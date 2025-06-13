@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v2
+      - name: Check formatting
+        run: cargo fmt --check
+      - name: Apply lints
+        run: cargo clippy -- -D warnings
+      - name: Build dependency crate
+        run: cd deps_crate && cargo build
+      - name: Build (Dev)
+        run: cargo build
+      - name: Test (Dev)
+        run: cargo test
+      - name: Build (Release)
+        run: cargo build --release
+      - name: Test (Release)
+        run: cargo test --release

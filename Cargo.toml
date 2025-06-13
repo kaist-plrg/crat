@@ -1,0 +1,11 @@
+[package]
+name = "crat"
+version = "0.1.0"
+authors = ["Jaemin Hong <hjm0901@gmail.com>"]
+edition = "2024"
+
+[dependencies]
+clap = { version = "4.5.40", features = ["derive"] }
+
+[package.metadata.rust-analyzer]
+rustc_private = true

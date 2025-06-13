@@ -1,0 +1,11 @@
+[package]
+name = "deps_crate"
+version = "1.0.0"
+edition = "2024"
+
+[dependencies]
+c2rust-bitfields = "0.3"
+c2rust-asm-casts = "0.2"
+f128 = "0.2"
+num-traits = "0.2"
+tempfile = "3.19"
