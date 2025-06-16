@@ -15,5 +15,5 @@ struct Args {
 fn main() {
     let args = Args::parse();
     let file = args.input.join("c2rust-lib.rs");
-    crat::type_checker::TypeChecker.run_on_path(&file);
+    crat::extern_resolver::type_resolver::TypeResolver.run_on_path(&file);
 }
