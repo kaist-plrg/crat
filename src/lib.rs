@@ -16,9 +16,11 @@ extern crate rustc_middle;
 extern crate rustc_parse;
 extern crate rustc_session;
 extern crate rustc_span;
+extern crate rustc_type_ir;
 
 pub mod ast_util;
 pub mod compile_util;
+pub mod disjoint_set;
 pub mod extern_resolver;
 pub mod graph_util;
 pub mod ir_util;
