@@ -9,12 +9,7 @@ use rustc_middle::{
 use rustc_span::{Symbol, def_id::LocalDefId};
 use typed_arena::Arena;
 
-use crate::{
-    compile_util::Pass,
-    disjoint_set::DisjointSets,
-    graph_util::{self, SccId},
-    ir_util,
-};
+use crate::{compile_util::Pass, disjoint_set::DisjointSets, graph_util, ir_util};
 
 pub struct TypeResolver;
 
@@ -24,7 +19,6 @@ impl Pass for TypeResolver {
     fn run(&self, tcx: TyCtxt<'_>) -> Self::Out {
         let result = resolve(tcx);
 
-        let mut num = 0;
         for (name, classes) in &result.equiv_adts {
             if classes.0.len() > 1 {
                 println!("{name}");
@@ -34,11 +28,8 @@ impl Pass for TypeResolver {
                         println!("    {def_id:?}");
                     }
                 }
-            } else {
-                num += classes.0.iter().map(|v| v.len()).sum::<usize>();
             }
         }
-        println!("{} {num}", result.equiv_adts.len());
 
         // let mut fns: FxHashMap<_, EquivClasses<LocalDefId>> = FxHashMap::default();
         // for def_id in hir_data.fns {
@@ -149,7 +140,8 @@ fn resolve(tcx: TyCtxt<'_>) -> ResolveResult {
     tcx.hir_visit_all_item_likes_in_crate(&mut visitor);
     let hir_data = visitor.data;
 
-    let mut dependencies: FxHashMap<_, _> = FxHashMap::default();
+    let mut name_to_adts: FxHashMap<_, Vec<_>> = FxHashMap::default();
+    let mut dependencies: FxHashMap<_, FxHashSet<_>> = FxHashMap::default();
     for def_id in hir_data.adts.iter().copied() {
         let adt_def = tcx.adt_def(def_id);
         let variant = adt_def.variant(VariantIdx::ZERO);
@@ -158,51 +150,51 @@ fn resolve(tcx: TyCtxt<'_>) -> ResolveResult {
             let ty = fd.ty(tcx, List::empty());
             visitor.visit_ty(ty);
         }
-        dependencies.insert(def_id, visitor.adts);
+        let name = ir_util::def_id_to_ty_symbol(def_id, tcx).unwrap();
+        name_to_adts.entry(name).or_default().push(def_id);
+        dependencies.entry(name).or_default().extend(
+            visitor
+                .adts
+                .into_iter()
+                .map(|def_id| ir_util::def_id_to_ty_symbol(def_id, tcx).unwrap()),
+        );
     }
 
     let sccs = graph_util::sccs_copied(&dependencies);
-    let area = Arena::new();
-    let equiv_sccs = DisjointSets::new(&area);
     let arena = Arena::new();
-    let equiv_unnameds = DisjointSets::new(&arena);
     let mut cmp = TypeComparator {
         tcx,
-        sccs: &sccs,
-        equiv_sccs,
-        equiv_unnameds,
-        finished: false,
+        equiv_adts: DisjointSets::new(&arena),
+        equiv_unnameds: DisjointSets::new(&arena),
+        compared_names: FxHashSet::default(),
+        possibly_equiv_unnameds: FxHashSet::default(),
+        visited_names: FxHashSet::default(),
     };
-
-    let mut scc_classes: EquivClasses<SccId> = EquivClasses::new();
+    let mut equiv_adts = FxHashMap::default();
     for scc_id in sccs.post_order() {
         let scc = &sccs.sccs[scc_id];
-        if scc.iter().all(|def_id| {
-            let name = ir_util::def_id_to_ty_symbol(*def_id, tcx).unwrap();
-            is_unnamed(name.as_str())
-        }) {
-            continue;
+        for name in scc {
+            if is_unnamed(name.as_str()) {
+                continue;
+            }
+            let adts = &name_to_adts[name];
+            let mut classes = EquivClasses::new();
+            for def_id in adts {
+                classes.insert(*def_id, |id1, id2| {
+                    let res = cmp.cmp_adts(*id1, *id2);
+                    let possibly_equiv_unnameds = cmp.possibly_equiv_unnameds.drain();
+                    if res {
+                        cmp.equiv_adts.union(*id1, *id2);
+                        for (unnamed1, unnamed2) in possibly_equiv_unnameds {
+                            cmp.equiv_unnameds.union(unnamed1, unnamed2);
+                        }
+                    }
+                    res
+                });
+            }
+            equiv_adts.insert(*name, classes);
+            cmp.compared_names.insert(*name);
         }
-        scc_classes.insert(scc_id, |id1, id2| cmp.cmp_sccs(*id1, *id2));
-    }
-    cmp.finished = true;
-
-    let scc_id_to_equiv_class = scc_classes.get_id_map();
-
-    let mut equiv_adts: FxHashMap<_, EquivClasses<LocalDefId>> = FxHashMap::default();
-    for def_id in &hir_data.adts {
-        let name = ir_util::def_id_to_ty_symbol(*def_id, tcx).unwrap();
-        if is_unnamed(name.as_str()) {
-            continue;
-        }
-        let classes = equiv_adts.entry(name).or_insert_with(EquivClasses::new);
-        classes.insert(*def_id, |id1, id2| {
-            let scc_id1 = sccs.indices[id1];
-            let scc_id2 = sccs.indices[id2];
-            let equiv_class1 = scc_id_to_equiv_class[&scc_id1];
-            let equiv_class2 = scc_id_to_equiv_class[&scc_id2];
-            equiv_class1 == equiv_class2
-        });
     }
 
     ResolveResult { equiv_adts }
@@ -210,52 +202,33 @@ fn resolve(tcx: TyCtxt<'_>) -> ResolveResult {
 
 struct TypeComparator<'a, 'tcx> {
     tcx: TyCtxt<'tcx>,
-    sccs: &'a graph_util::Sccs<LocalDefId>,
-    equiv_sccs: DisjointSets<'a, SccId>,
+
+    equiv_adts: DisjointSets<'a, LocalDefId>,
     equiv_unnameds: DisjointSets<'a, LocalDefId>,
-    finished: bool,
+    compared_names: FxHashSet<Symbol>,
+
+    possibly_equiv_unnameds: FxHashSet<(LocalDefId, LocalDefId)>,
+    visited_names: FxHashSet<Symbol>,
 }
 
 impl<'tcx> TypeComparator<'_, 'tcx> {
-    fn cmp_sccs(&mut self, scc_id1: SccId, scc_id2: SccId) -> bool {
-        if let Some(b) = self.equiv_sccs.equiv(scc_id1, scc_id2) {
-            if self.finished || b {
-                return b;
+    fn cmp_adts(&mut self, def_id1: LocalDefId, def_id2: LocalDefId) -> bool {
+        let name = ir_util::def_id_to_ty_symbol(def_id1, self.tcx).unwrap();
+        let unnamed = is_unnamed(name.as_str());
+        if !unnamed {
+            if self.compared_names.contains(&name) {
+                return self.equiv_adts.equiv(def_id1, def_id2) == Some(true);
             }
+            self.visited_names.insert(name);
         }
-
-        let scc1 = &self.sccs.sccs[scc_id1];
-        let (names1, name_to_id1) = names_in_scc(scc1, self.tcx);
-        let scc2 = &self.sccs.sccs[scc_id2];
-        let (names2, name_to_id2) = names_in_scc(scc2, self.tcx);
-        if names1 != names2 {
-            return false;
+        let res = self.cmp_adts_inner(def_id1, def_id2);
+        if !unnamed {
+            assert!(self.visited_names.remove(&name));
         }
-
-        let mut unnameds = FxHashSet::default();
-
-        for (name, def_id1) in name_to_id1 {
-            let def_id2 = name_to_id2[&name];
-            if !self.cmp_adts(def_id1, def_id2, Some(&mut unnameds), &names1) {
-                return false;
-            }
-        }
-
-        self.equiv_sccs.union(scc_id1, scc_id2);
-        for (def_id1, def_id2) in unnameds {
-            self.equiv_unnameds.union(def_id1, def_id2);
-        }
-
-        true
+        res
     }
 
-    fn cmp_adts(
-        &mut self,
-        def_id1: LocalDefId,
-        def_id2: LocalDefId,
-        mut unnameds: Option<&mut FxHashSet<(LocalDefId, LocalDefId)>>,
-        names: &FxHashSet<Symbol>,
-    ) -> bool {
+    fn cmp_adts_inner(&mut self, def_id1: LocalDefId, def_id2: LocalDefId) -> bool {
         let adt1 = self.tcx.adt_def(def_id1);
         let adt2 = self.tcx.adt_def(def_id2);
         if adt1.adt_kind() != adt2.adt_kind() {
@@ -271,7 +244,7 @@ impl<'tcx> TypeComparator<'_, 'tcx> {
         for (fd1, fd2) in variant1.fields.iter().zip(variant2.fields.iter()) {
             let ty1 = fd1.ty(self.tcx, List::empty());
             let ty2 = fd2.ty(self.tcx, List::empty());
-            if !self.cmp_tys(ty1, ty2, unnameds.as_deref_mut(), names) {
+            if !self.cmp_tys(ty1, ty2) {
                 return false;
             }
         }
@@ -279,13 +252,7 @@ impl<'tcx> TypeComparator<'_, 'tcx> {
         true
     }
 
-    fn cmp_tys(
-        &mut self,
-        ty1: ty::Ty<'tcx>,
-        ty2: ty::Ty<'tcx>,
-        mut unnameds: Option<&mut FxHashSet<(LocalDefId, LocalDefId)>>,
-        names: &FxHashSet<Symbol>,
-    ) -> bool {
+    fn cmp_tys(&mut self, ty1: ty::Ty<'tcx>, ty2: ty::Ty<'tcx>) -> bool {
         use ty::*;
         let ty1_kind = ty1.kind();
         let ty2_kind = ty2.kind();
@@ -314,24 +281,19 @@ impl<'tcx> TypeComparator<'_, 'tcx> {
                         assert!(args1.is_empty());
                         match (is_unnamed(name1.as_str()), is_unnamed(name2.as_str())) {
                             (true, true) => {
-                                let res =
-                                    self.cmp_adts(def_id1, def_id2, unnameds.as_deref_mut(), names);
-                                if let Some(unnameds) = unnameds
-                                    && res
-                                {
-                                    unnameds.insert((def_id1, def_id2));
+                                let res = self.cmp_adts(def_id1, def_id2);
+                                if res {
+                                    self.possibly_equiv_unnameds.insert((def_id1, def_id2));
                                 }
                                 res
                             }
                             (false, false) => {
                                 if name1 != name2 {
                                     false
-                                } else if names.contains(&name1) {
+                                } else if self.visited_names.contains(&name1) {
                                     true
                                 } else {
-                                    let scc1 = self.sccs.indices[&def_id1];
-                                    let scc2 = self.sccs.indices[&def_id2];
-                                    self.cmp_sccs(scc1, scc2)
+                                    self.cmp_adts(def_id1, def_id2)
                                 }
                             }
                             _ => false,
@@ -342,9 +304,7 @@ impl<'tcx> TypeComparator<'_, 'tcx> {
                             && args1.iter().zip(args2.iter()).all(|(arg1, arg2)| {
                                 use rustc_type_ir::GenericArgKind::*;
                                 match (arg1.unpack(), arg2.unpack()) {
-                                    (Type(ty1), Type(ty2)) => {
-                                        self.cmp_tys(ty1, ty2, unnameds.as_deref_mut(), names)
-                                    }
+                                    (Type(ty1), Type(ty2)) => self.cmp_tys(ty1, ty2),
                                     (Lifetime(_), Lifetime(_)) => true,
                                     (Const(_), Const(_)) => true,
                                     _ => false,
@@ -355,7 +315,7 @@ impl<'tcx> TypeComparator<'_, 'tcx> {
                 }
             }
             Foreign(def_id1) => match ty2_kind {
-                Adt(_, _) => self.cmp_tys(ty2, ty1, unnameds, names),
+                Adt(_, _) => self.cmp_tys(ty2, ty1),
                 Foreign(def_id2) => {
                     let name1 = ir_util::def_id_to_ty_symbol(def_id1, self.tcx).unwrap();
                     let name2 = ir_util::def_id_to_ty_symbol(def_id2, self.tcx).unwrap();
@@ -365,11 +325,11 @@ impl<'tcx> TypeComparator<'_, 'tcx> {
             },
             Array(ty1, len1) => {
                 let Array(ty2, len2) = ty2_kind else { return false };
-                len1 == len2 && self.cmp_tys(*ty1, *ty2, unnameds, names)
+                len1 == len2 && self.cmp_tys(*ty1, *ty2)
             }
             RawPtr(ty1, m1) => {
                 let RawPtr(ty2, m2) = ty2_kind else { return false };
-                m1 == m2 && self.cmp_tys(*ty1, *ty2, unnameds, names)
+                m1 == m2 && self.cmp_tys(*ty1, *ty2)
             }
             FnPtr(sig1, header1) => {
                 let FnPtr(sig2, header2) = ty2_kind else { return false };
@@ -378,7 +338,7 @@ impl<'tcx> TypeComparator<'_, 'tcx> {
                 }
                 let sig1 = sig1.skip_binder();
                 let sig2 = sig2.skip_binder();
-                if !self.cmp_tys(sig1.output(), sig2.output(), unnameds.as_deref_mut(), names) {
+                if !self.cmp_tys(sig1.output(), sig2.output()) {
                     return false;
                 }
                 let inputs1 = sig1.inputs();
@@ -389,7 +349,7 @@ impl<'tcx> TypeComparator<'_, 'tcx> {
                 inputs1
                     .iter()
                     .zip(inputs2)
-                    .all(|(ty1, ty2)| self.cmp_tys(*ty1, *ty2, unnameds.as_deref_mut(), names))
+                    .all(|(ty1, ty2)| self.cmp_tys(*ty1, *ty2))
             }
             Tuple(tys1) => {
                 let Tuple(tys2) = ty2_kind else { return false };
@@ -403,22 +363,22 @@ impl<'tcx> TypeComparator<'_, 'tcx> {
     }
 }
 
-fn names_in_scc(
-    scc: &FxHashSet<LocalDefId>,
-    tcx: TyCtxt<'_>,
-) -> (FxHashSet<Symbol>, FxHashMap<Symbol, LocalDefId>) {
-    let mut names = FxHashSet::default();
-    let mut name_to_def_id = FxHashMap::default();
-    for def_id in scc {
-        let name = ir_util::def_id_to_ty_symbol(*def_id, tcx).unwrap();
-        if is_unnamed(name.as_str()) {
-            continue;
-        }
-        names.insert(name);
-        name_to_def_id.insert(name, *def_id);
-    }
-    (names, name_to_def_id)
-}
+// fn names_in_scc(
+//     scc: &FxHashSet<LocalDefId>,
+//     tcx: TyCtxt<'_>,
+// ) -> (FxHashSet<Symbol>, FxHashMap<Symbol, LocalDefId>) {
+//     let mut names = FxHashSet::default();
+//     let mut name_to_def_id = FxHashMap::default();
+//     for def_id in scc {
+//         let name = ir_util::def_id_to_ty_symbol(*def_id, tcx).unwrap();
+//         if is_unnamed(name.as_str()) {
+//             continue;
+//         }
+//         names.insert(name);
+//         name_to_def_id.insert(name, *def_id);
+//     }
+//     (names, name_to_def_id)
+// }
 
 fn is_unnamed(name: &str) -> bool {
     name.starts_with("C2RustUnnamed")
@@ -469,17 +429,17 @@ impl<T> EquivClasses<T> {
     }
 }
 
-impl<T: Copy + Eq + std::hash::Hash> EquivClasses<T> {
-    fn get_id_map(&self) -> FxHashMap<T, EquivClassId> {
-        let mut map = FxHashMap::default();
-        for (id, equiv_class) in self.0.iter_enumerated() {
-            for &v in equiv_class {
-                map.insert(v, id);
-            }
-        }
-        map
-    }
-}
+// impl<T: Copy + Eq + std::hash::Hash> EquivClasses<T> {
+//     fn get_id_map(&self) -> FxHashMap<T, EquivClassId> {
+//         let mut map = FxHashMap::default();
+//         for (id, equiv_class) in self.0.iter_enumerated() {
+//             for &v in equiv_class {
+//                 map.insert(v, id);
+//             }
+//         }
+//         map
+//     }
+// }
 
 rustc_index::newtype_index! {
     #[orderable]
