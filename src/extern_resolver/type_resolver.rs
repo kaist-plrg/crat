@@ -19,83 +19,49 @@ impl Pass for TypeResolver {
 
     fn run(&self, tcx: TyCtxt<'_>) -> Self::Out {
         let result = resolve(tcx);
-        let ResolveResult {
-            equiv_adts: _equiv_adts,
-            equiv_fns: _equiv_fns,
-            unlinked_foreign_fns: _unlinked_foreign_fns,
-            equiv_statics: _equiv_statics,
-            unlinked_foreign_statics: _unlinked_foreign_statics,
-        } = result;
 
-        // for (name, classes) in &result.equiv_adts {
-        //     if classes.0.len() > 1 {
-        //         println!("{name}");
-        //         for (id, def_ids) in classes.0.iter_enumerated() {
-        //             println!("  {id:?}");
-        //             for def_id in def_ids {
-        //                 println!("    {def_id:?}");
-        //             }
-        //         }
-        //     }
-        // }
-
-        // for (name, classes) in &_equiv_fns {
-        //     let unlinked = _unlinked_foreign_fns.get(name);
-        //     if unlinked.is_some() {
-        //         println!("{name}");
-        //         for (id, def_ids) in classes.0.iter_enumerated() {
-        //             println!("  {id:?}");
-        //             for def_id in def_ids {
-        //                 println!("    {def_id:?}");
-        //             }
-        //         }
-        //         if let Some(unlinked) = unlinked {
-        //             println!("  Unlinked");
-        //             for def_id in unlinked {
-        //                 println!("    {def_id:?}");
-        //             }
-        //         }
-        //     }
-        // }
-
-        for (name, classes) in &_equiv_statics {
-            let unlinked = _unlinked_foreign_statics.get(name);
-            if classes.0.len() > 1 || unlinked.is_some() {
-                println!("{name}");
-                for (id, def_ids) in classes.0.iter_enumerated() {
-                    println!("  {id:?}");
-                    for def_id in def_ids {
-                        println!("    {def_id:?}");
-                    }
-                }
-                if let Some(unlinked) = unlinked {
-                    println!("  Unlinked");
-                    for def_id in unlinked {
-                        println!("    {def_id:?}");
-                    }
-                }
-            }
+        for (name, def_ids) in &result.equiv_adts {
+            let _name = name;
+            let _def_ids = def_ids;
         }
-
-        // let mut tys: FxHashMap<_, EquivClasses<LocalDefId>> = FxHashMap::default();
-        // for def_id in hir_data.tys {
-        //     let name = ir_util::def_id_to_ty_symbol(def_id, tcx).unwrap();
-        //     let classes = tys.entry(name).or_insert_with(EquivClasses::new);
-        //     classes.insert(def_id, |id1, id2| {
-        //         let ty1 = tcx.type_of(*id1).skip_binder();
-        //         let ty2 = tcx.type_of(*id2).skip_binder();
-        //         cmp.cmp_tys(ty1, ty2, None, &FxHashSet::default())
-        //     });
-        // }
+        for (def_id, link_candidates) in &result.extern_adts {
+            let _def_id = def_id;
+            let _link_candidates = link_candidates;
+        }
+        for (name, def_ids) in &result.equiv_tys {
+            let _name = name;
+            let _def_ids = def_ids;
+        }
+        for (name, def_ids) in &result.equiv_fns {
+            let _name = name;
+            let _def_ids = def_ids;
+        }
+        for (def_id, link_candidates) in &result.extern_fns {
+            let _def_id = def_id;
+            let _link_candidates = link_candidates;
+        }
+        for (name, def_ids) in &result.equiv_statics {
+            let _name = name;
+            let _def_ids = def_ids;
+        }
+        for (def_id, link_candidates) in &result.extern_statics {
+            let _def_id = def_id;
+            let _link_candidates = link_candidates;
+        }
     }
 }
 
 struct ResolveResult {
     equiv_adts: FxHashMap<Symbol, EquivClasses<LocalDefId>>,
+    extern_adts: Vec<(LocalDefId, Vec<EquivClassId>)>,
+
+    equiv_tys: FxHashMap<Symbol, EquivClasses<LocalDefId>>,
+
     equiv_fns: FxHashMap<Symbol, EquivClasses<LocalDefId>>,
-    unlinked_foreign_fns: FxHashMap<Symbol, Vec<(LocalDefId, Vec<EquivClassId>)>>,
+    extern_fns: Vec<(LocalDefId, Vec<EquivClassId>)>,
+
     equiv_statics: FxHashMap<Symbol, EquivClasses<LocalDefId>>,
-    unlinked_foreign_statics: FxHashMap<Symbol, Vec<(LocalDefId, Vec<EquivClassId>)>>,
+    extern_statics: Vec<(LocalDefId, Vec<EquivClassId>)>,
 }
 
 fn resolve(tcx: TyCtxt<'_>) -> ResolveResult {
@@ -159,6 +125,24 @@ fn resolve(tcx: TyCtxt<'_>) -> ResolveResult {
             cmp.compared_names.insert(*name);
         }
     }
+    let mut extern_adts = vec![];
+    for def_id in hir_data.foreign_tys {
+        let name = ir_util::def_id_to_ty_symbol(def_id, tcx).unwrap();
+        let classes = some_or!(equiv_adts.get_mut(&name), continue);
+        let mut link_candidates: Vec<_> = classes.0.indices().collect();
+        filter_by_common_def_path(&mut link_candidates, def_id, classes, tcx);
+        extern_adts.push((def_id, link_candidates));
+    }
+
+    let mut equiv_tys: FxHashMap<_, EquivClasses<LocalDefId>> = FxHashMap::default();
+    for def_id in hir_data.tys {
+        let name = ir_util::def_id_to_ty_symbol(def_id, tcx).unwrap();
+        if is_unnamed(name.as_str()) {
+            continue;
+        }
+        let classes = equiv_tys.entry(name).or_insert_with(EquivClasses::new);
+        classes.insert(def_id, |id1, id2| cmp.cmp_type_of(*id1, *id2));
+    }
 
     let mut equiv_fns: FxHashMap<_, EquivClasses<LocalDefId>> = FxHashMap::default();
     for def_id in hir_data.fns {
@@ -178,7 +162,7 @@ fn resolve(tcx: TyCtxt<'_>) -> ResolveResult {
             len1 == len2 && cmp.cmp_fn_sigs(*id1, *id2)
         });
     }
-    let mut unlinked_foreign_fns: FxHashMap<_, Vec<_>> = FxHashMap::default();
+    let mut extern_fns = vec![];
     for def_id in hir_data.foreign_fns {
         let name = ir_util::def_id_to_value_symbol(def_id, tcx).unwrap();
         let classes = some_or!(equiv_fns.get_mut(&name), continue);
@@ -194,14 +178,7 @@ fn resolve(tcx: TyCtxt<'_>) -> ResolveResult {
             })
             .collect();
         filter_by_common_def_path(&mut link_candidates, def_id, classes, tcx);
-        if let [i] = link_candidates[..] {
-            classes.0[i].push(def_id);
-        } else {
-            unlinked_foreign_fns
-                .entry(name)
-                .or_default()
-                .push((def_id, link_candidates));
-        }
+        extern_fns.push((def_id, link_candidates));
     }
 
     let mut equiv_statics: FxHashMap<_, EquivClasses<LocalDefId>> = FxHashMap::default();
@@ -217,7 +194,7 @@ fn resolve(tcx: TyCtxt<'_>) -> ResolveResult {
             init1 == init2
         });
     }
-    let mut unlinked_foreign_statics: FxHashMap<_, Vec<_>> = FxHashMap::default();
+    let mut extern_statics = vec![];
     for def_id in hir_data.foreign_statics {
         let name = ir_util::def_id_to_value_symbol(def_id, tcx).unwrap();
         let classes = some_or!(equiv_statics.get_mut(&name), continue);
@@ -233,22 +210,17 @@ fn resolve(tcx: TyCtxt<'_>) -> ResolveResult {
             })
             .collect();
         filter_by_common_def_path(&mut link_candidates, def_id, classes, tcx);
-        if let [i] = link_candidates[..] {
-            classes.0[i].push(def_id);
-        } else {
-            unlinked_foreign_statics
-                .entry(name)
-                .or_default()
-                .push((def_id, link_candidates));
-        }
+        extern_statics.push((def_id, link_candidates));
     }
 
     ResolveResult {
         equiv_adts,
+        extern_adts,
+        equiv_tys,
         equiv_fns,
-        unlinked_foreign_fns,
+        extern_fns,
         equiv_statics,
-        unlinked_foreign_statics,
+        extern_statics,
     }
 }
 
@@ -489,51 +461,9 @@ impl<'tcx> TypeComparator<'_, 'tcx> {
     }
 }
 
-// fn names_in_scc(
-//     scc: &FxHashSet<LocalDefId>,
-//     tcx: TyCtxt<'_>,
-// ) -> (FxHashSet<Symbol>, FxHashMap<Symbol, LocalDefId>) {
-//     let mut names = FxHashSet::default();
-//     let mut name_to_def_id = FxHashMap::default();
-//     for def_id in scc {
-//         let name = ir_util::def_id_to_ty_symbol(*def_id, tcx).unwrap();
-//         if is_unnamed(name.as_str()) {
-//             continue;
-//         }
-//         names.insert(name);
-//         name_to_def_id.insert(name, *def_id);
-//     }
-//     (names, name_to_def_id)
-// }
-
 fn is_unnamed(name: &str) -> bool {
     name.starts_with("C2RustUnnamed")
 }
-
-// let def_path = tcx.def_path(def_id.to_def_id());
-// let mut path: Vec<_> = def_path
-//     .data
-//     .into_iter()
-//     .map(|data| {
-//         let DefPathData::TypeNs(name) = data.data else { panic!() };
-//         name
-//     })
-//     .collect();
-// let name = path.pop().unwrap();
-// let module = ModulePath(path);
-// let qualified_name = QualifiedName {
-//     module: module.clone(),
-//     name,
-// };
-// name_to_def_id.insert(qualified_name, def_id);
-// #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-// struct QualifiedName {
-//     module: ModulePath,
-//     name: Symbol,
-// }
-
-// #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-// struct ModulePath(Vec<Symbol>);
 
 struct EquivClasses<T>(IndexVec<EquivClassId, Vec<T>>);
 
@@ -555,18 +485,6 @@ impl<T> EquivClasses<T> {
         self.0.push(vec![v]);
     }
 }
-
-// impl<T: Copy + Eq + std::hash::Hash> EquivClasses<T> {
-//     fn get_id_map(&self) -> FxHashMap<T, EquivClassId> {
-//         let mut map = FxHashMap::default();
-//         for (id, equiv_class) in self.0.iter_enumerated() {
-//             for &v in equiv_class {
-//                 map.insert(v, id);
-//             }
-//         }
-//         map
-//     }
-// }
 
 rustc_index::newtype_index! {
     #[orderable]
