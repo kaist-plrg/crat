@@ -3,6 +3,8 @@ use std::cell::Cell;
 use rustc_hash::FxHashMap;
 use typed_arena::Arena;
 
+use crate::equiv_classes::EquivClasses;
+
 /// Disjoint sets
 pub struct DisjointSets<'a, T> {
     arena: &'a Arena<DisjointSet<'a, T>>,
@@ -58,6 +60,15 @@ impl<'a, T: Copy + Eq + std::hash::Hash> DisjointSets<'a, T> {
     #[inline]
     pub fn iter(&self) -> impl Iterator<Item = T> + '_ {
         self.elements.keys().copied()
+    }
+
+    #[inline]
+    pub fn to_equiv_classes(&self) -> EquivClasses<T> {
+        let mut classes = EquivClasses::new();
+        for t in self.elements.keys() {
+            classes.insert(*t, |a, b| self.equiv(*a, *b).unwrap());
+        }
+        classes
     }
 }
 

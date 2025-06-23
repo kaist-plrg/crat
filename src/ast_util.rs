@@ -9,7 +9,7 @@ use rustc_session::parse::ParseSess;
 use rustc_span::{FileName, RealFileName};
 
 #[derive(Debug)]
-pub struct TransformationResult(Vec<(PathBuf, String)>);
+pub struct TransformationResult(pub Vec<(PathBuf, String)>);
 
 impl TransformationResult {
     pub fn apply(&self) {
@@ -19,8 +19,8 @@ impl TransformationResult {
     }
 }
 
-pub fn transform_ast<F: std::ops::Fn(&mut Crate) -> bool>(
-    f: F,
+pub fn transform_ast<F: std::ops::FnMut(&mut Crate) -> bool>(
+    mut f: F,
     tcx: TyCtxt<'_>,
 ) -> TransformationResult {
     tcx.resolver_for_lowering();
@@ -72,7 +72,7 @@ pub fn parse_item(item: String) -> Item {
 #[macro_export]
 macro_rules! item {
     ($($arg:tt)*) => {{
-        parse_item(format!($($arg)*))
+        $crate::ast_util::parse_item(format!($($arg)*))
     }};
 }
 
@@ -85,7 +85,7 @@ pub fn parse_ty_param(param: String) -> GenericParam {
 #[macro_export]
 macro_rules! ty_param {
     ($($arg:tt)*) => {{
-        parse_ty_param(format!($($arg)*))
+        $crate::ast_util::parse_ty_param(format!($($arg)*))
     }};
 }
 
@@ -98,7 +98,7 @@ pub fn parse_param(param: String) -> Param {
 #[macro_export]
 macro_rules! param {
     ($($arg:tt)*) => {{
-        parse_param(format!($($arg)*))
+        $crate::ast_util::parse_param(format!($($arg)*))
     }};
 }
 
@@ -115,7 +115,7 @@ pub fn parse_stmt(stmt: String) -> Stmt {
 #[macro_export]
 macro_rules! stmt {
     ($($arg:tt)*) => {{
-        parse_stmt(format!($($arg)*))
+        $crate::ast_util::parse_stmt(format!($($arg)*))
     }};
 }
 
@@ -129,7 +129,19 @@ pub fn parse_expr(expr: String) -> Expr {
 #[macro_export]
 macro_rules! expr {
     ($($arg:tt)*) => {{
-        parse_expr(format!($($arg)*))
+        $crate::ast_util::parse_expr(format!($($arg)*))
+    }};
+}
+
+pub fn parse_path(path: String) -> Path {
+    let ExprKind::Path(_, path) = parse_expr(path).kind else { panic!() };
+    path
+}
+
+#[macro_export]
+macro_rules! path {
+    ($($arg:tt)*) => {{
+        $crate::ast_util::parse_path(format!($($arg)*))
     }};
 }
 
@@ -143,6 +155,6 @@ pub fn parse_ty(ty: String) -> Ty {
 #[macro_export]
 macro_rules! ty {
     ($($arg:tt)*) => {{
-        parse_ty(format!($($arg)*))
+        $crate::ast_util::parse_ty(format!($($arg)*))
     }};
 }
