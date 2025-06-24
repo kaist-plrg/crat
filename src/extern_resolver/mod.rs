@@ -25,7 +25,7 @@ use crate::{
     graph_util, ir_util,
 };
 
-pub fn resolve_externs(tcx: TyCtxt<'_>) -> TransformationResult {
+pub fn resolve_extern(tcx: TyCtxt<'_>) -> TransformationResult {
     let result = resolve(tcx);
 
     let mut resolve_map = FxHashMap::default();

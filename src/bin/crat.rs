@@ -29,7 +29,11 @@ fn main() {
     }
     copy_dir(&args.input, &args.output, true);
     let file = args.output.join("c2rust-lib.rs");
-    let res = compile_util::run_compiler_on_path(&file, extern_resolver::resolve_externs).unwrap();
+
+    let res = compile_util::run_compiler_on_path(&file, extern_resolver::resolve_extern).unwrap();
+    res.apply();
+
+    let res = compile_util::run_compiler_on_path(&file, unsafe_resolver::resolve_unsafe).unwrap();
     res.apply();
 }
 

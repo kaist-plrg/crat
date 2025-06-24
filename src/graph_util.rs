@@ -14,10 +14,9 @@ rustc_index::newtype_index! {
 }
 
 /// Strongly connected components (SCCs) of a directed graph.
-#[derive(Debug, Clone)]
 pub struct Sccs<T> {
     /// SCC to its successors
-    pub graph: FxHashMap<SccId, FxHashSet<SccId>>,
+    graph: VecGraph<SccId, true>,
     /// SCC to its element nodes
     pub sccs: IndexVec<SccId, FxHashSet<T>>,
     /// Node to SCC it belongs to
@@ -26,8 +25,23 @@ pub struct Sccs<T> {
 
 impl<T: Eq + std::hash::Hash> Sccs<T> {
     #[inline]
-    pub fn scc(&self, t: &T) -> &FxHashSet<T> {
-        &self.sccs[self.indices[t]]
+    pub fn is_empty(&self) -> bool {
+        self.sccs.is_empty()
+    }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.sccs.len()
+    }
+
+    #[inline]
+    pub fn successors(&self, scc_id: SccId) -> &[SccId] {
+        self.graph.successors(scc_id)
+    }
+
+    #[inline]
+    pub fn predecessors(&self, scc_id: SccId) -> &[SccId] {
+        self.graph.predecessors(scc_id)
     }
 
     #[inline]
@@ -35,6 +49,11 @@ impl<T: Eq + std::hash::Hash> Sccs<T> {
         &self,
     ) -> impl DoubleEndedIterator<Item = SccId> + ExactSizeIterator + Clone + 'static {
         self.sccs.indices()
+    }
+
+    #[inline]
+    pub fn scc(&self, t: &T) -> &FxHashSet<T> {
+        &self.sccs[self.indices[t]]
     }
 }
 
@@ -86,12 +105,13 @@ fn sccs_common<T: Copy + Eq + std::hash::Hash>(
 
     let sccs: scc::Sccs<usize, SccId> = scc::Sccs::new(&vec_graph);
 
-    let mut scc_graph = FxHashMap::default();
+    let mut scc_edges = vec![];
     let mut scc_elems: IndexVec<SccId, _> = IndexVec::new();
     let mut scc_indices = FxHashMap::default();
     for scc in sccs.all_sccs() {
-        let succs: FxHashSet<_> = sccs.successors(scc).iter().cloned().collect();
-        scc_graph.insert(scc, succs);
+        for succ in sccs.successors(scc) {
+            scc_edges.push((scc, *succ));
+        }
         scc_elems.push(FxHashSet::default());
     }
     for (i, node) in id_to_node.into_iter().enumerate() {
@@ -99,9 +119,10 @@ fn sccs_common<T: Copy + Eq + std::hash::Hash>(
         scc_elems[scc].insert(node);
         scc_indices.insert(node, scc);
     }
+    let graph = VecGraph::new(sccs.num_sccs(), scc_edges);
 
     Sccs {
-        graph: scc_graph,
+        graph,
         sccs: scc_elems,
         indices: scc_indices,
     }
