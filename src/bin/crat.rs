@@ -29,7 +29,7 @@ fn main() {
     }
     copy_dir(&args.input, &args.output, true);
     let file = args.output.join("c2rust-lib.rs");
-    let res = crat::extern_resolver::type_resolver::TypeResolver.run_on_path(&file);
+    let res = crat::extern_resolver::ExternResolver.run_on_path(&file);
     res.apply();
 }
 
