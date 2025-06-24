@@ -24,45 +24,29 @@ use rustc_session::{
 };
 use rustc_span::{FileName, edition::Edition, source_map::SourceMap};
 
-pub trait Pass: Sync {
-    type Out;
-
-    fn run(&self, tcx: TyCtxt<'_>) -> Self::Out;
+#[inline]
+pub fn run_compiler_on_path<R: Send, F: FnOnce(TyCtxt<'_>) -> R + Send>(
+    path: &Path,
+    f: F,
+) -> Result<R, FatalError> {
+    run_compiler_on_input(path_to_input(path), f)
 }
 
-pub trait PassExt: Pass<Out: Send> {
-    #[inline]
-    fn try_on_input(&self, input: Input) -> Result<Self::Out, FatalError> {
-        run_compiler(make_config(input), |tcx| self.run(tcx))
-    }
-
-    #[inline]
-    fn try_on_path(&self, path: &Path) -> Result<Self::Out, FatalError> {
-        self.try_on_input(path_to_input(path))
-    }
-
-    #[inline]
-    fn try_on_str(&self, code: &str) -> Result<Self::Out, FatalError> {
-        self.try_on_input(str_to_input(code))
-    }
-
-    #[inline]
-    fn run_on_input(&self, input: Input) -> Self::Out {
-        self.try_on_input(input).unwrap()
-    }
-
-    #[inline]
-    fn run_on_path(&self, path: &Path) -> Self::Out {
-        self.try_on_path(path).unwrap()
-    }
-
-    #[inline]
-    fn run_on_str(&self, code: &str) -> Self::Out {
-        self.try_on_str(code).unwrap()
-    }
+#[inline]
+pub fn run_compiler_on_str<R: Send, F: FnOnce(TyCtxt<'_>) -> R + Send>(
+    code: &str,
+    f: F,
+) -> Result<R, FatalError> {
+    run_compiler_on_input(str_to_input(code), f)
 }
 
-impl<T: Pass<Out: Send>> PassExt for T {}
+#[inline]
+pub fn run_compiler_on_input<R: Send, F: FnOnce(TyCtxt<'_>) -> R + Send>(
+    input: Input,
+    f: F,
+) -> Result<R, FatalError> {
+    run_compiler(make_config(input), f)
+}
 
 #[inline]
 pub fn run_compiler<R: Send, F: FnOnce(TyCtxt<'_>) -> R + Send>(

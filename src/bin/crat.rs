@@ -6,7 +6,7 @@ use std::{
 };
 
 use clap::Parser;
-use crat::compile_util::PassExt;
+use crat::*;
 
 #[derive(Parser)]
 #[command(version)]
@@ -29,7 +29,7 @@ fn main() {
     }
     copy_dir(&args.input, &args.output, true);
     let file = args.output.join("c2rust-lib.rs");
-    let res = crat::extern_resolver::ExternResolver.run_on_path(&file);
+    let res = compile_util::run_compiler_on_path(&file, extern_resolver::resolve_externs).unwrap();
     res.apply();
 }
 

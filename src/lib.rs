@@ -29,3 +29,4 @@ pub mod extern_resolver;
 pub mod graph_util;
 pub mod ir_util;
 pub mod type_checker;
+pub mod unsafe_resolver;

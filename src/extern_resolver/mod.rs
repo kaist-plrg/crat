@@ -1,3 +1,5 @@
+//! Replaces extern items with `use`.
+
 use ast::ptr::P;
 use etrace::some_or;
 use rustc_abi::VariantIdx;
@@ -18,92 +20,85 @@ use typed_arena::Arena;
 
 use crate::{
     ast_util::{self, TransformationResult},
-    compile_util::Pass,
     disjoint_set::DisjointSets,
     equiv_classes::{EquivClassId, EquivClasses},
     graph_util, ir_util,
 };
 
-pub struct ExternResolver;
+pub fn resolve_externs(tcx: TyCtxt<'_>) -> TransformationResult {
+    let result = resolve(tcx);
 
-impl Pass for ExternResolver {
-    type Out = TransformationResult;
-
-    fn run(&self, tcx: TyCtxt<'_>) -> Self::Out {
-        let result = resolve(tcx);
-
-        let mut resolve_map = FxHashMap::default();
-        for classes in result
-            .equiv_adts
-            .values()
-            .chain(result.equiv_tys.values())
-            .chain(result.equiv_fns.values())
-            .chain(result.equiv_statics.values())
-            .chain(std::iter::once(&result.equiv_unnameds))
-        {
-            for class in &classes.0 {
-                let rep = find_representative_def_id(class, tcx);
-                for def_id in class {
-                    if *def_id != rep {
-                        resolve_map.insert(*def_id, rep);
-                    }
+    let mut resolve_map = FxHashMap::default();
+    for classes in result
+        .equiv_adts
+        .values()
+        .chain(result.equiv_tys.values())
+        .chain(result.equiv_fns.values())
+        .chain(result.equiv_statics.values())
+        .chain(std::iter::once(&result.equiv_unnameds))
+    {
+        for class in &classes.0 {
+            let rep = find_representative_def_id(class, tcx);
+            for def_id in class {
+                if *def_id != rep {
+                    resolve_map.insert(*def_id, rep);
                 }
             }
         }
-
-        let mut link_failed = false;
-        link_failed |= link_externs(
-            "Type",
-            &result.extern_adts,
-            &result.equiv_adts,
-            &mut resolve_map,
-            tcx,
-        );
-        link_failed |= link_externs(
-            "Function",
-            &result.extern_fns,
-            &result.equiv_fns,
-            &mut resolve_map,
-            tcx,
-        );
-        link_failed |= link_externs(
-            "Static",
-            &result.extern_statics,
-            &result.equiv_statics,
-            &mut resolve_map,
-            tcx,
-        );
-
-        assert!(!link_failed);
-
-        let mut visitor = AstVisitor {
-            tcx,
-            span_to_def_id: result.span_to_def_id,
-            resolve_map,
-            used: FxHashSet::default(),
-            updated: false,
-        };
-        ast_util::transform_ast(
-            |krate| {
-                visitor.updated = false;
-                visitor.visit_crate(krate);
-                let mut used: Vec<_> = visitor
-                    .used
-                    .drain()
-                    .map(|def_id| tcx.def_path_str(def_id))
-                    .collect();
-                used.sort();
-                let mut items: ThinVec<_> = used
-                    .into_iter()
-                    .map(|s| P(item!("use crate::{};", s)))
-                    .collect();
-                items.append(&mut krate.items);
-                krate.items = items;
-                visitor.updated
-            },
-            tcx,
-        )
     }
+
+    let mut link_failed = false;
+    link_failed |= link_externs(
+        "Type",
+        &result.extern_adts,
+        &result.equiv_adts,
+        &mut resolve_map,
+        tcx,
+    );
+    link_failed |= link_externs(
+        "Function",
+        &result.extern_fns,
+        &result.equiv_fns,
+        &mut resolve_map,
+        tcx,
+    );
+    link_failed |= link_externs(
+        "Static",
+        &result.extern_statics,
+        &result.equiv_statics,
+        &mut resolve_map,
+        tcx,
+    );
+
+    assert!(!link_failed);
+
+    let mut visitor = AstVisitor {
+        tcx,
+        span_to_def_id: result.span_to_def_id,
+        resolve_map,
+        used: FxHashSet::default(),
+        updated: false,
+    };
+    ast_util::transform_ast(
+        |krate| {
+            visitor.updated = false;
+            visitor.visit_crate(krate);
+            let mut used: Vec<_> = visitor
+                .used
+                .drain()
+                .map(|def_id| tcx.def_path_str(def_id))
+                .collect();
+            used.sort();
+            let mut items: ThinVec<_> = used
+                .into_iter()
+                .map(|s| P(item!("use crate::{};", s)))
+                .collect();
+            items.append(&mut krate.items);
+            krate.items = items;
+            visitor.updated
+        },
+        tcx,
+    )
 }
 
 #[inline]

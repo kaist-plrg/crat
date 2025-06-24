@@ -1,22 +1,17 @@
-use super::resolve;
-
 fn run_test(code1: &str, code2: &str, same: bool) {
     let code = format!("#![feature(extern_types)] mod a {{ {code1} }} mod b {{ {code2} }}");
-    crate::compile_util::run_compiler(
-        crate::compile_util::make_config(crate::compile_util::str_to_input(&code)),
-        |tcx| {
-            let res = resolve(tcx);
-            for classes in res.equiv_adts.values() {
-                if same {
-                    assert_eq!(classes.0.len(), 1);
-                } else {
-                    for class in &classes.0 {
-                        assert_eq!(class.len(), 1);
-                    }
+    crate::compile_util::run_compiler_on_str(&code, |tcx| {
+        let res = super::resolve(tcx);
+        for classes in res.equiv_adts.values() {
+            if same {
+                assert_eq!(classes.0.len(), 1);
+            } else {
+                for class in &classes.0 {
+                    assert_eq!(class.len(), 1);
                 }
             }
-        },
-    )
+        }
+    })
     .unwrap();
 }
 
