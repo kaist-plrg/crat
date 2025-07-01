@@ -116,6 +116,7 @@ pub fn resolve_extern(hints: &ResolveHints, tcx: TyCtxt<'_>) {
                 .map(|def_id| tcx.def_path_str(def_id))
                 .collect();
             used.sort();
+            used.dedup();
             let mut items: ThinVec<_> = used
                 .into_iter()
                 .map(|s| P(item!("use crate::{};", s)))
