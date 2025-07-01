@@ -11,12 +11,9 @@ use rustc_index::bit_set::ChunkedBitSet;
 use rustc_middle::ty::TyCtxt;
 use rustc_span::{Span, def_id::LocalDefId};
 
-use crate::{
-    ast_util::{self, TransformationResult},
-    graph_util,
-};
+use crate::{ast_util, graph_util};
 
-pub fn resolve_unsafe(tcx: TyCtxt<'_>) -> TransformationResult {
+pub fn resolve_unsafe(tcx: TyCtxt<'_>) {
     let unsafe_fns = find_unsafe_fns(tcx)
         .into_iter()
         .map(|def_id| {
@@ -29,14 +26,15 @@ pub fn resolve_unsafe(tcx: TyCtxt<'_>) -> TransformationResult {
         unsafe_fns,
         updated: false,
     };
-    ast_util::transform_ast(
+    let res = ast_util::transform_ast(
         |krate| {
             visitor.updated = false;
             visitor.visit_crate(krate);
             visitor.updated
         },
         tcx,
-    )
+    );
+    res.apply();
 }
 
 struct AstVisitor {

@@ -6,6 +6,7 @@ use std::{
 };
 
 use clap::{Parser, ValueEnum};
+use compile_util::run_compiler_on_path;
 use crat::*;
 use serde::Deserialize;
 
@@ -38,6 +39,7 @@ struct Args {
 enum Pass {
     Extern,
     Unsafe,
+    Bin,
     Check,
     OutParam,
     Lock,
@@ -111,20 +113,20 @@ fn main() {
                         .push(extern_resolver::LinkHint::new(from.clone(), to.clone()));
                 }
 
-                let res = compile_util::run_compiler_on_path(&file, |tcx| {
+                run_compiler_on_path(&file, |tcx| {
                     extern_resolver::resolve_extern(resolve_hints, tcx)
                 })
                 .unwrap();
-                res.apply();
             }
             Pass::Unsafe => {
-                let res =
-                    compile_util::run_compiler_on_path(&file, unsafe_resolver::resolve_unsafe)
-                        .unwrap();
-                res.apply();
+                run_compiler_on_path(&file, unsafe_resolver::resolve_unsafe).unwrap();
+            }
+            Pass::Bin => {
+                run_compiler_on_path(&file, |tcx| bin_file_adder::add_bin_files(&output, tcx))
+                    .unwrap();
             }
             Pass::Check => {
-                compile_util::run_compiler_on_path(&file, type_checker::type_check).unwrap();
+                run_compiler_on_path(&file, type_checker::type_check).unwrap();
             }
             Pass::OutParam => {
                 todo!()

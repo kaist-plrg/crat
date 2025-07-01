@@ -20,7 +20,7 @@ use thin_vec::ThinVec;
 use typed_arena::Arena;
 
 use crate::{
-    ast_util::{self, TransformationResult},
+    ast_util,
     disjoint_set::DisjointSets,
     equiv_classes::{EquivClassId, EquivClasses},
     graph_util, ir_util,
@@ -49,7 +49,7 @@ impl LinkHint {
     }
 }
 
-pub fn resolve_extern(hints: &ResolveHints, tcx: TyCtxt<'_>) -> TransformationResult {
+pub fn resolve_extern(hints: &ResolveHints, tcx: TyCtxt<'_>) {
     let result = resolve(tcx);
 
     let mut resolve_map = FxHashMap::default();
@@ -106,7 +106,7 @@ pub fn resolve_extern(hints: &ResolveHints, tcx: TyCtxt<'_>) -> TransformationRe
         used: FxHashSet::default(),
         updated: false,
     };
-    ast_util::transform_ast(
+    let res = ast_util::transform_ast(
         |krate| {
             visitor.updated = false;
             visitor.visit_crate(krate);
@@ -125,7 +125,8 @@ pub fn resolve_extern(hints: &ResolveHints, tcx: TyCtxt<'_>) -> TransformationRe
             visitor.updated
         },
         tcx,
-    )
+    );
+    res.apply();
 }
 
 #[inline]

@@ -106,6 +106,7 @@ dependencies = [
  "etrace",
  "serde",
  "toml",
+ "toml_edit",
  "typed-arena",
 ]
 

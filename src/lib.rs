@@ -24,6 +24,7 @@ extern crate thin_vec;
 
 #[macro_use]
 pub mod ast_util;
+pub mod bin_file_adder;
 pub mod compile_util;
 pub mod disjoint_set;
 pub mod equiv_classes;
