@@ -11,6 +11,9 @@ use crat::*;
 #[derive(Parser)]
 #[command(version)]
 struct Args {
+    #[arg(long, help = "Path to the extern resolver hints file")]
+    resolve_hints_file: Option<PathBuf>,
+
     #[arg(short, long, help = "Path to the output directory")]
     output: PathBuf,
     #[arg(help = "Path to the input directory containing c2rust-lib.rs")]
@@ -30,7 +33,14 @@ fn main() {
     copy_dir(&args.input, &args.output, true);
     let file = args.output.join("c2rust-lib.rs");
 
-    let res = compile_util::run_compiler_on_path(&file, extern_resolver::resolve_extern).unwrap();
+    let hints = args
+        .resolve_hints_file
+        .as_ref()
+        .map(|p| fs::read_to_string(p).unwrap());
+    let res = compile_util::run_compiler_on_path(&file, |tcx| {
+        extern_resolver::resolve_extern(hints, tcx)
+    })
+    .unwrap();
     res.apply();
 
     let res = compile_util::run_compiler_on_path(&file, unsafe_resolver::resolve_unsafe).unwrap();

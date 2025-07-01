@@ -14,6 +14,7 @@ use rustc_middle::{
     ty::{self, List, TyCtxt, TypeSuperVisitable, TypeVisitor},
 };
 use rustc_span::{Span, Symbol, def_id::LocalDefId};
+use serde::Deserialize;
 use smallvec::SmallVec;
 use thin_vec::ThinVec;
 use typed_arena::Arena;
@@ -25,7 +26,24 @@ use crate::{
     graph_util, ir_util,
 };
 
-pub fn resolve_extern(tcx: TyCtxt<'_>) -> TransformationResult {
+#[derive(Debug, Default, Deserialize)]
+struct ResolveHints {
+    functions: Option<Vec<LinkHint>>,
+    variables: Option<Vec<LinkHint>>,
+    types: Option<Vec<LinkHint>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct LinkHint {
+    from: String,
+    to: String,
+}
+
+pub fn resolve_extern(hints: Option<String>, tcx: TyCtxt<'_>) -> TransformationResult {
+    let hints: ResolveHints = hints
+        .map(|hints| toml::from_str(&hints).unwrap())
+        .unwrap_or_default();
+
     let result = resolve(tcx);
 
     let mut resolve_map = FxHashMap::default();
@@ -53,6 +71,7 @@ pub fn resolve_extern(tcx: TyCtxt<'_>) -> TransformationResult {
         &result.extern_adts,
         &result.equiv_adts,
         &mut resolve_map,
+        hints.types.as_ref(),
         tcx,
     );
     link_failed |= link_externs(
@@ -60,6 +79,7 @@ pub fn resolve_extern(tcx: TyCtxt<'_>) -> TransformationResult {
         &result.extern_fns,
         &result.equiv_fns,
         &mut resolve_map,
+        hints.functions.as_ref(),
         tcx,
     );
     link_failed |= link_externs(
@@ -67,6 +87,7 @@ pub fn resolve_extern(tcx: TyCtxt<'_>) -> TransformationResult {
         &result.extern_statics,
         &result.equiv_statics,
         &mut resolve_map,
+        hints.variables.as_ref(),
         tcx,
     );
 
@@ -107,22 +128,54 @@ fn link_externs(
     externs: &[(LocalDefId, Vec<EquivClassId>)],
     equivs: &FxHashMap<Symbol, EquivClasses<LocalDefId>>,
     resolve_map: &mut FxHashMap<LocalDefId, LocalDefId>,
+    hints: Option<&Vec<LinkHint>>,
     tcx: TyCtxt<'_>,
 ) -> bool {
+    let hints: FxHashMap<_, _> = hints
+        .map(|hints| {
+            hints
+                .iter()
+                .map(|hint| (hint.from.as_str(), hint.to.as_str()))
+                .collect()
+        })
+        .unwrap_or_default();
+
     let mut link_failed = false;
     for (def_id, link_candidates) in externs {
         let name = ir_util::def_id_to_symbol(*def_id, tcx).unwrap();
         let classes = &equivs[&name];
+
+        let mut link_candidates = link_candidates;
+        let candidates: Vec<_>;
+        if link_candidates.len() > 1
+            && let Some(hint) = hints.get(tcx.def_path_str(*def_id).as_str())
+        {
+            candidates = link_candidates
+                .iter()
+                .copied()
+                .filter(|id| {
+                    let class = &classes.0[*id];
+                    class
+                        .iter()
+                        .any(|def_id| tcx.def_path_str(*def_id) == *hint)
+                })
+                .collect();
+            link_candidates = &candidates;
+        }
+
         if let [id] = link_candidates[..] {
             let class = &classes.0[id];
             let rep = find_representative_def_id(class, tcx);
             resolve_map.insert(*def_id, rep);
         } else {
-            eprintln!("{kind} link failed: {def_id:?} ({link_candidates:?})");
+            eprintln!(
+                "{kind} link failed: {} ({link_candidates:?})",
+                tcx.def_path_str(*def_id)
+            );
             for (id, class) in classes.0.iter_enumerated() {
                 eprintln!("  {id:?}");
                 for def_id in class {
-                    eprintln!("    {def_id:?}");
+                    eprintln!("    {}", tcx.def_path_str(*def_id));
                 }
             }
             link_failed = true;
@@ -250,9 +303,10 @@ fn resolve(tcx: TyCtxt<'_>) -> ResolveResult {
             let hir::Node::Item(item2) = tcx.hir_node_by_def_id(*id2) else { panic!() };
             let span1 = item1.span;
             let span2 = item2.span;
-            let len1 = span1.hi() - span1.lo();
-            let len2 = span2.hi() - span2.lo();
-            len1 == len2 && cmp.cmp_fn_sigs(*id1, *id2)
+            let source_map = tcx.sess.source_map();
+            let str1 = source_map.span_to_snippet(span1).unwrap();
+            let str2 = source_map.span_to_snippet(span2).unwrap();
+            str1 == str2 && cmp.cmp_fn_sigs(*id1, *id2)
         });
     }
     let mut extern_fns = vec![];
