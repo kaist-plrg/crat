@@ -27,23 +27,29 @@ use crate::{
 };
 
 #[derive(Debug, Default, Deserialize)]
-struct ResolveHints {
-    functions: Option<Vec<LinkHint>>,
-    variables: Option<Vec<LinkHint>>,
-    types: Option<Vec<LinkHint>>,
+pub struct ResolveHints {
+    #[serde(default)]
+    pub functions: Vec<LinkHint>,
+    #[serde(default)]
+    pub statics: Vec<LinkHint>,
+    #[serde(default)]
+    pub types: Vec<LinkHint>,
 }
 
 #[derive(Debug, Deserialize)]
-struct LinkHint {
-    from: String,
-    to: String,
+pub struct LinkHint {
+    pub from: String,
+    pub to: String,
 }
 
-pub fn resolve_extern(hints: Option<String>, tcx: TyCtxt<'_>) -> TransformationResult {
-    let hints: ResolveHints = hints
-        .map(|hints| toml::from_str(&hints).unwrap())
-        .unwrap_or_default();
+impl LinkHint {
+    #[inline]
+    pub fn new(from: String, to: String) -> Self {
+        Self { from, to }
+    }
+}
 
+pub fn resolve_extern(hints: &ResolveHints, tcx: TyCtxt<'_>) -> TransformationResult {
     let result = resolve(tcx);
 
     let mut resolve_map = FxHashMap::default();
@@ -71,7 +77,7 @@ pub fn resolve_extern(hints: Option<String>, tcx: TyCtxt<'_>) -> TransformationR
         &result.extern_adts,
         &result.equiv_adts,
         &mut resolve_map,
-        hints.types.as_ref(),
+        &hints.types,
         tcx,
     );
     link_failed |= link_externs(
@@ -79,7 +85,7 @@ pub fn resolve_extern(hints: Option<String>, tcx: TyCtxt<'_>) -> TransformationR
         &result.extern_fns,
         &result.equiv_fns,
         &mut resolve_map,
-        hints.functions.as_ref(),
+        &hints.functions,
         tcx,
     );
     link_failed |= link_externs(
@@ -87,7 +93,7 @@ pub fn resolve_extern(hints: Option<String>, tcx: TyCtxt<'_>) -> TransformationR
         &result.extern_statics,
         &result.equiv_statics,
         &mut resolve_map,
-        hints.variables.as_ref(),
+        &hints.statics,
         tcx,
     );
 
@@ -128,17 +134,13 @@ fn link_externs(
     externs: &[(LocalDefId, Vec<EquivClassId>)],
     equivs: &FxHashMap<Symbol, EquivClasses<LocalDefId>>,
     resolve_map: &mut FxHashMap<LocalDefId, LocalDefId>,
-    hints: Option<&Vec<LinkHint>>,
+    hints: &[LinkHint],
     tcx: TyCtxt<'_>,
 ) -> bool {
     let hints: FxHashMap<_, _> = hints
-        .map(|hints| {
-            hints
-                .iter()
-                .map(|hint| (hint.from.as_str(), hint.to.as_str()))
-                .collect()
-        })
-        .unwrap_or_default();
+        .iter()
+        .map(|hint| (hint.from.as_str(), hint.to.as_str()))
+        .collect();
 
     let mut link_failed = false;
     for (def_id, link_candidates) in externs {

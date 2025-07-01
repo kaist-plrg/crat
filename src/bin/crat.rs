@@ -5,46 +5,144 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use crat::*;
+use serde::Deserialize;
 
 #[derive(Parser)]
 #[command(version)]
 struct Args {
-    #[arg(long, help = "Path to the extern resolver hints file")]
-    resolve_hints_file: Option<PathBuf>,
+    #[arg(long, num_args = 2, value_names = ["FROM", "TO"], help = "Resolve hint for extern functions (example: `from::foo to::foo`)")]
+    resolve_function: Vec<String>,
+    #[arg(long, num_args = 2, value_names = ["FROM", "TO"], help = "Resolve hint for extern static variables (example: `from::foo to::foo`)")]
+    resolve_static: Vec<String>,
+    #[arg(long, num_args = 2, value_names = ["FROM", "TO"], help = "Resolve hint for extern types (example: `from::foo to::foo`)")]
+    resolve_type: Vec<String>,
+
+    #[arg(short, long, help = "Enable verbose output")]
+    verbose: bool,
+    #[arg(long, value_delimiter = ',', help = "Passes to run")]
+    pass: Vec<Pass>,
+    #[arg(long, help = "Path to the configuration file")]
+    config: Option<PathBuf>,
 
     #[arg(short, long, help = "Path to the output directory")]
-    output: PathBuf,
+    output: Option<PathBuf>,
     #[arg(help = "Path to the input directory containing c2rust-lib.rs")]
     input: PathBuf,
 }
 
+#[derive(Clone, Debug, ValueEnum, Deserialize)]
+#[clap(rename_all = "lower")]
+#[serde(rename_all = "lowercase")]
+enum Pass {
+    Extern,
+    Unsafe,
+    Check,
+    OutParam,
+    Lock,
+    Union,
+    Io,
+    Pointer,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct Config {
+    #[serde(default)]
+    resolve_hints: extern_resolver::ResolveHints,
+
+    #[serde(default)]
+    verbose: bool,
+    #[serde(default)]
+    passes: Vec<Pass>,
+    output: Option<PathBuf>,
+}
+
 fn main() {
-    let mut args = Args::parse();
+    let args = Args::parse();
 
-    args.output.push(args.input.file_name().unwrap());
-    if args.output.exists() {
-        assert!(args.output.is_dir());
-        clear_dir(&args.output);
+    let mut config = args
+        .config
+        .map(|path| {
+            let content = fs::read_to_string(path).unwrap();
+            toml::from_str::<Config>(&content).unwrap()
+        })
+        .unwrap_or_default();
+    config.verbose |= args.verbose;
+    config.passes.extend(args.pass);
+
+    let mut output = config
+        .output
+        .or(args.output)
+        .expect("The output directory must be specified in the configuration or as an argument");
+    output.push(args.input.file_name().unwrap());
+    if output.exists() {
+        assert!(output.is_dir(), "{output:?} is not a directory");
+        clear_dir(&output);
     } else {
-        fs::create_dir(&args.output).unwrap();
+        assert!(fs::create_dir(&output).is_ok(), "Cannot create {output:?}");
     }
-    copy_dir(&args.input, &args.output, true);
-    let file = args.output.join("c2rust-lib.rs");
+    copy_dir(&args.input, &output, true);
+    let file = output.join("c2rust-lib.rs");
 
-    let hints = args
-        .resolve_hints_file
-        .as_ref()
-        .map(|p| fs::read_to_string(p).unwrap());
-    let res = compile_util::run_compiler_on_path(&file, |tcx| {
-        extern_resolver::resolve_extern(hints, tcx)
-    })
-    .unwrap();
-    res.apply();
+    for pass in config.passes {
+        if config.verbose {
+            println!("{pass:?}");
+        }
+        match pass {
+            Pass::Extern => {
+                let resolve_hints = &mut config.resolve_hints;
+                for args in args.resolve_function.chunks(2) {
+                    let [from, to] = args else { panic!() };
+                    resolve_hints
+                        .functions
+                        .push(extern_resolver::LinkHint::new(from.clone(), to.clone()));
+                }
+                for args in args.resolve_static.chunks(2) {
+                    let [from, to] = args else { panic!() };
+                    resolve_hints
+                        .statics
+                        .push(extern_resolver::LinkHint::new(from.clone(), to.clone()));
+                }
+                for args in args.resolve_type.chunks(2) {
+                    let [from, to] = args else { panic!() };
+                    resolve_hints
+                        .types
+                        .push(extern_resolver::LinkHint::new(from.clone(), to.clone()));
+                }
 
-    let res = compile_util::run_compiler_on_path(&file, unsafe_resolver::resolve_unsafe).unwrap();
-    res.apply();
+                let res = compile_util::run_compiler_on_path(&file, |tcx| {
+                    extern_resolver::resolve_extern(resolve_hints, tcx)
+                })
+                .unwrap();
+                res.apply();
+            }
+            Pass::Unsafe => {
+                let res =
+                    compile_util::run_compiler_on_path(&file, unsafe_resolver::resolve_unsafe)
+                        .unwrap();
+                res.apply();
+            }
+            Pass::Check => {
+                compile_util::run_compiler_on_path(&file, type_checker::type_check).unwrap();
+            }
+            Pass::OutParam => {
+                todo!()
+            }
+            Pass::Lock => {
+                todo!()
+            }
+            Pass::Union => {
+                todo!()
+            }
+            Pass::Io => {
+                todo!()
+            }
+            Pass::Pointer => {
+                todo!()
+            }
+        }
+    }
 }
 
 fn clear_dir(path: &Path) {
