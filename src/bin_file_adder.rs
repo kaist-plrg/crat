@@ -9,9 +9,16 @@ use rustc_hir as hir;
 use rustc_hir::{definitions::DefPathData, intravisit};
 use rustc_middle::{hir::nested_filter, ty::TyCtxt};
 use rustc_span::def_id::LocalDefId;
+use serde::Deserialize;
 use toml_edit::{DocumentMut, Table};
 
-pub fn add_bin_files(dir: &Path, tcx: TyCtxt<'_>) {
+#[derive(Debug, Default, Deserialize)]
+pub struct Config {
+    #[serde(default)]
+    pub ignores: Vec<String>,
+}
+
+pub fn add_bin_files(dir: &Path, ignores: &Config, tcx: TyCtxt<'_>) {
     let mut visitor = HirVisitor {
         tcx,
         data: HirData::default(),
@@ -29,6 +36,11 @@ pub fn add_bin_files(dir: &Path, tcx: TyCtxt<'_>) {
         .unwrap();
 
     for def_id in visitor.data.mains {
+        let def_path_str = tcx.def_path_str(def_id);
+        if ignores.ignores.iter().any(|s| def_path_str.starts_with(s)) {
+            continue;
+        }
+
         let def_path = tcx.def_path(def_id.to_def_id());
 
         let mut fn_path = crate_name.clone();

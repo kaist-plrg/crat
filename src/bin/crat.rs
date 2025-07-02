@@ -20,6 +20,13 @@ struct Args {
     #[arg(long, num_args = 2, value_names = ["FROM", "TO"], help = "Resolve hint for extern types (example: `from::foo to::foo`)")]
     resolve_type: Vec<String>,
 
+    #[arg(
+        long,
+        value_delimiter = ',',
+        help = "Main function to ignore when adding bin files"
+    )]
+    bin_ignore: Vec<String>,
+
     #[arg(short, long, help = "Enable verbose output")]
     verbose: bool,
     #[arg(long, value_delimiter = ',', help = "Passes to run")]
@@ -51,7 +58,9 @@ enum Pass {
 #[derive(Debug, Default, Deserialize)]
 struct Config {
     #[serde(default)]
-    resolve_hints: extern_resolver::ResolveHints,
+    r#extern: extern_resolver::Config,
+    #[serde(default)]
+    bin: bin_file_adder::Config,
 
     #[serde(default)]
     verbose: bool,
@@ -73,6 +82,32 @@ fn main() {
     config.verbose |= args.verbose;
     config.passes.extend(args.pass);
 
+    for args in args.resolve_function.chunks(2) {
+        let [from, to] = args else { panic!() };
+        config
+            .r#extern
+            .function_hints
+            .push(extern_resolver::LinkHint::new(from.clone(), to.clone()));
+    }
+    for args in args.resolve_static.chunks(2) {
+        let [from, to] = args else { panic!() };
+        config
+            .r#extern
+            .static_hints
+            .push(extern_resolver::LinkHint::new(from.clone(), to.clone()));
+    }
+    for args in args.resolve_type.chunks(2) {
+        let [from, to] = args else { panic!() };
+        config
+            .r#extern
+            .type_hints
+            .push(extern_resolver::LinkHint::new(from.clone(), to.clone()));
+    }
+
+    for arg in args.bin_ignore {
+        config.bin.ignores.push(arg);
+    }
+
     let mut output = config
         .output
         .or(args.output)
@@ -93,28 +128,8 @@ fn main() {
         }
         match pass {
             Pass::Extern => {
-                let resolve_hints = &mut config.resolve_hints;
-                for args in args.resolve_function.chunks(2) {
-                    let [from, to] = args else { panic!() };
-                    resolve_hints
-                        .functions
-                        .push(extern_resolver::LinkHint::new(from.clone(), to.clone()));
-                }
-                for args in args.resolve_static.chunks(2) {
-                    let [from, to] = args else { panic!() };
-                    resolve_hints
-                        .statics
-                        .push(extern_resolver::LinkHint::new(from.clone(), to.clone()));
-                }
-                for args in args.resolve_type.chunks(2) {
-                    let [from, to] = args else { panic!() };
-                    resolve_hints
-                        .types
-                        .push(extern_resolver::LinkHint::new(from.clone(), to.clone()));
-                }
-
                 run_compiler_on_path(&file, |tcx| {
-                    extern_resolver::resolve_extern(resolve_hints, tcx)
+                    extern_resolver::resolve_extern(&config.r#extern, tcx)
                 })
                 .unwrap();
             }
@@ -122,8 +137,10 @@ fn main() {
                 run_compiler_on_path(&file, unsafe_resolver::resolve_unsafe).unwrap();
             }
             Pass::Bin => {
-                run_compiler_on_path(&file, |tcx| bin_file_adder::add_bin_files(&output, tcx))
-                    .unwrap();
+                run_compiler_on_path(&file, |tcx| {
+                    bin_file_adder::add_bin_files(&output, &config.bin, tcx)
+                })
+                .unwrap();
             }
             Pass::Check => {
                 run_compiler_on_path(&file, type_checker::type_check).unwrap();

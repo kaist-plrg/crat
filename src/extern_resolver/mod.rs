@@ -27,13 +27,13 @@ use crate::{
 };
 
 #[derive(Debug, Default, Deserialize)]
-pub struct ResolveHints {
+pub struct Config {
     #[serde(default)]
-    pub functions: Vec<LinkHint>,
+    pub function_hints: Vec<LinkHint>,
     #[serde(default)]
-    pub statics: Vec<LinkHint>,
+    pub static_hints: Vec<LinkHint>,
     #[serde(default)]
-    pub types: Vec<LinkHint>,
+    pub type_hints: Vec<LinkHint>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -49,7 +49,7 @@ impl LinkHint {
     }
 }
 
-pub fn resolve_extern(hints: &ResolveHints, tcx: TyCtxt<'_>) {
+pub fn resolve_extern(hints: &Config, tcx: TyCtxt<'_>) {
     let result = resolve(tcx);
 
     let mut resolve_map = FxHashMap::default();
@@ -77,7 +77,7 @@ pub fn resolve_extern(hints: &ResolveHints, tcx: TyCtxt<'_>) {
         &result.extern_adts,
         &result.equiv_adts,
         &mut resolve_map,
-        &hints.types,
+        &hints.type_hints,
         tcx,
     );
     link_failed |= link_externs(
@@ -85,7 +85,7 @@ pub fn resolve_extern(hints: &ResolveHints, tcx: TyCtxt<'_>) {
         &result.extern_fns,
         &result.equiv_fns,
         &mut resolve_map,
-        &hints.functions,
+        &hints.function_hints,
         tcx,
     );
     link_failed |= link_externs(
@@ -93,7 +93,7 @@ pub fn resolve_extern(hints: &ResolveHints, tcx: TyCtxt<'_>) {
         &result.extern_statics,
         &result.equiv_statics,
         &mut resolve_map,
-        &hints.statics,
+        &hints.static_hints,
         tcx,
     );
 
