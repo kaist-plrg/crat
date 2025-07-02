@@ -454,24 +454,38 @@ impl<'tcx> TypeComparator<'_, 'tcx> {
     }
 
     fn cmp_adts_inner(&mut self, def_id1: LocalDefId, def_id2: LocalDefId) -> bool {
-        let adt1 = self.tcx.adt_def(def_id1);
-        let adt2 = self.tcx.adt_def(def_id2);
-        if adt1.adt_kind() != adt2.adt_kind() {
-            return false;
-        }
+        let hir::Node::Item(item1) = self.tcx.hir_node_by_def_id(def_id1) else { panic!() };
+        let hir::Node::Item(item2) = self.tcx.hir_node_by_def_id(def_id2) else { panic!() };
 
-        let variant1 = adt1.variant(VariantIdx::ZERO);
-        let variant2 = adt2.variant(VariantIdx::ZERO);
-        if variant1.fields.len() != variant2.fields.len() {
+        let ((hir::ItemKind::Struct(_, vd1, _), hir::ItemKind::Struct(_, vd2, _))
+        | (hir::ItemKind::Union(_, vd1, _), hir::ItemKind::Union(_, vd2, _))) =
+            (item1.kind, item2.kind)
+        else {
             return false;
-        }
+        };
 
-        for (fd1, fd2) in variant1.fields.iter().zip(variant2.fields.iter()) {
-            let ty1 = fd1.ty(self.tcx, List::empty());
-            let ty2 = fd2.ty(self.tcx, List::empty());
-            if !self.cmp_tys(ty1, ty2) {
-                return false;
+        match (vd1, vd2) {
+            (
+                hir::VariantData::Struct { fields: fs1, .. },
+                hir::VariantData::Struct { fields: fs2, .. },
+            )
+            | (hir::VariantData::Tuple(fs1, _, _), hir::VariantData::Tuple(fs2, _, _)) => {
+                if fs1.len() != fs2.len() {
+                    return false;
+                }
+                for (f1, f2) in fs1.iter().zip(fs2) {
+                    if f1.ident.name != f2.ident.name {
+                        return false;
+                    }
+                    let ty1 = self.tcx.type_of(f1.def_id).skip_binder();
+                    let ty2 = self.tcx.type_of(f2.def_id).skip_binder();
+                    if !self.cmp_tys(ty1, ty2) {
+                        return false;
+                    }
+                }
             }
+            (hir::VariantData::Unit(_, _), hir::VariantData::Unit(_, _)) => {}
+            _ => return false,
         }
 
         true
