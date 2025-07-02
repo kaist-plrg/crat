@@ -71,6 +71,18 @@ pub fn resolve_extern(hints: &Config, tcx: TyCtxt<'_>) {
         }
     }
 
+    for def_ids in result.opaque_foreign_tys.values() {
+        if def_ids.len() <= 1 {
+            continue;
+        }
+        let rep = find_representative_def_id(def_ids, tcx);
+        for def_id in def_ids {
+            if *def_id != rep {
+                resolve_map.insert(*def_id, rep);
+            }
+        }
+    }
+
     let mut link_failed = false;
     link_failed |= link_externs(
         "Type",
@@ -203,6 +215,7 @@ struct ResolveResult {
     equiv_adts: FxHashMap<Symbol, EquivClasses<LocalDefId>>,
     equiv_unnameds: EquivClasses<LocalDefId>,
     extern_adts: Vec<(LocalDefId, Vec<EquivClassId>)>,
+    opaque_foreign_tys: FxHashMap<Symbol, Vec<LocalDefId>>,
 
     equiv_tys: FxHashMap<Symbol, EquivClasses<LocalDefId>>,
 
@@ -276,12 +289,16 @@ fn resolve(tcx: TyCtxt<'_>) -> ResolveResult {
     }
     let equiv_unnameds = cmp.equiv_unnameds.to_equiv_classes();
     let mut extern_adts = vec![];
+    let mut opaque_foreign_tys: FxHashMap<_, Vec<_>> = FxHashMap::default();
     for def_id in hir_data.foreign_tys {
         let name = ir_util::def_id_to_symbol(def_id, tcx).unwrap();
-        let classes = some_or!(equiv_adts.get_mut(&name), continue);
-        let mut link_candidates: Vec<_> = classes.0.indices().collect();
-        filter_by_common_def_path(&mut link_candidates, def_id, classes, tcx);
-        extern_adts.push((def_id, link_candidates));
+        if let Some(classes) = equiv_adts.get_mut(&name) {
+            let mut link_candidates: Vec<_> = classes.0.indices().collect();
+            filter_by_common_def_path(&mut link_candidates, def_id, classes, tcx);
+            extern_adts.push((def_id, link_candidates));
+        } else {
+            opaque_foreign_tys.entry(name).or_default().push(def_id);
+        }
     }
 
     let mut equiv_tys: FxHashMap<_, EquivClasses<LocalDefId>> = FxHashMap::default();
@@ -369,6 +386,7 @@ fn resolve(tcx: TyCtxt<'_>) -> ResolveResult {
         equiv_adts,
         equiv_unnameds,
         extern_adts,
+        opaque_foreign_tys,
         equiv_tys,
         equiv_fns,
         extern_fns,
