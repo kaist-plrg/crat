@@ -46,6 +46,7 @@ struct Args {
 enum Pass {
     Extern,
     Unsafe,
+    Assert,
     Bin,
     Check,
     OutParam,
@@ -135,6 +136,9 @@ fn main() {
             }
             Pass::Unsafe => {
                 run_compiler_on_path(&file, unsafe_resolver::resolve_unsafe).unwrap();
+            }
+            Pass::Assert => {
+                run_compiler_on_path(&file, assert_deduper::dedup_assert).unwrap();
             }
             Pass::Bin => {
                 run_compiler_on_path(&file, |tcx| {

@@ -22,6 +22,7 @@ extern crate rustc_type_ir;
 extern crate smallvec;
 extern crate thin_vec;
 
+pub mod assert_deduper;
 #[macro_use]
 pub mod ast_util;
 pub mod bin_file_adder;
