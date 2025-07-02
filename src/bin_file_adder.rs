@@ -1,12 +1,11 @@
 use std::{
-    fmt::Write as _,
     fs::{self, File},
     io::Write as _,
     path::Path,
 };
 
 use rustc_hir as hir;
-use rustc_hir::{definitions::DefPathData, intravisit};
+use rustc_hir::intravisit;
 use rustc_middle::{hir::nested_filter, ty::TyCtxt};
 use rustc_span::def_id::LocalDefId;
 use serde::Deserialize;
@@ -41,25 +40,11 @@ pub fn add_bin_files(dir: &Path, ignores: &Config, tcx: TyCtxt<'_>) {
             continue;
         }
 
-        let def_path = tcx.def_path(def_id.to_def_id());
-
-        let mut fn_path = crate_name.clone();
-        let mut bin_name = String::new();
-        for data in def_path.data {
-            let (DefPathData::TypeNs(name) | DefPathData::ValueNs(name)) = data.data else {
-                panic!()
-            };
-            write!(fn_path, "::{name}").unwrap();
-            if !bin_name.is_empty() {
-                bin_name.push('_');
-            }
-            write!(bin_name, "{name}").unwrap();
-        }
-
+        let bin_name = def_path_str.replace("::", "_").replace("r#", "");
         let filename = format!("{bin_name}.rs");
         let path = dir.join(&filename);
         let mut file = File::create_new(path).unwrap();
-        write!(file, "fn main() {{ {fn_path}(); }}").unwrap();
+        write!(file, "fn main() {{ {crate_name}::{def_path_str}(); }}").unwrap();
 
         let mut t = Table::new();
         t["name"] = toml_edit::value(bin_name);
