@@ -61,12 +61,10 @@ fn find_unsafe_fns(tcx: TyCtxt<'_>) -> FxHashSet<LocalDefId> {
     for item_id in tcx.hir_free_items() {
         let def_id = item_id.owner_id.def_id;
         let item = tcx.hir_item(item_id);
-        if !matches!(item.kind, rustc_hir::ItemKind::Fn { .. }) {
-            continue;
-        }
+        let rustc_hir::ItemKind::Fn { sig, .. } = item.kind else { continue };
         let (callees, is_unsafe) = check_unsafety::check_unsafety(tcx, def_id);
         call_graph.insert(def_id, callees);
-        if is_unsafe {
+        if is_unsafe || sig.decl.c_variadic {
             self_unsafe_fns.insert(def_id);
         }
     }

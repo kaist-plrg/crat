@@ -200,3 +200,16 @@ unsafe fn g() -> i32 {
 "#;
     run_test(code, &["f"]);
 }
+#[test]
+fn test_vararg() {
+    let code = r#"
+#![feature(c_variadic)]
+unsafe extern "C" fn f(mut x: i32, ...) -> i32 {
+    x
+}
+unsafe fn g(mut x: i32) -> i32 {
+    x
+}
+"#;
+    run_test(code, &["f"]);
+}
