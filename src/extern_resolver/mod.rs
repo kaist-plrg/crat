@@ -272,13 +272,9 @@ fn resolve(tcx: TyCtxt<'_>) -> ResolveResult {
             let mut classes = EquivClasses::new();
             for def_id in adts {
                 classes.insert(*def_id, |id1, id2| {
-                    let res = cmp.cmp_adts(*id1, *id2);
-                    let possibly_equiv_unnameds = cmp.possibly_equiv_unnameds.drain();
+                    let res = cmp.with_equiv_unnameds_update(|cmp| cmp.cmp_adts(*id1, *id2));
                     if res {
                         cmp.equiv_adts.union(*id1, *id2);
-                        for (unnamed1, unnamed2) in possibly_equiv_unnameds {
-                            cmp.equiv_unnameds.union(unnamed1, unnamed2);
-                        }
                     }
                     res
                 });
@@ -287,7 +283,6 @@ fn resolve(tcx: TyCtxt<'_>) -> ResolveResult {
             cmp.compared_names.insert(*name);
         }
     }
-    let equiv_unnameds = cmp.equiv_unnameds.to_equiv_classes();
     let mut extern_adts = vec![];
     let mut opaque_foreign_tys: FxHashMap<_, Vec<_>> = FxHashMap::default();
     for def_id in hir_data.foreign_tys {
@@ -308,7 +303,9 @@ fn resolve(tcx: TyCtxt<'_>) -> ResolveResult {
             continue;
         }
         let classes = equiv_tys.entry(name).or_insert_with(EquivClasses::new);
-        classes.insert(def_id, |id1, id2| cmp.cmp_type_of(*id1, *id2));
+        classes.insert(def_id, |id1, id2| {
+            cmp.with_equiv_unnameds_update(|cmp| cmp.cmp_type_of(*id1, *id2))
+        });
     }
 
     let mut equiv_fns: FxHashMap<_, EquivClasses<LocalDefId>> = FxHashMap::default();
@@ -327,7 +324,7 @@ fn resolve(tcx: TyCtxt<'_>) -> ResolveResult {
             let source_map = tcx.sess.source_map();
             let str1 = source_map.span_to_snippet(span1).unwrap();
             let str2 = source_map.span_to_snippet(span2).unwrap();
-            str1 == str2 && cmp.cmp_fn_sigs(*id1, *id2)
+            str1 == str2 && cmp.with_equiv_unnameds_update(|cmp| cmp.cmp_fn_sigs(*id1, *id2))
         });
     }
     let mut extern_fns = vec![];
@@ -338,7 +335,7 @@ fn resolve(tcx: TyCtxt<'_>) -> ResolveResult {
             .0
             .iter_enumerated()
             .filter_map(|(id, class)| {
-                if cmp.cmp_fn_sigs(class[0], def_id) {
+                if cmp.with_equiv_unnameds_update(|cmp| cmp.cmp_fn_sigs(class[0], def_id)) {
                     Some(id)
                 } else {
                     None
@@ -354,7 +351,7 @@ fn resolve(tcx: TyCtxt<'_>) -> ResolveResult {
         let name = ir_util::def_id_to_symbol(def_id, tcx).unwrap();
         let classes = equiv_statics.entry(name).or_insert_with(EquivClasses::new);
         classes.insert(def_id, |id1, id2| {
-            if !cmp.cmp_type_of(*id1, *id2) {
+            if !cmp.with_equiv_unnameds_update(|cmp| cmp.cmp_type_of(*id1, *id2)) {
                 return false;
             }
             let init1 = tcx.eval_static_initializer(*id1);
@@ -370,7 +367,7 @@ fn resolve(tcx: TyCtxt<'_>) -> ResolveResult {
             .0
             .iter_enumerated()
             .filter_map(|(id, class)| {
-                if cmp.cmp_type_of(class[0], def_id) {
+                if cmp.with_equiv_unnameds_update(|cmp| cmp.cmp_type_of(class[0], def_id)) {
                     Some(id)
                 } else {
                     None
@@ -380,6 +377,8 @@ fn resolve(tcx: TyCtxt<'_>) -> ResolveResult {
         filter_by_common_def_path(&mut link_candidates, def_id, classes, tcx);
         extern_statics.push((def_id, link_candidates));
     }
+
+    let equiv_unnameds = cmp.equiv_unnameds.to_equiv_classes();
 
     ResolveResult {
         span_to_def_id: hir_data.span_to_def_id,
@@ -455,6 +454,19 @@ struct TypeComparator<'a, 'tcx> {
 }
 
 impl<'tcx> TypeComparator<'_, 'tcx> {
+    #[inline]
+    fn with_equiv_unnameds_update<F: FnMut(&mut Self) -> bool>(&mut self, mut f: F) -> bool {
+        self.possibly_equiv_unnameds.clear();
+        let res = f(self);
+        let possibly_equiv_unnameds = self.possibly_equiv_unnameds.drain();
+        if res {
+            for (unnamed1, unnamed2) in possibly_equiv_unnameds {
+                self.equiv_unnameds.union(unnamed1, unnamed2);
+            }
+        }
+        res
+    }
+
     fn cmp_adts(&mut self, def_id1: LocalDefId, def_id2: LocalDefId) -> bool {
         let name = ir_util::def_id_to_symbol(def_id1, self.tcx).unwrap();
         let unnamed = is_unnamed(name.as_str());
