@@ -1,0 +1,154 @@
+use ::libc;
+extern "C" {
+    fn strerror(_: libc::c_int) -> *mut libc::c_char;
+    fn ulog(ttype: tlog, zfmt: *const libc::c_char, _: ...);
+    fn access(__name: *const libc::c_char, __type: libc::c_int) -> libc::c_int;
+    fn getuid() -> __uid_t;
+    fn geteuid() -> __uid_t;
+    fn getgid() -> __gid_t;
+    fn getegid() -> __gid_t;
+    fn __xstat(
+        __ver: libc::c_int,
+        __filename: *const libc::c_char,
+        __stat_buf: *mut stat,
+    ) -> libc::c_int;
+    fn __errno_location() -> *mut libc::c_int;
+}
+pub type __dev_t = libc::c_ulong;
+pub type __uid_t = libc::c_uint;
+pub type __gid_t = libc::c_uint;
+pub type __ino_t = libc::c_ulong;
+pub type __mode_t = libc::c_uint;
+pub type __nlink_t = libc::c_ulong;
+pub type __off_t = libc::c_long;
+pub type __time_t = libc::c_long;
+pub type __blksize_t = libc::c_long;
+pub type __blkcnt_t = libc::c_long;
+pub type __syscall_slong_t = libc::c_long;
+pub type uid_t = __uid_t;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct timespec {
+    pub tv_sec: __time_t,
+    pub tv_nsec: __syscall_slong_t,
+}
+pub type boolean = libc::c_int;
+pub type tlog = libc::c_uint;
+pub const LOG_DEBUG_END: tlog = 6;
+pub const LOG_DEBUG_CONTINUE: tlog = 5;
+pub const LOG_DEBUG_START: tlog = 4;
+pub const LOG_DEBUG: tlog = 3;
+pub const LOG_FATAL: tlog = 2;
+pub const LOG_ERROR: tlog = 1;
+pub const LOG_NORMAL: tlog = 0;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct stat {
+    pub st_dev: __dev_t,
+    pub st_ino: __ino_t,
+    pub st_nlink: __nlink_t,
+    pub st_mode: __mode_t,
+    pub st_uid: __uid_t,
+    pub st_gid: __gid_t,
+    pub __pad0: libc::c_int,
+    pub st_rdev: __dev_t,
+    pub st_size: __off_t,
+    pub st_blksize: __blksize_t,
+    pub st_blocks: __blkcnt_t,
+    pub st_atim: timespec,
+    pub st_mtim: timespec,
+    pub st_ctim: timespec,
+    pub __glibc_reserved: [__syscall_slong_t; 3],
+}
+#[inline]
+unsafe extern "C" fn stat(
+    mut __path: *const libc::c_char,
+    mut __statbuf: *mut stat,
+) -> libc::c_int {
+    return __xstat(1 as libc::c_int, __path, __statbuf);
+}
+pub unsafe extern "C" fn fsysdep_access(mut zfile: *const libc::c_char) -> boolean {
+    if access(zfile, 4 as libc::c_int) == 0 as libc::c_int {
+        return 1 as libc::c_int;
+    }
+    ulog(
+        LOG_ERROR,
+        b"%s: %s\0" as *const u8 as *const libc::c_char,
+        zfile,
+        strerror(*__errno_location()),
+    );
+    return 0 as libc::c_int;
+}
+pub unsafe extern "C" fn fsysdep_daemon_access(
+    mut zfile: *const libc::c_char,
+) -> boolean {
+    let mut s: stat = stat {
+        st_dev: 0,
+        st_ino: 0,
+        st_nlink: 0,
+        st_mode: 0,
+        st_uid: 0,
+        st_gid: 0,
+        __pad0: 0,
+        st_rdev: 0,
+        st_size: 0,
+        st_blksize: 0,
+        st_blocks: 0,
+        st_atim: timespec { tv_sec: 0, tv_nsec: 0 },
+        st_mtim: timespec { tv_sec: 0, tv_nsec: 0 },
+        st_ctim: timespec { tv_sec: 0, tv_nsec: 0 },
+        __glibc_reserved: [0; 3],
+    };
+    let mut ieuid: uid_t = 0;
+    let mut iuid: uid_t = 0;
+    let mut iegid: uid_t = 0;
+    let mut igid: uid_t = 0;
+    let mut fok: boolean = 0;
+    ieuid = geteuid();
+    if ieuid == 0 as libc::c_int as libc::c_uint {
+        return 1 as libc::c_int;
+    }
+    iuid = getuid();
+    iegid = getegid();
+    igid = getgid();
+    if ieuid == iuid && iegid == igid {
+        return 1 as libc::c_int;
+    }
+    if stat(zfile as *mut libc::c_char, &mut s) != 0 as libc::c_int {
+        if *__errno_location() == 13 as libc::c_int {
+            ulog(
+                LOG_ERROR,
+                b"%s: cannot be read by daemon\0" as *const u8 as *const libc::c_char,
+                zfile,
+            );
+        } else {
+            ulog(
+                LOG_ERROR,
+                b"stat (%s): %s\0" as *const u8 as *const libc::c_char,
+                zfile,
+                strerror(*__errno_location()),
+            );
+        }
+        return 0 as libc::c_int;
+    }
+    if ieuid != iuid && ieuid == s.st_uid {
+        fok = (s.st_mode & 0o400 as libc::c_int as libc::c_uint
+            != 0 as libc::c_int as libc::c_uint) as libc::c_int;
+    } else if iegid != igid && iegid == s.st_gid {
+        fok = (s.st_mode & (0o400 as libc::c_int >> 3 as libc::c_int) as libc::c_uint
+            != 0 as libc::c_int as libc::c_uint) as libc::c_int;
+    } else {
+        fok = (s.st_mode
+            & (0o400 as libc::c_int >> 3 as libc::c_int >> 3 as libc::c_int)
+                as libc::c_uint != 0 as libc::c_int as libc::c_uint) as libc::c_int;
+    }
+    if fok == 0 {
+        ulog(
+            LOG_ERROR,
+            b"%s: cannot be read by daemon\0" as *const u8 as *const libc::c_char,
+            zfile,
+        );
+        return 0 as libc::c_int;
+    }
+    return 1 as libc::c_int;
+}

@@ -1,0 +1,242 @@
+use ::libc;
+extern "C" {
+    fn sigemptyset(__set: *mut sigset_t) -> libc::c_int;
+    fn sigaction(
+        __sig: libc::c_int,
+        __act: *const sigaction,
+        __oact: *mut sigaction,
+    ) -> libc::c_int;
+    fn strerror(_: libc::c_int) -> *mut libc::c_char;
+    fn ulog(ttype: tlog, zfmt: *const libc::c_char, _: ...);
+    static mut afSignal: [sig_atomic_t; 5];
+    static mut afLog_signal: [sig_atomic_t; 5];
+    fn __errno_location() -> *mut libc::c_int;
+}
+pub type __uint32_t = libc::c_uint;
+pub type __uid_t = libc::c_uint;
+pub type __pid_t = libc::c_int;
+pub type __clock_t = libc::c_long;
+pub type __sig_atomic_t = libc::c_int;
+pub type sig_atomic_t = __sig_atomic_t;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct __sigset_t {
+    pub __val: [libc::c_ulong; 16],
+}
+pub type sigset_t = __sigset_t;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub union sigval {
+    pub sival_int: libc::c_int,
+    pub sival_ptr: *mut libc::c_void,
+}
+pub type __sigval_t = sigval;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct siginfo_t {
+    pub si_signo: libc::c_int,
+    pub si_errno: libc::c_int,
+    pub si_code: libc::c_int,
+    pub __pad0: libc::c_int,
+    pub _sifields: C2RustUnnamed,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub union C2RustUnnamed {
+    pub _pad: [libc::c_int; 28],
+    pub _kill: C2RustUnnamed_8,
+    pub _timer: C2RustUnnamed_7,
+    pub _rt: C2RustUnnamed_6,
+    pub _sigchld: C2RustUnnamed_5,
+    pub _sigfault: C2RustUnnamed_2,
+    pub _sigpoll: C2RustUnnamed_1,
+    pub _sigsys: C2RustUnnamed_0,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct C2RustUnnamed_0 {
+    pub _call_addr: *mut libc::c_void,
+    pub _syscall: libc::c_int,
+    pub _arch: libc::c_uint,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct C2RustUnnamed_1 {
+    pub si_band: libc::c_long,
+    pub si_fd: libc::c_int,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct C2RustUnnamed_2 {
+    pub si_addr: *mut libc::c_void,
+    pub si_addr_lsb: libc::c_short,
+    pub _bounds: C2RustUnnamed_3,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub union C2RustUnnamed_3 {
+    pub _addr_bnd: C2RustUnnamed_4,
+    pub _pkey: __uint32_t,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct C2RustUnnamed_4 {
+    pub _lower: *mut libc::c_void,
+    pub _upper: *mut libc::c_void,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct C2RustUnnamed_5 {
+    pub si_pid: __pid_t,
+    pub si_uid: __uid_t,
+    pub si_status: libc::c_int,
+    pub si_utime: __clock_t,
+    pub si_stime: __clock_t,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct C2RustUnnamed_6 {
+    pub si_pid: __pid_t,
+    pub si_uid: __uid_t,
+    pub si_sigval: __sigval_t,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct C2RustUnnamed_7 {
+    pub si_tid: libc::c_int,
+    pub si_overrun: libc::c_int,
+    pub si_sigval: __sigval_t,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct C2RustUnnamed_8 {
+    pub si_pid: __pid_t,
+    pub si_uid: __uid_t,
+}
+pub type __sighandler_t = Option::<unsafe extern "C" fn(libc::c_int) -> ()>;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct sigaction {
+    pub __sigaction_handler: C2RustUnnamed_9,
+    pub sa_mask: __sigset_t,
+    pub sa_flags: libc::c_int,
+    pub sa_restorer: Option::<unsafe extern "C" fn() -> ()>,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub union C2RustUnnamed_9 {
+    pub sa_handler: __sighandler_t,
+    pub sa_sigaction: Option::<
+        unsafe extern "C" fn(libc::c_int, *mut siginfo_t, *mut libc::c_void) -> (),
+    >,
+}
+pub type boolean = libc::c_int;
+pub type tlog = libc::c_uint;
+pub const LOG_DEBUG_END: tlog = 6;
+pub const LOG_DEBUG_CONTINUE: tlog = 5;
+pub const LOG_DEBUG_START: tlog = 4;
+pub const LOG_DEBUG: tlog = 3;
+pub const LOG_FATAL: tlog = 2;
+pub const LOG_ERROR: tlog = 1;
+pub const LOG_NORMAL: tlog = 0;
+pub unsafe extern "C" fn ussignal(mut isig: libc::c_int) {
+    let mut iindex: libc::c_int = 0;
+    match isig {
+        2 => {
+            iindex = 1 as libc::c_int;
+        }
+        3 => {
+            iindex = 2 as libc::c_int;
+        }
+        15 => {
+            iindex = 3 as libc::c_int;
+        }
+        13 => {
+            iindex = 4 as libc::c_int;
+        }
+        _ => {
+            iindex = 0 as libc::c_int;
+        }
+    }
+    ::std::ptr::write_volatile(
+        &mut afSignal[iindex as usize] as *mut sig_atomic_t,
+        1 as libc::c_int,
+    );
+    ::std::ptr::write_volatile(
+        &mut afLog_signal[iindex as usize] as *mut sig_atomic_t,
+        1 as libc::c_int,
+    );
+}
+pub unsafe extern "C" fn usset_signal(
+    mut isig: libc::c_int,
+    mut pfn: Option::<unsafe extern "C" fn(libc::c_int) -> ()>,
+    mut fforce: boolean,
+    mut pfignored: *mut boolean,
+) {
+    let mut s: sigaction = sigaction {
+        __sigaction_handler: C2RustUnnamed_9 {
+            sa_handler: None,
+        },
+        sa_mask: __sigset_t { __val: [0; 16] },
+        sa_flags: 0,
+        sa_restorer: None,
+    };
+    if fforce == 0 {
+        sigemptyset(&mut s.sa_mask);
+        if sigaction(isig, 0 as *mut libc::c_void as *mut sigaction, &mut s)
+            != 0 as libc::c_int
+        {
+            ulog(
+                LOG_FATAL,
+                b"sigaction (%d): %s\0" as *const u8 as *const libc::c_char,
+                isig,
+                strerror(*__errno_location()),
+            );
+        }
+        if s.__sigaction_handler.sa_handler
+            == ::std::mem::transmute::<
+                libc::intptr_t,
+                __sighandler_t,
+            >(1 as libc::c_int as libc::intptr_t)
+        {
+            if !pfignored.is_null() {
+                *pfignored = 1 as libc::c_int;
+            }
+            return;
+        }
+        if !pfignored.is_null() {
+            *pfignored = 0 as libc::c_int;
+        }
+    }
+    s.__sigaction_handler.sa_handler = pfn;
+    sigemptyset(&mut s.sa_mask);
+    s.sa_flags = 0x20000000 as libc::c_int;
+    if sigaction(isig, &mut s, 0 as *mut libc::c_void as *mut sigaction)
+        != 0 as libc::c_int
+    {
+        ulog(
+            LOG_FATAL,
+            b"sigaction (%d): %s\0" as *const u8 as *const libc::c_char,
+            isig,
+            strerror(*__errno_location()),
+        );
+    }
+}
+pub unsafe extern "C" fn usysdep_signal(mut isig: libc::c_int) {
+    usset_signal(
+        isig,
+        ::std::mem::transmute::<
+            Option::<unsafe extern "C" fn() -> ()>,
+            Option::<unsafe extern "C" fn(libc::c_int) -> ()>,
+        >(
+            Some(
+                ::std::mem::transmute::<
+                    unsafe extern "C" fn(libc::c_int) -> (),
+                    unsafe extern "C" fn() -> (),
+                >(ussignal),
+            ),
+        ),
+        0 as libc::c_int,
+        0 as *mut libc::c_void as *mut boolean,
+    );
+}

@@ -1,0 +1,1833 @@
+use ::libc;
+extern "C" {
+    pub type _zend_unserialize_data;
+    pub type _zend_serialize_data;
+    static mut zend_string_init_interned: zend_string_init_interned_func_t;
+    fn memset(
+        _: *mut libc::c_void,
+        _: libc::c_int,
+        _: libc::c_ulong,
+    ) -> *mut libc::c_void;
+    fn _emalloc(size: size_t) -> *mut libc::c_void;
+    fn _emalloc_8() -> *mut libc::c_void;
+    fn _emalloc_16() -> *mut libc::c_void;
+    fn _emalloc_24() -> *mut libc::c_void;
+    fn _emalloc_32() -> *mut libc::c_void;
+    fn _emalloc_40() -> *mut libc::c_void;
+    fn _emalloc_48() -> *mut libc::c_void;
+    fn _emalloc_56() -> *mut libc::c_void;
+    fn _emalloc_64() -> *mut libc::c_void;
+    fn _emalloc_80() -> *mut libc::c_void;
+    fn _emalloc_96() -> *mut libc::c_void;
+    fn _emalloc_112() -> *mut libc::c_void;
+    fn _emalloc_128() -> *mut libc::c_void;
+    fn _emalloc_160() -> *mut libc::c_void;
+    fn _emalloc_192() -> *mut libc::c_void;
+    fn _emalloc_224() -> *mut libc::c_void;
+    fn _emalloc_256() -> *mut libc::c_void;
+    fn _emalloc_320() -> *mut libc::c_void;
+    fn _emalloc_384() -> *mut libc::c_void;
+    fn _emalloc_448() -> *mut libc::c_void;
+    fn _emalloc_512() -> *mut libc::c_void;
+    fn _emalloc_640() -> *mut libc::c_void;
+    fn _emalloc_768() -> *mut libc::c_void;
+    fn _emalloc_896() -> *mut libc::c_void;
+    fn _emalloc_1024() -> *mut libc::c_void;
+    fn _emalloc_1280() -> *mut libc::c_void;
+    fn _emalloc_1536() -> *mut libc::c_void;
+    fn _emalloc_1792() -> *mut libc::c_void;
+    fn _emalloc_2048() -> *mut libc::c_void;
+    fn _emalloc_2560() -> *mut libc::c_void;
+    fn _emalloc_3072() -> *mut libc::c_void;
+    fn _emalloc_large(size: size_t) -> *mut libc::c_void;
+    fn _emalloc_huge(size: size_t) -> *mut libc::c_void;
+    fn zend_hash_next_index_insert(ht: *mut HashTable, pData: *mut zval) -> *mut zval;
+    fn _zend_new_array_0() -> *mut HashTable;
+    fn _zend_new_array(size: uint32_t) -> *mut HashTable;
+    fn rc_dtor_func(p: *mut zend_refcounted);
+    fn zval_ptr_dtor(zval_ptr: *mut zval);
+    fn zend_object_std_init(object: *mut zend_object, ce_0: *mut zend_class_entry);
+    fn zend_object_std_dtor(object: *mut zend_object);
+    fn zend_register_internal_class_ex(
+        class_entry: *mut zend_class_entry,
+        parent_ce: *mut zend_class_entry,
+    ) -> *mut zend_class_entry;
+    fn zend_class_implements(
+        class_entry: *mut zend_class_entry,
+        num_interfaces: libc::c_int,
+        _: ...
+    );
+    fn object_init_ex(arg: *mut zval, ce_0: *mut zend_class_entry) -> libc::c_int;
+    fn object_properties_init(
+        object: *mut zend_object,
+        class_type: *mut zend_class_entry,
+    );
+    fn zend_wrong_parameters_none_error() -> libc::c_int;
+    fn zim_RdKafka___construct(
+        execute_data: *mut zend_execute_data,
+        return_value: *mut zval,
+    );
+    static mut kafka_default_object_handlers: zend_object_handlers;
+    static mut ce_kafka_exception: *mut zend_class_entry;
+    static mut zend_ce_iterator: *mut zend_class_entry;
+    static mut zend_ce_countable: *mut zend_class_entry;
+    fn zend_throw_exception(
+        exception_ce: *mut zend_class_entry,
+        message: *const libc::c_char,
+        code: zend_long,
+    ) -> *mut zend_object;
+    fn zend_throw_exception_ex(
+        exception_ce: *mut zend_class_entry,
+        code: zend_long,
+        format: *const libc::c_char,
+        _: ...
+    ) -> *mut zend_object;
+}
+pub type size_t = libc::c_ulong;
+pub type __uint8_t = libc::c_uchar;
+pub type __uint16_t = libc::c_ushort;
+pub type __uint32_t = libc::c_uint;
+pub type __int64_t = libc::c_long;
+pub type __uint64_t = libc::c_ulong;
+pub type int64_t = __int64_t;
+pub type uint8_t = __uint8_t;
+pub type uint16_t = __uint16_t;
+pub type uint32_t = __uint32_t;
+pub type uint64_t = __uint64_t;
+pub type uintptr_t = libc::c_ulong;
+pub type zend_long = int64_t;
+pub type zend_ulong = uint64_t;
+pub type zend_bool = libc::c_uchar;
+pub type zend_uchar = libc::c_uchar;
+pub type C2RustUnnamed = libc::c_int;
+pub const FAILURE: C2RustUnnamed = -1;
+pub const SUCCESS: C2RustUnnamed = 0;
+pub type zend_uintptr_t = uintptr_t;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct _zend_object_handlers {
+    pub offset: libc::c_int,
+    pub free_obj: zend_object_free_obj_t,
+    pub dtor_obj: zend_object_dtor_obj_t,
+    pub clone_obj: zend_object_clone_obj_t,
+    pub read_property: zend_object_read_property_t,
+    pub write_property: zend_object_write_property_t,
+    pub read_dimension: zend_object_read_dimension_t,
+    pub write_dimension: zend_object_write_dimension_t,
+    pub get_property_ptr_ptr: zend_object_get_property_ptr_ptr_t,
+    pub get: zend_object_get_t,
+    pub set: zend_object_set_t,
+    pub has_property: zend_object_has_property_t,
+    pub unset_property: zend_object_unset_property_t,
+    pub has_dimension: zend_object_has_dimension_t,
+    pub unset_dimension: zend_object_unset_dimension_t,
+    pub get_properties: zend_object_get_properties_t,
+    pub get_method: zend_object_get_method_t,
+    pub call_method: zend_object_call_method_t,
+    pub get_constructor: zend_object_get_constructor_t,
+    pub get_class_name: zend_object_get_class_name_t,
+    pub compare_objects: zend_object_compare_t,
+    pub cast_object: zend_object_cast_t,
+    pub count_elements: zend_object_count_elements_t,
+    pub get_debug_info: zend_object_get_debug_info_t,
+    pub get_closure: zend_object_get_closure_t,
+    pub get_gc: zend_object_get_gc_t,
+    pub do_operation: zend_object_do_operation_t,
+    pub compare: zend_object_compare_zvals_t,
+    pub get_properties_for: zend_object_get_properties_for_t,
+}
+pub type zend_object_get_properties_for_t = Option::<
+    unsafe extern "C" fn(*mut zval, zend_prop_purpose) -> *mut zend_array,
+>;
+pub type zend_prop_purpose = _zend_prop_purpose;
+pub type _zend_prop_purpose = libc::c_uint;
+pub const _ZEND_PROP_PURPOSE_NON_EXHAUSTIVE_ENUM: _zend_prop_purpose = 6;
+pub const _ZEND_PROP_PURPOSE_ARRAY_KEY_EXISTS: _zend_prop_purpose = 5;
+pub const ZEND_PROP_PURPOSE_JSON: _zend_prop_purpose = 4;
+pub const ZEND_PROP_PURPOSE_VAR_EXPORT: _zend_prop_purpose = 3;
+pub const ZEND_PROP_PURPOSE_SERIALIZE: _zend_prop_purpose = 2;
+pub const ZEND_PROP_PURPOSE_ARRAY_CAST: _zend_prop_purpose = 1;
+pub const ZEND_PROP_PURPOSE_DEBUG: _zend_prop_purpose = 0;
+pub type zval = _zval_struct;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct _zval_struct {
+    pub value: zend_value,
+    pub u1: C2RustUnnamed_1,
+    pub u2: C2RustUnnamed_0,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub union C2RustUnnamed_0 {
+    pub next: uint32_t,
+    pub cache_slot: uint32_t,
+    pub opline_num: uint32_t,
+    pub lineno: uint32_t,
+    pub num_args: uint32_t,
+    pub fe_pos: uint32_t,
+    pub fe_iter_idx: uint32_t,
+    pub access_flags: uint32_t,
+    pub property_guard: uint32_t,
+    pub constant_flags: uint32_t,
+    pub extra: uint32_t,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub union C2RustUnnamed_1 {
+    pub v: C2RustUnnamed_2,
+    pub type_info: uint32_t,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct C2RustUnnamed_2 {
+    pub type_0: zend_uchar,
+    pub type_flags: zend_uchar,
+    pub u: C2RustUnnamed_3,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub union C2RustUnnamed_3 {
+    pub extra: uint16_t,
+}
+pub type zend_value = _zend_value;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub union _zend_value {
+    pub lval: zend_long,
+    pub dval: libc::c_double,
+    pub counted: *mut zend_refcounted,
+    pub str_0: *mut zend_string,
+    pub arr: *mut zend_array,
+    pub obj: *mut zend_object,
+    pub res: *mut zend_resource,
+    pub ref_0: *mut zend_reference,
+    pub ast: *mut zend_ast_ref,
+    pub zv: *mut zval,
+    pub ptr: *mut libc::c_void,
+    pub ce: *mut zend_class_entry,
+    pub func: *mut zend_function,
+    pub ww: C2RustUnnamed_4,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct C2RustUnnamed_4 {
+    pub w1: uint32_t,
+    pub w2: uint32_t,
+}
+pub type zend_function = _zend_function;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub union _zend_function {
+    pub type_0: zend_uchar,
+    pub quick_arg_flags: uint32_t,
+    pub common: C2RustUnnamed_14,
+    pub op_array: zend_op_array,
+    pub internal_function: zend_internal_function,
+}
+pub type zend_internal_function = _zend_internal_function;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct _zend_internal_function {
+    pub type_0: zend_uchar,
+    pub arg_flags: [zend_uchar; 3],
+    pub fn_flags: uint32_t,
+    pub function_name: *mut zend_string,
+    pub scope: *mut zend_class_entry,
+    pub prototype: *mut zend_function,
+    pub num_args: uint32_t,
+    pub required_num_args: uint32_t,
+    pub arg_info: *mut zend_internal_arg_info,
+    pub handler: zif_handler,
+    pub module: *mut _zend_module_entry,
+    pub reserved: [*mut libc::c_void; 6],
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct _zend_module_entry {
+    pub size: libc::c_ushort,
+    pub zend_api: libc::c_uint,
+    pub zend_debug: libc::c_uchar,
+    pub zts: libc::c_uchar,
+    pub ini_entry: *const _zend_ini_entry,
+    pub deps: *const _zend_module_dep,
+    pub name: *const libc::c_char,
+    pub functions: *const _zend_function_entry,
+    pub module_startup_func: Option::<
+        unsafe extern "C" fn(libc::c_int, libc::c_int) -> libc::c_int,
+    >,
+    pub module_shutdown_func: Option::<
+        unsafe extern "C" fn(libc::c_int, libc::c_int) -> libc::c_int,
+    >,
+    pub request_startup_func: Option::<
+        unsafe extern "C" fn(libc::c_int, libc::c_int) -> libc::c_int,
+    >,
+    pub request_shutdown_func: Option::<
+        unsafe extern "C" fn(libc::c_int, libc::c_int) -> libc::c_int,
+    >,
+    pub info_func: Option::<unsafe extern "C" fn(*mut zend_module_entry) -> ()>,
+    pub version: *const libc::c_char,
+    pub globals_size: size_t,
+    pub globals_ptr: *mut libc::c_void,
+    pub globals_ctor: Option::<unsafe extern "C" fn(*mut libc::c_void) -> ()>,
+    pub globals_dtor: Option::<unsafe extern "C" fn(*mut libc::c_void) -> ()>,
+    pub post_deactivate_func: Option::<unsafe extern "C" fn() -> libc::c_int>,
+    pub module_started: libc::c_int,
+    pub type_0: libc::c_uchar,
+    pub handle: *mut libc::c_void,
+    pub module_number: libc::c_int,
+    pub build_id: *const libc::c_char,
+}
+pub type zend_module_entry = _zend_module_entry;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct _zend_function_entry {
+    pub fname: *const libc::c_char,
+    pub handler: zif_handler,
+    pub arg_info: *const _zend_internal_arg_info,
+    pub num_args: uint32_t,
+    pub flags: uint32_t,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct _zend_internal_arg_info {
+    pub name: *const libc::c_char,
+    pub type_0: zend_type,
+    pub pass_by_reference: zend_uchar,
+    pub is_variadic: zend_bool,
+}
+pub type zend_type = uintptr_t;
+pub type zif_handler = Option::<
+    unsafe extern "C" fn(*mut zend_execute_data, *mut zval) -> (),
+>;
+pub type zend_execute_data = _zend_execute_data;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct _zend_execute_data {
+    pub opline: *const zend_op,
+    pub call: *mut zend_execute_data,
+    pub return_value: *mut zval,
+    pub func: *mut zend_function,
+    pub This: zval,
+    pub prev_execute_data: *mut zend_execute_data,
+    pub symbol_table: *mut zend_array,
+    pub run_time_cache: *mut *mut libc::c_void,
+}
+pub type zend_array = _zend_array;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct _zend_array {
+    pub gc: zend_refcounted_h,
+    pub u: C2RustUnnamed_6,
+    pub nTableMask: uint32_t,
+    pub arData: *mut Bucket,
+    pub nNumUsed: uint32_t,
+    pub nNumOfElements: uint32_t,
+    pub nTableSize: uint32_t,
+    pub nInternalPointer: uint32_t,
+    pub nNextFreeElement: zend_long,
+    pub pDestructor: dtor_func_t,
+}
+pub type dtor_func_t = Option::<unsafe extern "C" fn(*mut zval) -> ()>;
+pub type Bucket = _Bucket;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct _Bucket {
+    pub val: zval,
+    pub h: zend_ulong,
+    pub key: *mut zend_string,
+}
+pub type zend_string = _zend_string;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct _zend_string {
+    pub gc: zend_refcounted_h,
+    pub h: zend_ulong,
+    pub len: size_t,
+    pub val: [libc::c_char; 1],
+}
+pub type zend_refcounted_h = _zend_refcounted_h;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct _zend_refcounted_h {
+    pub refcount: uint32_t,
+    pub u: C2RustUnnamed_5,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub union C2RustUnnamed_5 {
+    pub type_info: uint32_t,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub union C2RustUnnamed_6 {
+    pub v: C2RustUnnamed_7,
+    pub flags: uint32_t,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct C2RustUnnamed_7 {
+    pub flags: zend_uchar,
+    pub _unused: zend_uchar,
+    pub nIteratorsCount: zend_uchar,
+    pub _unused2: zend_uchar,
+}
+pub type zend_op = _zend_op;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct _zend_op {
+    pub handler: *const libc::c_void,
+    pub op1: znode_op,
+    pub op2: znode_op,
+    pub result: znode_op,
+    pub extended_value: uint32_t,
+    pub lineno: uint32_t,
+    pub opcode: zend_uchar,
+    pub op1_type: zend_uchar,
+    pub op2_type: zend_uchar,
+    pub result_type: zend_uchar,
+}
+pub type znode_op = _znode_op;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub union _znode_op {
+    pub constant: uint32_t,
+    pub var: uint32_t,
+    pub num: uint32_t,
+    pub opline_num: uint32_t,
+    pub jmp_offset: uint32_t,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct _zend_module_dep {
+    pub name: *const libc::c_char,
+    pub rel: *const libc::c_char,
+    pub version: *const libc::c_char,
+    pub type_0: libc::c_uchar,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct _zend_ini_entry {
+    pub name: *mut zend_string,
+    pub on_modify: Option::<
+        unsafe extern "C" fn(
+            *mut zend_ini_entry,
+            *mut zend_string,
+            *mut libc::c_void,
+            *mut libc::c_void,
+            *mut libc::c_void,
+            libc::c_int,
+        ) -> libc::c_int,
+    >,
+    pub mh_arg1: *mut libc::c_void,
+    pub mh_arg2: *mut libc::c_void,
+    pub mh_arg3: *mut libc::c_void,
+    pub value: *mut zend_string,
+    pub orig_value: *mut zend_string,
+    pub displayer: Option::<
+        unsafe extern "C" fn(*mut zend_ini_entry, libc::c_int) -> (),
+    >,
+    pub module_number: libc::c_int,
+    pub modifiable: uint8_t,
+    pub orig_modifiable: uint8_t,
+    pub modified: uint8_t,
+}
+pub type zend_ini_entry = _zend_ini_entry;
+pub type zend_internal_arg_info = _zend_internal_arg_info;
+pub type zend_class_entry = _zend_class_entry;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct _zend_class_entry {
+    pub type_0: libc::c_char,
+    pub name: *mut zend_string,
+    pub c2rust_unnamed: C2RustUnnamed_13,
+    pub refcount: libc::c_int,
+    pub ce_flags: uint32_t,
+    pub default_properties_count: libc::c_int,
+    pub default_static_members_count: libc::c_int,
+    pub default_properties_table: *mut zval,
+    pub default_static_members_table: *mut zval,
+    pub static_members_table__ptr: *mut *mut zval,
+    pub function_table: HashTable,
+    pub properties_info: HashTable,
+    pub constants_table: HashTable,
+    pub properties_info_table: *mut *mut _zend_property_info,
+    pub constructor: *mut zend_function,
+    pub destructor: *mut zend_function,
+    pub clone: *mut zend_function,
+    pub __get: *mut zend_function,
+    pub __set: *mut zend_function,
+    pub __unset: *mut zend_function,
+    pub __isset: *mut zend_function,
+    pub __call: *mut zend_function,
+    pub __callstatic: *mut zend_function,
+    pub __tostring: *mut zend_function,
+    pub __debugInfo: *mut zend_function,
+    pub serialize_func: *mut zend_function,
+    pub unserialize_func: *mut zend_function,
+    pub iterator_funcs_ptr: *mut zend_class_iterator_funcs,
+    pub c2rust_unnamed_0: C2RustUnnamed_12,
+    pub get_iterator: Option::<
+        unsafe extern "C" fn(
+            *mut zend_class_entry,
+            *mut zval,
+            libc::c_int,
+        ) -> *mut zend_object_iterator,
+    >,
+    pub get_static_method: Option::<
+        unsafe extern "C" fn(
+            *mut zend_class_entry,
+            *mut zend_string,
+        ) -> *mut zend_function,
+    >,
+    pub serialize: Option::<
+        unsafe extern "C" fn(
+            *mut zval,
+            *mut *mut libc::c_uchar,
+            *mut size_t,
+            *mut zend_serialize_data,
+        ) -> libc::c_int,
+    >,
+    pub unserialize: Option::<
+        unsafe extern "C" fn(
+            *mut zval,
+            *mut zend_class_entry,
+            *const libc::c_uchar,
+            size_t,
+            *mut zend_unserialize_data,
+        ) -> libc::c_int,
+    >,
+    pub num_interfaces: uint32_t,
+    pub num_traits: uint32_t,
+    pub c2rust_unnamed_1: C2RustUnnamed_11,
+    pub trait_names: *mut zend_class_name,
+    pub trait_aliases: *mut *mut zend_trait_alias,
+    pub trait_precedences: *mut *mut zend_trait_precedence,
+    pub info: C2RustUnnamed_8,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub union C2RustUnnamed_8 {
+    pub user: C2RustUnnamed_10,
+    pub internal: C2RustUnnamed_9,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct C2RustUnnamed_9 {
+    pub builtin_functions: *const _zend_function_entry,
+    pub module: *mut _zend_module_entry,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct C2RustUnnamed_10 {
+    pub filename: *mut zend_string,
+    pub line_start: uint32_t,
+    pub line_end: uint32_t,
+    pub doc_comment: *mut zend_string,
+}
+pub type zend_trait_precedence = _zend_trait_precedence;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct _zend_trait_precedence {
+    pub trait_method: zend_trait_method_reference,
+    pub num_excludes: uint32_t,
+    pub exclude_class_names: [*mut zend_string; 1],
+}
+pub type zend_trait_method_reference = _zend_trait_method_reference;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct _zend_trait_method_reference {
+    pub method_name: *mut zend_string,
+    pub class_name: *mut zend_string,
+}
+pub type zend_trait_alias = _zend_trait_alias;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct _zend_trait_alias {
+    pub trait_method: zend_trait_method_reference,
+    pub alias: *mut zend_string,
+    pub modifiers: uint32_t,
+}
+pub type zend_class_name = _zend_class_name;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct _zend_class_name {
+    pub name: *mut zend_string,
+    pub lc_name: *mut zend_string,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub union C2RustUnnamed_11 {
+    pub interfaces: *mut *mut zend_class_entry,
+    pub interface_names: *mut zend_class_name,
+}
+pub type zend_unserialize_data = _zend_unserialize_data;
+pub type zend_serialize_data = _zend_serialize_data;
+pub type zend_object_iterator = _zend_object_iterator;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct _zend_object_iterator {
+    pub std: zend_object,
+    pub data: zval,
+    pub funcs: *const zend_object_iterator_funcs,
+    pub index: zend_ulong,
+}
+pub type zend_object_iterator_funcs = _zend_object_iterator_funcs;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct _zend_object_iterator_funcs {
+    pub dtor: Option::<unsafe extern "C" fn(*mut zend_object_iterator) -> ()>,
+    pub valid: Option::<unsafe extern "C" fn(*mut zend_object_iterator) -> libc::c_int>,
+    pub get_current_data: Option::<
+        unsafe extern "C" fn(*mut zend_object_iterator) -> *mut zval,
+    >,
+    pub get_current_key: Option::<
+        unsafe extern "C" fn(*mut zend_object_iterator, *mut zval) -> (),
+    >,
+    pub move_forward: Option::<unsafe extern "C" fn(*mut zend_object_iterator) -> ()>,
+    pub rewind: Option::<unsafe extern "C" fn(*mut zend_object_iterator) -> ()>,
+    pub invalidate_current: Option::<
+        unsafe extern "C" fn(*mut zend_object_iterator) -> (),
+    >,
+}
+pub type zend_object = _zend_object;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct _zend_object {
+    pub gc: zend_refcounted_h,
+    pub handle: uint32_t,
+    pub ce: *mut zend_class_entry,
+    pub handlers: *const zend_object_handlers,
+    pub properties: *mut HashTable,
+    pub properties_table: [zval; 1],
+}
+pub type HashTable = _zend_array;
+pub type zend_object_handlers = _zend_object_handlers;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub union C2RustUnnamed_12 {
+    pub create_object: Option::<
+        unsafe extern "C" fn(*mut zend_class_entry) -> *mut zend_object,
+    >,
+    pub interface_gets_implemented: Option::<
+        unsafe extern "C" fn(*mut zend_class_entry, *mut zend_class_entry) -> libc::c_int,
+    >,
+}
+pub type zend_class_iterator_funcs = _zend_class_iterator_funcs;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct _zend_class_iterator_funcs {
+    pub zf_new_iterator: *mut zend_function,
+    pub zf_valid: *mut zend_function,
+    pub zf_current: *mut zend_function,
+    pub zf_key: *mut zend_function,
+    pub zf_next: *mut zend_function,
+    pub zf_rewind: *mut zend_function,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct _zend_property_info {
+    pub offset: uint32_t,
+    pub flags: uint32_t,
+    pub name: *mut zend_string,
+    pub doc_comment: *mut zend_string,
+    pub ce: *mut zend_class_entry,
+    pub type_0: zend_type,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub union C2RustUnnamed_13 {
+    pub parent: *mut zend_class_entry,
+    pub parent_name: *mut zend_string,
+}
+pub type zend_op_array = _zend_op_array;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct _zend_op_array {
+    pub type_0: zend_uchar,
+    pub arg_flags: [zend_uchar; 3],
+    pub fn_flags: uint32_t,
+    pub function_name: *mut zend_string,
+    pub scope: *mut zend_class_entry,
+    pub prototype: *mut zend_function,
+    pub num_args: uint32_t,
+    pub required_num_args: uint32_t,
+    pub arg_info: *mut zend_arg_info,
+    pub cache_size: libc::c_int,
+    pub last_var: libc::c_int,
+    pub T: uint32_t,
+    pub last: uint32_t,
+    pub opcodes: *mut zend_op,
+    pub run_time_cache__ptr: *mut *mut *mut libc::c_void,
+    pub static_variables_ptr__ptr: *mut *mut HashTable,
+    pub static_variables: *mut HashTable,
+    pub vars: *mut *mut zend_string,
+    pub refcount: *mut uint32_t,
+    pub last_live_range: libc::c_int,
+    pub last_try_catch: libc::c_int,
+    pub live_range: *mut zend_live_range,
+    pub try_catch_array: *mut zend_try_catch_element,
+    pub filename: *mut zend_string,
+    pub line_start: uint32_t,
+    pub line_end: uint32_t,
+    pub doc_comment: *mut zend_string,
+    pub last_literal: libc::c_int,
+    pub literals: *mut zval,
+    pub reserved: [*mut libc::c_void; 6],
+}
+pub type zend_try_catch_element = _zend_try_catch_element;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct _zend_try_catch_element {
+    pub try_op: uint32_t,
+    pub catch_op: uint32_t,
+    pub finally_op: uint32_t,
+    pub finally_end: uint32_t,
+}
+pub type zend_live_range = _zend_live_range;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct _zend_live_range {
+    pub var: uint32_t,
+    pub start: uint32_t,
+    pub end: uint32_t,
+}
+pub type zend_arg_info = _zend_arg_info;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct _zend_arg_info {
+    pub name: *mut zend_string,
+    pub type_0: zend_type,
+    pub pass_by_reference: zend_uchar,
+    pub is_variadic: zend_bool,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct C2RustUnnamed_14 {
+    pub type_0: zend_uchar,
+    pub arg_flags: [zend_uchar; 3],
+    pub fn_flags: uint32_t,
+    pub function_name: *mut zend_string,
+    pub scope: *mut zend_class_entry,
+    pub prototype: *mut zend_function,
+    pub num_args: uint32_t,
+    pub required_num_args: uint32_t,
+    pub arg_info: *mut zend_arg_info,
+}
+pub type zend_ast_ref = _zend_ast_ref;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct _zend_ast_ref {
+    pub gc: zend_refcounted_h,
+}
+pub type zend_reference = _zend_reference;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct _zend_reference {
+    pub gc: zend_refcounted_h,
+    pub val: zval,
+    pub sources: zend_property_info_source_list,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub union zend_property_info_source_list {
+    pub ptr: *mut _zend_property_info,
+    pub list: uintptr_t,
+}
+pub type zend_resource = _zend_resource;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct _zend_resource {
+    pub gc: zend_refcounted_h,
+    pub handle: libc::c_int,
+    pub type_0: libc::c_int,
+    pub ptr: *mut libc::c_void,
+}
+pub type zend_refcounted = _zend_refcounted;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct _zend_refcounted {
+    pub gc: zend_refcounted_h,
+}
+pub type zend_object_compare_zvals_t = Option::<
+    unsafe extern "C" fn(*mut zval, *mut zval, *mut zval) -> libc::c_int,
+>;
+pub type zend_object_do_operation_t = Option::<
+    unsafe extern "C" fn(zend_uchar, *mut zval, *mut zval, *mut zval) -> libc::c_int,
+>;
+pub type zend_object_get_gc_t = Option::<
+    unsafe extern "C" fn(*mut zval, *mut *mut zval, *mut libc::c_int) -> *mut HashTable,
+>;
+pub type zend_object_get_closure_t = Option::<
+    unsafe extern "C" fn(
+        *mut zval,
+        *mut *mut zend_class_entry,
+        *mut *mut zend_function,
+        *mut *mut zend_object,
+    ) -> libc::c_int,
+>;
+pub type zend_object_get_debug_info_t = Option::<
+    unsafe extern "C" fn(*mut zval, *mut libc::c_int) -> *mut HashTable,
+>;
+pub type zend_object_count_elements_t = Option::<
+    unsafe extern "C" fn(*mut zval, *mut zend_long) -> libc::c_int,
+>;
+pub type zend_object_cast_t = Option::<
+    unsafe extern "C" fn(*mut zval, *mut zval, libc::c_int) -> libc::c_int,
+>;
+pub type zend_object_compare_t = Option::<
+    unsafe extern "C" fn(*mut zval, *mut zval) -> libc::c_int,
+>;
+pub type zend_object_get_class_name_t = Option::<
+    unsafe extern "C" fn(*const zend_object) -> *mut zend_string,
+>;
+pub type zend_object_get_constructor_t = Option::<
+    unsafe extern "C" fn(*mut zend_object) -> *mut zend_function,
+>;
+pub type zend_object_call_method_t = Option::<
+    unsafe extern "C" fn(
+        *mut zend_string,
+        *mut zend_object,
+        *mut zend_execute_data,
+        *mut zval,
+    ) -> libc::c_int,
+>;
+pub type zend_object_get_method_t = Option::<
+    unsafe extern "C" fn(
+        *mut *mut zend_object,
+        *mut zend_string,
+        *const zval,
+    ) -> *mut zend_function,
+>;
+pub type zend_object_get_properties_t = Option::<
+    unsafe extern "C" fn(*mut zval) -> *mut HashTable,
+>;
+pub type zend_object_unset_dimension_t = Option::<
+    unsafe extern "C" fn(*mut zval, *mut zval) -> (),
+>;
+pub type zend_object_has_dimension_t = Option::<
+    unsafe extern "C" fn(*mut zval, *mut zval, libc::c_int) -> libc::c_int,
+>;
+pub type zend_object_unset_property_t = Option::<
+    unsafe extern "C" fn(*mut zval, *mut zval, *mut *mut libc::c_void) -> (),
+>;
+pub type zend_object_has_property_t = Option::<
+    unsafe extern "C" fn(
+        *mut zval,
+        *mut zval,
+        libc::c_int,
+        *mut *mut libc::c_void,
+    ) -> libc::c_int,
+>;
+pub type zend_object_set_t = Option::<unsafe extern "C" fn(*mut zval, *mut zval) -> ()>;
+pub type zend_object_get_t = Option::<
+    unsafe extern "C" fn(*mut zval, *mut zval) -> *mut zval,
+>;
+pub type zend_object_get_property_ptr_ptr_t = Option::<
+    unsafe extern "C" fn(
+        *mut zval,
+        *mut zval,
+        libc::c_int,
+        *mut *mut libc::c_void,
+    ) -> *mut zval,
+>;
+pub type zend_object_write_dimension_t = Option::<
+    unsafe extern "C" fn(*mut zval, *mut zval, *mut zval) -> (),
+>;
+pub type zend_object_read_dimension_t = Option::<
+    unsafe extern "C" fn(*mut zval, *mut zval, libc::c_int, *mut zval) -> *mut zval,
+>;
+pub type zend_object_write_property_t = Option::<
+    unsafe extern "C" fn(
+        *mut zval,
+        *mut zval,
+        *mut zval,
+        *mut *mut libc::c_void,
+    ) -> *mut zval,
+>;
+pub type zend_object_read_property_t = Option::<
+    unsafe extern "C" fn(
+        *mut zval,
+        *mut zval,
+        libc::c_int,
+        *mut *mut libc::c_void,
+        *mut zval,
+    ) -> *mut zval,
+>;
+pub type zend_object_clone_obj_t = Option::<
+    unsafe extern "C" fn(*mut zval) -> *mut zend_object,
+>;
+pub type zend_object_dtor_obj_t = Option::<unsafe extern "C" fn(*mut zend_object) -> ()>;
+pub type zend_object_free_obj_t = Option::<unsafe extern "C" fn(*mut zend_object) -> ()>;
+pub type zend_string_init_interned_func_t = Option::<
+    unsafe extern "C" fn(*const libc::c_char, size_t, libc::c_int) -> *mut zend_string,
+>;
+pub type zend_function_entry = _zend_function_entry;
+pub type kafka_metadata_collection_ctor_t = Option::<
+    unsafe extern "C" fn(*mut zval, *mut zval, *const libc::c_void) -> (),
+>;
+pub type object_intern = _object_intern;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct _object_intern {
+    pub zmetadata: zval,
+    pub items: *const libc::c_void,
+    pub item_cnt: size_t,
+    pub item_size: size_t,
+    pub position: size_t,
+    pub ctor: kafka_metadata_collection_ctor_t,
+    pub std: zend_object,
+}
+#[inline(always)]
+unsafe extern "C" fn zval_get_type(mut pz: *const zval) -> zend_uchar {
+    return (*pz).u1.v.type_0;
+}
+#[inline(always)]
+unsafe extern "C" fn zend_gc_addref(mut p: *mut zend_refcounted_h) -> uint32_t {
+    (*p).refcount = ((*p).refcount).wrapping_add(1);
+    return (*p).refcount;
+}
+#[inline(always)]
+unsafe extern "C" fn zend_gc_delref(mut p: *mut zend_refcounted_h) -> uint32_t {
+    if !((*p).refcount > 0 as libc::c_int as libc::c_uint) as libc::c_int as libc::c_long
+        != 0
+    {
+        unreachable!();
+    }
+    (*p).refcount = ((*p).refcount).wrapping_sub(1);
+    return (*p).refcount;
+}
+#[inline(always)]
+unsafe extern "C" fn zval_delref_p(mut pz: *mut zval) -> uint32_t {
+    if !((*pz).u1.v.type_flags as libc::c_int != 0 as libc::c_int) as libc::c_int
+        as libc::c_long != 0
+    {
+        unreachable!();
+    }
+    return zend_gc_delref(&mut (*(*pz).value.counted).gc);
+}
+#[inline(always)]
+unsafe extern "C" fn zval_ptr_dtor_nogc(mut zval_ptr: *mut zval) {
+    if (*zval_ptr).u1.v.type_flags as libc::c_int != 0 as libc::c_int
+        && zval_delref_p(zval_ptr) == 0
+    {
+        rc_dtor_func((*zval_ptr).value.counted);
+    }
+}
+#[inline(always)]
+unsafe extern "C" fn zend_object_properties_size(
+    mut ce_0: *mut zend_class_entry,
+) -> size_t {
+    return (::std::mem::size_of::<zval>() as libc::c_ulong)
+        .wrapping_mul(
+            ((*ce_0).default_properties_count
+                - (if (*ce_0).ce_flags
+                    & ((1 as libc::c_int) << 11 as libc::c_int) as libc::c_uint != 0
+                {
+                    0 as libc::c_int
+                } else {
+                    1 as libc::c_int
+                })) as libc::c_ulong,
+        );
+}
+#[inline(always)]
+unsafe extern "C" fn zend_object_alloc(
+    mut obj_size: size_t,
+    mut ce_0: *mut zend_class_entry,
+) -> *mut libc::c_void {
+    let mut obj: *mut libc::c_void = if 0 != 0 {
+        if obj_size.wrapping_add(zend_object_properties_size(ce_0))
+            <= 8 as libc::c_int as libc::c_ulong
+        {
+            _emalloc_8()
+        } else if obj_size.wrapping_add(zend_object_properties_size(ce_0))
+            <= 16 as libc::c_int as libc::c_ulong
+        {
+            _emalloc_16()
+        } else if obj_size.wrapping_add(zend_object_properties_size(ce_0))
+            <= 24 as libc::c_int as libc::c_ulong
+        {
+            _emalloc_24()
+        } else if obj_size.wrapping_add(zend_object_properties_size(ce_0))
+            <= 32 as libc::c_int as libc::c_ulong
+        {
+            _emalloc_32()
+        } else if obj_size.wrapping_add(zend_object_properties_size(ce_0))
+            <= 40 as libc::c_int as libc::c_ulong
+        {
+            _emalloc_40()
+        } else if obj_size.wrapping_add(zend_object_properties_size(ce_0))
+            <= 48 as libc::c_int as libc::c_ulong
+        {
+            _emalloc_48()
+        } else if obj_size.wrapping_add(zend_object_properties_size(ce_0))
+            <= 56 as libc::c_int as libc::c_ulong
+        {
+            _emalloc_56()
+        } else if obj_size.wrapping_add(zend_object_properties_size(ce_0))
+            <= 64 as libc::c_int as libc::c_ulong
+        {
+            _emalloc_64()
+        } else if obj_size.wrapping_add(zend_object_properties_size(ce_0))
+            <= 80 as libc::c_int as libc::c_ulong
+        {
+            _emalloc_80()
+        } else if obj_size.wrapping_add(zend_object_properties_size(ce_0))
+            <= 96 as libc::c_int as libc::c_ulong
+        {
+            _emalloc_96()
+        } else if obj_size.wrapping_add(zend_object_properties_size(ce_0))
+            <= 112 as libc::c_int as libc::c_ulong
+        {
+            _emalloc_112()
+        } else if obj_size.wrapping_add(zend_object_properties_size(ce_0))
+            <= 128 as libc::c_int as libc::c_ulong
+        {
+            _emalloc_128()
+        } else if obj_size.wrapping_add(zend_object_properties_size(ce_0))
+            <= 160 as libc::c_int as libc::c_ulong
+        {
+            _emalloc_160()
+        } else if obj_size.wrapping_add(zend_object_properties_size(ce_0))
+            <= 192 as libc::c_int as libc::c_ulong
+        {
+            _emalloc_192()
+        } else if obj_size.wrapping_add(zend_object_properties_size(ce_0))
+            <= 224 as libc::c_int as libc::c_ulong
+        {
+            _emalloc_224()
+        } else if obj_size.wrapping_add(zend_object_properties_size(ce_0))
+            <= 256 as libc::c_int as libc::c_ulong
+        {
+            _emalloc_256()
+        } else if obj_size.wrapping_add(zend_object_properties_size(ce_0))
+            <= 320 as libc::c_int as libc::c_ulong
+        {
+            _emalloc_320()
+        } else if obj_size.wrapping_add(zend_object_properties_size(ce_0))
+            <= 384 as libc::c_int as libc::c_ulong
+        {
+            _emalloc_384()
+        } else if obj_size.wrapping_add(zend_object_properties_size(ce_0))
+            <= 448 as libc::c_int as libc::c_ulong
+        {
+            _emalloc_448()
+        } else if obj_size.wrapping_add(zend_object_properties_size(ce_0))
+            <= 512 as libc::c_int as libc::c_ulong
+        {
+            _emalloc_512()
+        } else if obj_size.wrapping_add(zend_object_properties_size(ce_0))
+            <= 640 as libc::c_int as libc::c_ulong
+        {
+            _emalloc_640()
+        } else if obj_size.wrapping_add(zend_object_properties_size(ce_0))
+            <= 768 as libc::c_int as libc::c_ulong
+        {
+            _emalloc_768()
+        } else if obj_size.wrapping_add(zend_object_properties_size(ce_0))
+            <= 896 as libc::c_int as libc::c_ulong
+        {
+            _emalloc_896()
+        } else if obj_size.wrapping_add(zend_object_properties_size(ce_0))
+            <= 1024 as libc::c_int as libc::c_ulong
+        {
+            _emalloc_1024()
+        } else if obj_size.wrapping_add(zend_object_properties_size(ce_0))
+            <= 1280 as libc::c_int as libc::c_ulong
+        {
+            _emalloc_1280()
+        } else if obj_size.wrapping_add(zend_object_properties_size(ce_0))
+            <= 1536 as libc::c_int as libc::c_ulong
+        {
+            _emalloc_1536()
+        } else if obj_size.wrapping_add(zend_object_properties_size(ce_0))
+            <= 1792 as libc::c_int as libc::c_ulong
+        {
+            _emalloc_1792()
+        } else if obj_size.wrapping_add(zend_object_properties_size(ce_0))
+            <= 2048 as libc::c_int as libc::c_ulong
+        {
+            _emalloc_2048()
+        } else if obj_size.wrapping_add(zend_object_properties_size(ce_0))
+            <= 2560 as libc::c_int as libc::c_ulong
+        {
+            _emalloc_2560()
+        } else if obj_size.wrapping_add(zend_object_properties_size(ce_0))
+            <= 3072 as libc::c_int as libc::c_ulong
+        {
+            _emalloc_3072()
+        } else if obj_size.wrapping_add(zend_object_properties_size(ce_0))
+            <= (2 as libc::c_int * 1024 as libc::c_int * 1024 as libc::c_int
+                - 4 as libc::c_int * 1024 as libc::c_int * 1 as libc::c_int)
+                as libc::c_ulong
+        {
+            _emalloc_large(obj_size.wrapping_add(zend_object_properties_size(ce_0)))
+        } else {
+            _emalloc_huge(obj_size.wrapping_add(zend_object_properties_size(ce_0)))
+        }
+    } else {
+        _emalloc(obj_size.wrapping_add(zend_object_properties_size(ce_0)))
+    };
+    memset(
+        obj,
+        0 as libc::c_int,
+        obj_size.wrapping_sub(::std::mem::size_of::<zval>() as libc::c_ulong),
+    );
+    return obj;
+}
+#[inline(always)]
+unsafe extern "C" fn add_next_index_zval(
+    mut arg: *mut zval,
+    mut value: *mut zval,
+) -> libc::c_int {
+    return if !(zend_hash_next_index_insert((*arg).value.arr, value)).is_null() {
+        SUCCESS as libc::c_int
+    } else {
+        FAILURE as libc::c_int
+    };
+}
+static mut arginfo_class_RdKafka_Metadata_Collection___construct: [zend_internal_arg_info; 1] = [
+    {
+        let mut init = _zend_internal_arg_info {
+            name: 0 as *const libc::c_char,
+            type_0: 0 as libc::c_int as zend_type,
+            pass_by_reference: 0 as libc::c_int as zend_uchar,
+            is_variadic: 0 as libc::c_int as zend_bool,
+        };
+        init
+    },
+];
+static mut arginfo_class_RdKafka_Metadata_Collection_count: [zend_internal_arg_info; 1] = [
+    {
+        let mut init = _zend_internal_arg_info {
+            name: 0 as *const libc::c_char,
+            type_0: 0 as libc::c_int as zend_type,
+            pass_by_reference: 0 as libc::c_int as zend_uchar,
+            is_variadic: 0 as libc::c_int as zend_bool,
+        };
+        init
+    },
+];
+static mut class_RdKafka_Metadata_Collection_methods: [zend_function_entry; 8] = [zend_function_entry {
+    fname: 0 as *const libc::c_char,
+    handler: None,
+    arg_info: 0 as *const _zend_internal_arg_info,
+    num_args: 0,
+    flags: 0,
+}; 8];
+unsafe extern "C" fn register_class_RdKafka_Metadata_Collection(
+    mut class_entry_Countable: *mut zend_class_entry,
+    mut class_entry_Iterator: *mut zend_class_entry,
+) -> *mut zend_class_entry {
+    let mut ce_0: zend_class_entry = zend_class_entry {
+        type_0: 0,
+        name: 0 as *mut zend_string,
+        c2rust_unnamed: C2RustUnnamed_13 {
+            parent: 0 as *mut zend_class_entry,
+        },
+        refcount: 0,
+        ce_flags: 0,
+        default_properties_count: 0,
+        default_static_members_count: 0,
+        default_properties_table: 0 as *mut zval,
+        default_static_members_table: 0 as *mut zval,
+        static_members_table__ptr: 0 as *mut *mut zval,
+        function_table: HashTable {
+            gc: zend_refcounted_h {
+                refcount: 0,
+                u: C2RustUnnamed_5 { type_info: 0 },
+            },
+            u: C2RustUnnamed_6 {
+                v: C2RustUnnamed_7 {
+                    flags: 0,
+                    _unused: 0,
+                    nIteratorsCount: 0,
+                    _unused2: 0,
+                },
+            },
+            nTableMask: 0,
+            arData: 0 as *mut Bucket,
+            nNumUsed: 0,
+            nNumOfElements: 0,
+            nTableSize: 0,
+            nInternalPointer: 0,
+            nNextFreeElement: 0,
+            pDestructor: None,
+        },
+        properties_info: HashTable {
+            gc: zend_refcounted_h {
+                refcount: 0,
+                u: C2RustUnnamed_5 { type_info: 0 },
+            },
+            u: C2RustUnnamed_6 {
+                v: C2RustUnnamed_7 {
+                    flags: 0,
+                    _unused: 0,
+                    nIteratorsCount: 0,
+                    _unused2: 0,
+                },
+            },
+            nTableMask: 0,
+            arData: 0 as *mut Bucket,
+            nNumUsed: 0,
+            nNumOfElements: 0,
+            nTableSize: 0,
+            nInternalPointer: 0,
+            nNextFreeElement: 0,
+            pDestructor: None,
+        },
+        constants_table: HashTable {
+            gc: zend_refcounted_h {
+                refcount: 0,
+                u: C2RustUnnamed_5 { type_info: 0 },
+            },
+            u: C2RustUnnamed_6 {
+                v: C2RustUnnamed_7 {
+                    flags: 0,
+                    _unused: 0,
+                    nIteratorsCount: 0,
+                    _unused2: 0,
+                },
+            },
+            nTableMask: 0,
+            arData: 0 as *mut Bucket,
+            nNumUsed: 0,
+            nNumOfElements: 0,
+            nTableSize: 0,
+            nInternalPointer: 0,
+            nNextFreeElement: 0,
+            pDestructor: None,
+        },
+        properties_info_table: 0 as *mut *mut _zend_property_info,
+        constructor: 0 as *mut zend_function,
+        destructor: 0 as *mut zend_function,
+        clone: 0 as *mut zend_function,
+        __get: 0 as *mut zend_function,
+        __set: 0 as *mut zend_function,
+        __unset: 0 as *mut zend_function,
+        __isset: 0 as *mut zend_function,
+        __call: 0 as *mut zend_function,
+        __callstatic: 0 as *mut zend_function,
+        __tostring: 0 as *mut zend_function,
+        __debugInfo: 0 as *mut zend_function,
+        serialize_func: 0 as *mut zend_function,
+        unserialize_func: 0 as *mut zend_function,
+        iterator_funcs_ptr: 0 as *mut zend_class_iterator_funcs,
+        c2rust_unnamed_0: C2RustUnnamed_12 {
+            create_object: None,
+        },
+        get_iterator: None,
+        get_static_method: None,
+        serialize: None,
+        unserialize: None,
+        num_interfaces: 0,
+        num_traits: 0,
+        c2rust_unnamed_1: C2RustUnnamed_11 {
+            interfaces: 0 as *mut *mut zend_class_entry,
+        },
+        trait_names: 0 as *mut zend_class_name,
+        trait_aliases: 0 as *mut *mut zend_trait_alias,
+        trait_precedences: 0 as *mut *mut zend_trait_precedence,
+        info: C2RustUnnamed_8 {
+            user: C2RustUnnamed_10 {
+                filename: 0 as *mut zend_string,
+                line_start: 0,
+                line_end: 0,
+                doc_comment: 0 as *mut zend_string,
+            },
+        },
+    };
+    let mut class_entry: *mut zend_class_entry = 0 as *mut zend_class_entry;
+    memset(
+        &mut ce_0 as *mut zend_class_entry as *mut libc::c_void,
+        0 as libc::c_int,
+        ::std::mem::size_of::<zend_class_entry>() as libc::c_ulong,
+    );
+    ce_0
+        .name = zend_string_init_interned
+        .unwrap()(
+        b"RdKafka\\Metadata\\Collection\0" as *const u8 as *const libc::c_char,
+        (::std::mem::size_of::<[libc::c_char; 28]>() as libc::c_ulong)
+            .wrapping_sub(1 as libc::c_int as libc::c_ulong),
+        1 as libc::c_int,
+    );
+    ce_0
+        .info
+        .internal
+        .builtin_functions = class_RdKafka_Metadata_Collection_methods.as_ptr();
+    class_entry = zend_register_internal_class_ex(&mut ce_0, 0 as *mut zend_class_entry);
+    zend_class_implements(
+        class_entry,
+        2 as libc::c_int,
+        class_entry_Countable,
+        class_entry_Iterator,
+    );
+    return class_entry;
+}
+static mut ce: *mut zend_class_entry = 0 as *const zend_class_entry
+    as *mut zend_class_entry;
+static mut handlers: zend_object_handlers = zend_object_handlers {
+    offset: 0,
+    free_obj: None,
+    dtor_obj: None,
+    clone_obj: None,
+    read_property: None,
+    write_property: None,
+    read_dimension: None,
+    write_dimension: None,
+    get_property_ptr_ptr: None,
+    get: None,
+    set: None,
+    has_property: None,
+    unset_property: None,
+    has_dimension: None,
+    unset_dimension: None,
+    get_properties: None,
+    get_method: None,
+    call_method: None,
+    get_constructor: None,
+    get_class_name: None,
+    compare_objects: None,
+    cast_object: None,
+    count_elements: None,
+    get_debug_info: None,
+    get_closure: None,
+    get_gc: None,
+    do_operation: None,
+    compare: None,
+    get_properties_for: None,
+};
+unsafe extern "C" fn free_object(mut object: *mut zend_object) {
+    let mut intern: *mut object_intern = (object as *mut libc::c_char)
+        .offset(-(56 as libc::c_ulong as isize)) as *mut object_intern;
+    if !((*intern).items).is_null() {
+        zval_ptr_dtor_nogc(&mut (*intern).zmetadata);
+    }
+    zend_object_std_dtor(&mut (*intern).std);
+}
+unsafe extern "C" fn create_object(
+    mut class_type: *mut zend_class_entry,
+) -> *mut zend_object {
+    let mut retval: *mut zend_object = 0 as *mut zend_object;
+    let mut intern: *mut object_intern = 0 as *mut object_intern;
+    intern = zend_object_alloc(
+        ::std::mem::size_of::<object_intern>() as libc::c_ulong,
+        class_type,
+    ) as *mut object_intern;
+    zend_object_std_init(&mut (*intern).std, class_type);
+    object_properties_init(&mut (*intern).std, class_type);
+    retval = &mut (*intern).std;
+    (*retval).handlers = &mut handlers;
+    return retval;
+}
+unsafe extern "C" fn get_object(mut zmti: *mut zval) -> *mut object_intern {
+    let mut omti: *mut object_intern = ((*zmti).value.obj as *mut libc::c_char)
+        .offset(-(56 as libc::c_ulong as isize)) as *mut object_intern;
+    if ((*omti).items).is_null() {
+        zend_throw_exception_ex(
+            0 as *mut zend_class_entry,
+            0 as libc::c_int as zend_long,
+            b"RdKafka\\Metadata\\Collection::__construct() has not been called\0"
+                as *const u8 as *const libc::c_char,
+        );
+        return 0 as *mut object_intern;
+    }
+    return omti;
+}
+unsafe extern "C" fn get_debug_info(
+    mut object: *mut zval,
+    mut is_temp: *mut libc::c_int,
+) -> *mut HashTable {
+    let mut ary: zval = zval {
+        value: _zend_value { lval: 0 },
+        u1: C2RustUnnamed_1 {
+            v: C2RustUnnamed_2 {
+                type_0: 0,
+                type_flags: 0,
+                u: C2RustUnnamed_3 { extra: 0 },
+            },
+        },
+        u2: C2RustUnnamed_0 { next: 0 },
+    };
+    let mut intern: *mut object_intern = 0 as *mut object_intern;
+    let mut i: size_t = 0;
+    let mut item: zval = zval {
+        value: _zend_value { lval: 0 },
+        u1: C2RustUnnamed_1 {
+            v: C2RustUnnamed_2 {
+                type_0: 0,
+                type_flags: 0,
+                u: C2RustUnnamed_3 { extra: 0 },
+            },
+        },
+        u2: C2RustUnnamed_0 { next: 0 },
+    };
+    *is_temp = 1 as libc::c_int;
+    let mut __arr: *mut zend_array = if 0 != 0 {
+        if 0 as libc::c_int as uint32_t <= 8 as libc::c_int as libc::c_uint {
+            _zend_new_array_0()
+        } else {
+            _zend_new_array(0 as libc::c_int as uint32_t)
+        }
+    } else {
+        _zend_new_array(0 as libc::c_int as uint32_t)
+    };
+    let mut __z: *mut zval = &mut ary;
+    (*__z).value.arr = __arr;
+    (*__z)
+        .u1
+        .type_info = (7 as libc::c_int
+        | ((1 as libc::c_int) << 0 as libc::c_int) << 8 as libc::c_int
+        | ((1 as libc::c_int) << 1 as libc::c_int) << 8 as libc::c_int) as uint32_t;
+    intern = ((*object).value.obj as *mut libc::c_char)
+        .offset(-(56 as libc::c_ulong as isize)) as *mut object_intern;
+    if intern.is_null() || ((*intern).items).is_null() {
+        return ary.value.arr;
+    }
+    i = 0 as libc::c_int as size_t;
+    while i < (*intern).item_cnt {
+        item.u1.type_info = 1 as libc::c_int as uint32_t;
+        ((*intern).ctor)
+            .unwrap()(
+            &mut item,
+            &mut (*intern).zmetadata,
+            ((*intern).items as *mut libc::c_char)
+                .offset(i.wrapping_mul((*intern).item_size) as isize)
+                as *const libc::c_void,
+        );
+        add_next_index_zval(&mut ary, &mut item);
+        i = i.wrapping_add(1);
+        i;
+    }
+    return ary.value.arr;
+}
+pub unsafe extern "C" fn zim_RdKafka_Metadata_Collection_count(
+    mut execute_data: *mut zend_execute_data,
+    mut return_value: *mut zval,
+) {
+    let mut intern: *mut object_intern = 0 as *mut object_intern;
+    if (if ((*execute_data).This.u2.num_args == 0 as libc::c_int as libc::c_uint)
+        as libc::c_int as libc::c_long != 0
+    {
+        SUCCESS as libc::c_int
+    } else {
+        zend_wrong_parameters_none_error();
+        FAILURE as libc::c_int
+    }) == FAILURE as libc::c_int
+    {
+        return;
+    }
+    intern = get_object(
+        if zval_get_type(&mut (*execute_data).This) as libc::c_int == 8 as libc::c_int {
+            &mut (*execute_data).This
+        } else {
+            0 as *mut zval
+        },
+    );
+    if intern.is_null() {
+        return;
+    }
+    let mut __z: *mut zval = return_value;
+    (*__z).value.lval = (*intern).item_cnt as zend_long;
+    (*__z).u1.type_info = 4 as libc::c_int as uint32_t;
+}
+pub unsafe extern "C" fn zim_RdKafka_Metadata_Collection_rewind(
+    mut execute_data: *mut zend_execute_data,
+    mut return_value: *mut zval,
+) {
+    let mut intern: *mut object_intern = 0 as *mut object_intern;
+    if (if ((*execute_data).This.u2.num_args == 0 as libc::c_int as libc::c_uint)
+        as libc::c_int as libc::c_long != 0
+    {
+        SUCCESS as libc::c_int
+    } else {
+        zend_wrong_parameters_none_error();
+        FAILURE as libc::c_int
+    }) == FAILURE as libc::c_int
+    {
+        return;
+    }
+    intern = get_object(
+        if zval_get_type(&mut (*execute_data).This) as libc::c_int == 8 as libc::c_int {
+            &mut (*execute_data).This
+        } else {
+            0 as *mut zval
+        },
+    );
+    if intern.is_null() {
+        return;
+    }
+    (*intern).position = 0 as libc::c_int as size_t;
+}
+pub unsafe extern "C" fn zim_RdKafka_Metadata_Collection_current(
+    mut execute_data: *mut zend_execute_data,
+    mut return_value: *mut zval,
+) {
+    let mut intern: *mut object_intern = 0 as *mut object_intern;
+    if (if ((*execute_data).This.u2.num_args == 0 as libc::c_int as libc::c_uint)
+        as libc::c_int as libc::c_long != 0
+    {
+        SUCCESS as libc::c_int
+    } else {
+        zend_wrong_parameters_none_error();
+        FAILURE as libc::c_int
+    }) == FAILURE as libc::c_int
+    {
+        return;
+    }
+    intern = get_object(
+        if zval_get_type(&mut (*execute_data).This) as libc::c_int == 8 as libc::c_int {
+            &mut (*execute_data).This
+        } else {
+            0 as *mut zval
+        },
+    );
+    if intern.is_null() {
+        return;
+    }
+    if (*intern).position >= (*intern).item_cnt {
+        zend_throw_exception(
+            ce_kafka_exception,
+            b"Called current() on invalid iterator\0" as *const u8
+                as *const libc::c_char,
+            0 as libc::c_int as zend_long,
+        );
+        return;
+    }
+    ((*intern).ctor)
+        .unwrap()(
+        return_value,
+        &mut (*intern).zmetadata,
+        ((*intern).items as *mut libc::c_char)
+            .offset(((*intern).position).wrapping_mul((*intern).item_size) as isize)
+            as *const libc::c_void,
+    );
+}
+pub unsafe extern "C" fn zim_RdKafka_Metadata_Collection_key(
+    mut execute_data: *mut zend_execute_data,
+    mut return_value: *mut zval,
+) {
+    let mut intern: *mut object_intern = 0 as *mut object_intern;
+    if (if ((*execute_data).This.u2.num_args == 0 as libc::c_int as libc::c_uint)
+        as libc::c_int as libc::c_long != 0
+    {
+        SUCCESS as libc::c_int
+    } else {
+        zend_wrong_parameters_none_error();
+        FAILURE as libc::c_int
+    }) == FAILURE as libc::c_int
+    {
+        return;
+    }
+    intern = get_object(
+        if zval_get_type(&mut (*execute_data).This) as libc::c_int == 8 as libc::c_int {
+            &mut (*execute_data).This
+        } else {
+            0 as *mut zval
+        },
+    );
+    if intern.is_null() {
+        return;
+    }
+    if (*intern).position >= (*intern).item_cnt {
+        zend_throw_exception(
+            ce_kafka_exception,
+            b"Called key() on invalid iterator\0" as *const u8 as *const libc::c_char,
+            0 as libc::c_int as zend_long,
+        );
+        return;
+    }
+    let mut __z: *mut zval = return_value;
+    (*__z).value.lval = (*intern).position as zend_long;
+    (*__z).u1.type_info = 4 as libc::c_int as uint32_t;
+}
+pub unsafe extern "C" fn zim_RdKafka_Metadata_Collection_next(
+    mut execute_data: *mut zend_execute_data,
+    mut return_value: *mut zval,
+) {
+    let mut intern: *mut object_intern = 0 as *mut object_intern;
+    if (if ((*execute_data).This.u2.num_args == 0 as libc::c_int as libc::c_uint)
+        as libc::c_int as libc::c_long != 0
+    {
+        SUCCESS as libc::c_int
+    } else {
+        zend_wrong_parameters_none_error();
+        FAILURE as libc::c_int
+    }) == FAILURE as libc::c_int
+    {
+        return;
+    }
+    intern = get_object(
+        if zval_get_type(&mut (*execute_data).This) as libc::c_int == 8 as libc::c_int {
+            &mut (*execute_data).This
+        } else {
+            0 as *mut zval
+        },
+    );
+    if intern.is_null() {
+        return;
+    }
+    (*intern).position = ((*intern).position).wrapping_add(1);
+    (*intern).position;
+}
+pub unsafe extern "C" fn zim_RdKafka_Metadata_Collection_valid(
+    mut execute_data: *mut zend_execute_data,
+    mut return_value: *mut zval,
+) {
+    let mut intern: *mut object_intern = 0 as *mut object_intern;
+    if (if ((*execute_data).This.u2.num_args == 0 as libc::c_int as libc::c_uint)
+        as libc::c_int as libc::c_long != 0
+    {
+        SUCCESS as libc::c_int
+    } else {
+        zend_wrong_parameters_none_error();
+        FAILURE as libc::c_int
+    }) == FAILURE as libc::c_int
+    {
+        return;
+    }
+    intern = get_object(
+        if zval_get_type(&mut (*execute_data).This) as libc::c_int == 8 as libc::c_int {
+            &mut (*execute_data).This
+        } else {
+            0 as *mut zval
+        },
+    );
+    if intern.is_null() {
+        return;
+    }
+    (*return_value)
+        .u1
+        .type_info = (if (*intern).position < (*intern).item_cnt {
+        3 as libc::c_int
+    } else {
+        2 as libc::c_int
+    }) as uint32_t;
+}
+pub unsafe extern "C" fn kafka_metadata_collection_minit(
+    mut type_0: libc::c_int,
+    mut module_number: libc::c_int,
+) {
+    ce = register_class_RdKafka_Metadata_Collection(zend_ce_countable, zend_ce_iterator);
+    (*ce)
+        .c2rust_unnamed_0
+        .create_object = Some(
+        create_object as unsafe extern "C" fn(*mut zend_class_entry) -> *mut zend_object,
+    );
+    handlers = kafka_default_object_handlers;
+    handlers
+        .get_debug_info = Some(
+        get_debug_info
+            as unsafe extern "C" fn(*mut zval, *mut libc::c_int) -> *mut HashTable,
+    );
+    handlers
+        .free_obj = Some(free_object as unsafe extern "C" fn(*mut zend_object) -> ());
+    handlers.offset = 56 as libc::c_ulong as libc::c_int;
+}
+pub unsafe extern "C" fn kafka_metadata_collection_init(
+    mut return_value: *mut zval,
+    mut zmetadata: *mut zval,
+    mut items: *const libc::c_void,
+    mut item_cnt: size_t,
+    mut item_size: size_t,
+    mut ctor: kafka_metadata_collection_ctor_t,
+) {
+    let mut intern: *mut object_intern = 0 as *mut object_intern;
+    if object_init_ex(return_value, ce) != SUCCESS as libc::c_int {
+        return;
+    }
+    intern = ((*return_value).value.obj as *mut libc::c_char)
+        .offset(-(56 as libc::c_ulong as isize)) as *mut object_intern;
+    if intern.is_null() {
+        return;
+    }
+    let mut __z: *mut zval = &mut (*intern).zmetadata;
+    let mut __zv: *mut zval = zmetadata;
+    if !(zval_get_type(__zv) as libc::c_int == 10 as libc::c_int) as libc::c_int
+        as libc::c_long != 0
+    {
+        if 1 as libc::c_int != 0 && 0 as libc::c_int == 0 {
+            let mut _z1: *mut zval = __z;
+            let mut _z2: *const zval = __zv;
+            let mut _gc: *mut zend_refcounted = (*_z2).value.counted;
+            let mut _t: uint32_t = (*_z2).u1.type_info;
+            (*_z1).value.counted = _gc;
+            (*_z1).u1.type_info = _t;
+            if _t & 0xff00 as libc::c_int as libc::c_uint
+                != 0 as libc::c_int as libc::c_uint
+            {
+                zend_gc_addref(&mut (*_gc).gc);
+            }
+        } else {
+            let mut _z1_0: *mut zval = __z;
+            let mut _z2_0: *const zval = __zv;
+            let mut _gc_0: *mut zend_refcounted = (*_z2_0).value.counted;
+            let mut _t_0: uint32_t = (*_z2_0).u1.type_info;
+            (*_z1_0).value.counted = _gc_0;
+            (*_z1_0).u1.type_info = _t_0;
+        }
+    } else {
+        let mut _z1_1: *mut zval = __z;
+        let mut _z2_1: *const zval = &mut (*(*__zv).value.ref_0).val;
+        let mut _gc_1: *mut zend_refcounted = (*_z2_1).value.counted;
+        let mut _t_1: uint32_t = (*_z2_1).u1.type_info;
+        (*_z1_1).value.counted = _gc_1;
+        (*_z1_1).u1.type_info = _t_1;
+        if _t_1 & 0xff00 as libc::c_int as libc::c_uint
+            != 0 as libc::c_int as libc::c_uint
+        {
+            zend_gc_addref(&mut (*_gc_1).gc);
+        }
+        if 0 as libc::c_int != 0 || 1 as libc::c_int == 0 {
+            zval_ptr_dtor(__zv);
+        }
+    }
+    (*intern).items = items;
+    (*intern).item_cnt = item_cnt;
+    (*intern).item_size = item_size;
+    (*intern).ctor = ctor;
+}
+unsafe extern "C" fn run_static_initializers() {
+    class_RdKafka_Metadata_Collection_methods = [
+        {
+            let mut init = _zend_function_entry {
+                fname: b"__construct\0" as *const u8 as *const libc::c_char,
+                handler: Some(
+                    zim_RdKafka___construct
+                        as unsafe extern "C" fn(*mut zend_execute_data, *mut zval) -> (),
+                ),
+                arg_info: arginfo_class_RdKafka_Metadata_Collection___construct.as_ptr(),
+                num_args: (::std::mem::size_of::<[zend_internal_arg_info; 1]>()
+                    as libc::c_ulong)
+                    .wrapping_div(
+                        ::std::mem::size_of::<_zend_internal_arg_info>() as libc::c_ulong,
+                    )
+                    .wrapping_sub(1 as libc::c_int as libc::c_ulong) as uint32_t,
+                flags: ((1 as libc::c_int) << 2 as libc::c_int) as uint32_t,
+            };
+            init
+        },
+        {
+            let mut init = _zend_function_entry {
+                fname: b"count\0" as *const u8 as *const libc::c_char,
+                handler: Some(
+                    zim_RdKafka_Metadata_Collection_count
+                        as unsafe extern "C" fn(*mut zend_execute_data, *mut zval) -> (),
+                ),
+                arg_info: arginfo_class_RdKafka_Metadata_Collection_count.as_ptr(),
+                num_args: (::std::mem::size_of::<[zend_internal_arg_info; 1]>()
+                    as libc::c_ulong)
+                    .wrapping_div(
+                        ::std::mem::size_of::<_zend_internal_arg_info>() as libc::c_ulong,
+                    )
+                    .wrapping_sub(1 as libc::c_int as libc::c_ulong) as uint32_t,
+                flags: ((1 as libc::c_int) << 0 as libc::c_int) as uint32_t,
+            };
+            init
+        },
+        {
+            let mut init = _zend_function_entry {
+                fname: b"current\0" as *const u8 as *const libc::c_char,
+                handler: Some(
+                    zim_RdKafka_Metadata_Collection_current
+                        as unsafe extern "C" fn(*mut zend_execute_data, *mut zval) -> (),
+                ),
+                arg_info: arginfo_class_RdKafka_Metadata_Collection_count.as_ptr(),
+                num_args: (::std::mem::size_of::<[zend_internal_arg_info; 1]>()
+                    as libc::c_ulong)
+                    .wrapping_div(
+                        ::std::mem::size_of::<_zend_internal_arg_info>() as libc::c_ulong,
+                    )
+                    .wrapping_sub(1 as libc::c_int as libc::c_ulong) as uint32_t,
+                flags: ((1 as libc::c_int) << 0 as libc::c_int) as uint32_t,
+            };
+            init
+        },
+        {
+            let mut init = _zend_function_entry {
+                fname: b"key\0" as *const u8 as *const libc::c_char,
+                handler: Some(
+                    zim_RdKafka_Metadata_Collection_key
+                        as unsafe extern "C" fn(*mut zend_execute_data, *mut zval) -> (),
+                ),
+                arg_info: arginfo_class_RdKafka_Metadata_Collection_count.as_ptr(),
+                num_args: (::std::mem::size_of::<[zend_internal_arg_info; 1]>()
+                    as libc::c_ulong)
+                    .wrapping_div(
+                        ::std::mem::size_of::<_zend_internal_arg_info>() as libc::c_ulong,
+                    )
+                    .wrapping_sub(1 as libc::c_int as libc::c_ulong) as uint32_t,
+                flags: ((1 as libc::c_int) << 0 as libc::c_int) as uint32_t,
+            };
+            init
+        },
+        {
+            let mut init = _zend_function_entry {
+                fname: b"next\0" as *const u8 as *const libc::c_char,
+                handler: Some(
+                    zim_RdKafka_Metadata_Collection_next
+                        as unsafe extern "C" fn(*mut zend_execute_data, *mut zval) -> (),
+                ),
+                arg_info: arginfo_class_RdKafka_Metadata_Collection_count.as_ptr(),
+                num_args: (::std::mem::size_of::<[zend_internal_arg_info; 1]>()
+                    as libc::c_ulong)
+                    .wrapping_div(
+                        ::std::mem::size_of::<_zend_internal_arg_info>() as libc::c_ulong,
+                    )
+                    .wrapping_sub(1 as libc::c_int as libc::c_ulong) as uint32_t,
+                flags: ((1 as libc::c_int) << 0 as libc::c_int) as uint32_t,
+            };
+            init
+        },
+        {
+            let mut init = _zend_function_entry {
+                fname: b"rewind\0" as *const u8 as *const libc::c_char,
+                handler: Some(
+                    zim_RdKafka_Metadata_Collection_rewind
+                        as unsafe extern "C" fn(*mut zend_execute_data, *mut zval) -> (),
+                ),
+                arg_info: arginfo_class_RdKafka_Metadata_Collection_count.as_ptr(),
+                num_args: (::std::mem::size_of::<[zend_internal_arg_info; 1]>()
+                    as libc::c_ulong)
+                    .wrapping_div(
+                        ::std::mem::size_of::<_zend_internal_arg_info>() as libc::c_ulong,
+                    )
+                    .wrapping_sub(1 as libc::c_int as libc::c_ulong) as uint32_t,
+                flags: ((1 as libc::c_int) << 0 as libc::c_int) as uint32_t,
+            };
+            init
+        },
+        {
+            let mut init = _zend_function_entry {
+                fname: b"valid\0" as *const u8 as *const libc::c_char,
+                handler: Some(
+                    zim_RdKafka_Metadata_Collection_valid
+                        as unsafe extern "C" fn(*mut zend_execute_data, *mut zval) -> (),
+                ),
+                arg_info: arginfo_class_RdKafka_Metadata_Collection_count.as_ptr(),
+                num_args: (::std::mem::size_of::<[zend_internal_arg_info; 1]>()
+                    as libc::c_ulong)
+                    .wrapping_div(
+                        ::std::mem::size_of::<_zend_internal_arg_info>() as libc::c_ulong,
+                    )
+                    .wrapping_sub(1 as libc::c_int as libc::c_ulong) as uint32_t,
+                flags: ((1 as libc::c_int) << 0 as libc::c_int) as uint32_t,
+            };
+            init
+        },
+        {
+            let mut init = _zend_function_entry {
+                fname: 0 as *const libc::c_char,
+                handler: None,
+                arg_info: 0 as *const _zend_internal_arg_info,
+                num_args: 0 as libc::c_int as uint32_t,
+                flags: 0 as libc::c_int as uint32_t,
+            };
+            init
+        },
+    ];
+}
+#[used]
+#[cfg_attr(target_os = "linux", link_section = ".init_array")]
+#[cfg_attr(target_os = "windows", link_section = ".CRT$XIB")]
+#[cfg_attr(target_os = "macos", link_section = "__DATA,__mod_init_func")]
+static INIT_ARRAY: [unsafe extern "C" fn(); 1] = [run_static_initializers];
