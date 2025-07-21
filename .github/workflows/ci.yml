@@ -10,21 +10,37 @@ defaults:
 jobs:
   test:
     name: test
+
     runs-on: ubuntu-22.04
+
+    container:
+      image: kaistplrg/crat-test:1.1.0
+
     steps:
       - name: Clone repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
+
       - name: Check formatting
         run: cargo fmt --check
       - name: Apply lints
         run: cargo clippy -- -D warnings
+
       - name: Build dependency crate
         run: cd deps_crate && cargo build
+
       - name: Build (Dev)
         run: cargo build
       - name: Test (Dev)
         run: cargo test
+
       - name: Build (Release)
         run: cargo build --release
       - name: Test (Release)
         run: cargo test --release
+
+      - name: Benchmark (Transformation)
+        run: ./tool.py transform resolve
+      - name: Benchmark (Build)
+        run: ./tool.py build resolve
+      - name: Benchmark (Build, Release)
+        run: ./tool.py build resolve --release
