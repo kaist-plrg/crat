@@ -43,6 +43,6 @@ jobs:
       - name: Benchmark (Transformation)
         run: sudo -u ubuntu bash -lc "./tool.py transform resolve"
       - name: Benchmark (Build)
-        run: sudo -u ubuntu bash -lc "./tool.py build resolve"
-      - name: Benchmark (Build, Release)
         run: sudo -u ubuntu bash -lc "./tool.py build resolve --release"
+      - name: Benchmark (Test)
+        run: sudo -u ubuntu bash -lc "./tool.py test resolve --release"

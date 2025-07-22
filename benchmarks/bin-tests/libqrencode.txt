@@ -1,0 +1,14 @@
+tests_prof_qrencode_main
+tests_pthread_qrencode_main
+tests_test_bitstream_main
+tests_test_estimatebit_main
+tests_test_mask_main
+tests_test_mmask_main
+tests_test_monkey_main
+tests_test_mqrspec_main
+tests_test_qrencode_main
+tests_test_qrinput_main
+tests_test_qrspec_main
+tests_test_rs_main
+tests_test_split_main
+tests_test_split_urls_main

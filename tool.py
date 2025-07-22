@@ -8,7 +8,8 @@ import shutil
 import signal
 
 BENCH_ROOT = Path("benchmarks")
-CONFIG_ROOT = Path("configs")
+CONFIG_ROOT = BENCH_ROOT / "configs"
+BIN_TEST_DIR = BENCH_ROOT / "bin-tests"
 RS_ORIG = BENCH_ROOT / "rs"
 TRANSFORM_DIRS = {
     "resolve": BENCH_ROOT / "rs-resolved",
@@ -133,9 +134,50 @@ def build(stage, bench=None, release=False):
                 transform_one(stage, bench)
             run_build(dest_path)
 
+def test_one(stage, bench, release=False):
+    build(stage, bench, release)
+
+    print(f"[Test] {bench}")
+
+    test_file = BIN_TEST_DIR / f"{bench}.txt"
+    if not test_file.exists():
+        print(f"[Skip] no test: {bench}")
+        return
+
+    bench_dir = TRANSFORM_DIRS[stage] / bench
+    bin_subdir = "release" if release else "debug"
+    with open(test_file) as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            expected_failure = line.startswith("!")
+            name = line[1:] if expected_failure else line
+            bin_path = Path("target") / bin_subdir / name
+
+            print(f"[Exec] {bin_path}")
+            try:
+                result = subprocess.run([str(bin_path)], cwd=bench_dir)
+                success = (result.returncode == 0 and not expected_failure) or \
+                          (result.returncode != 0 and expected_failure)
+                status = "ok" if success else "FAIL"
+                print(f"  => {status}")
+                if not success:
+                    sys.exit(1)
+            except Exception as e:
+                print(f"  => [ERROR] {e}")
+                sys.exit(1)
+
+def test(stage, bench=None, release=False):
+    if bench:
+        test_one(stage, bench, release)
+    else:
+        for b in list_benchmarks():
+            test_one(stage, b, release)
+
 def main():
     if len(sys.argv) < 3:
-        print("Usage: tool.py <transform|build|clean> <stage> [BENCHMARK] [--force|--release]")
+        print("Usage: tool.py <transform|build|test|clean> <stage> [BENCHMARK] [--force|--release]")
         sys.exit(1)
 
     mode = sys.argv[1]
@@ -160,6 +202,11 @@ def main():
             build(stage, args[0], release)
         else:
             build(stage, release=release)
+    elif mode == "test":
+        if args:
+            test(stage, args[0], release)
+        else:
+            test(stage, release=release)
     elif mode == "clean":
         if args:
             clean(stage, args[0])
