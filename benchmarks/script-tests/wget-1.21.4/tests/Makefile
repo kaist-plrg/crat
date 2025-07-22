@@ -2172,6 +2172,7 @@ clean-checkPROGRAMS:
 	-test -z "$(check_PROGRAMS)" || rm -f $(check_PROGRAMS)
 
 unit-tests$(EXEEXT):
+	touch unit-tests$(EXEEXT)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
