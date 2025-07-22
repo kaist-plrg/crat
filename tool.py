@@ -149,8 +149,9 @@ def test_one(stage, bench, release=False):
     with open(test_file) as f:
         for line in f:
             line = line.strip()
-            if not line:
+            if not line or line.startswith("#"):
                 continue
+
             expected_failure = line.startswith("!")
             name = line[1:] if expected_failure else line
             bin_path = Path("target") / bin_subdir / name
