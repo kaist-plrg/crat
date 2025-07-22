@@ -1,0 +1,129 @@
+# t440 --- co -p -w
+#
+# Copyright (C) 2010-2022 Thien-Thi Nguyen
+#
+# This program is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. $srcdir/common
+. $srcdir/common-kn
+split_std_out_err no
+$hey echo '                                    -*- org -*-'
+$hey type co
+
+##
+# Do "co -p -wAUTHOR" for various values of AUTHOR,
+# on various branches.  Check output and diagnostics.
+##
+
+prep_b_comparison
+
+coerr=$wd/co.err
+doubt=$wd/diff.out
+
+tip1=1.9
+tip111=1.1.1.7
+tip161=1.6.1.2
+
+xfail ()
+{
+    # $1 -- author login
+    # $2 -- source (valid branch or revision number)
+    # $3+ -- expected diagnostic
+    who=$1
+    source=$2
+    shift ; shift
+    badmsg="$@"
+    $hey echo "* xfail: $who $source"
+
+    cmd="co -p$source -w$who"
+    $cmd $v 1> $actual 2> $coerr \
+        && problem "unexpected exit value (success): $cmd"
+    noiselessness_rules $actual "$cmd"
+    grep -F "$badmsg" $coerr \
+        || problem "unexpected diagnostic output: $cmd"
+}
+
+xfail_brnum ()
+{
+    # $1 -- author login
+    # $2 -- branch number
+    who=$1
+    brnum=$2
+    xfail $who $brnum "No revision on branch $brnum has author $who."
+}
+
+xfail_revno ()
+{
+    # $1 -- author login
+    # $2 -- revision number
+    who=$1
+    revno=$2
+    tip_varname=`echo tip$revno | sed 's/[.]//g'`
+    eval tip='$'$tip_varname
+    xfail $who $revno "Revision $tip has author ttn."
+}
+
+xpass ()
+{
+    # $1 -- STEM in fake/b.d/STEM.cou
+    # $2 -- author login
+    # $3 -- source (valid branch or revision number)
+    expected=`bundled_commav b.d/$1.cou`
+    who=$2
+    source=$3
+    cmd="co -p$source -w$who"
+    $hey echo "* xpass: $who $source"
+
+    must '$cmd $v 1> $actual 2> $coerr'
+    normalize_b_and_diff "$cmd"
+}
+
+##
+# * First, try an author that is not in the RCS file.
+##
+
+xfail_brnum nobody 1
+xfail_revno nobody 1.
+xfail_brnum nobody 1.1.1
+xfail_revno nobody 1.1.1.
+xfail_brnum nobody 1.6.1
+xfail_revno nobody 1.6.1.
+
+##
+# * Next, try an author that is only one branch.
+##
+
+xpass 14    zurg 1
+xfail_revno zurg 1.
+xpass 14    zurg 1.4
+xpass 13    zurg 1.3
+xfail_brnum zurg 1.1.1
+xfail_revno zurg 1.1.1.
+xfail_brnum zurg 1.6.1
+xfail_revno zurg 1.6.1.
+
+##
+# * Last, try an author that is everywhere.
+##
+
+xpass 19   ttn 1
+xpass 19   ttn 1.
+xpass 1117 ttn 1.1.1
+xpass 1117 ttn 1.1.1.
+xpass 1612 ttn 1.6.1
+xpass 1612 ttn 1.6.1.
+
+exit 0
+
+# t440 ends here

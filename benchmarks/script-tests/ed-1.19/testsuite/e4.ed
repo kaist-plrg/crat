@@ -1,0 +1,5 @@
+H
+e test.bin
+# modifying the last line of a binary file adds a newline
+$s/x/x/
+w out.o

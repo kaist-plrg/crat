@@ -1,0 +1,50 @@
+# t806 --- invalid RCS file: missing string for desc, log, text
+#
+# Copyright (C) 2016-2022 Thien-Thi Nguyen
+#
+# This program is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. $srcdir/common
+split_std_out_err
+$hey echo '                                -*- org -*-'
+
+##
+# Check that missing string value for ‘desc’, ‘log’ and ‘text’
+# cause rlog to abort w/ missing KEYWORD message.
+##
+
+try ()
+{
+    # $1 -- sed(1) address range to delete
+    # $2 -- RCS file keyword
+    addr=$1
+    kw=$2
+    context="for missing $kw string"
+    err=$wd/err.$kw
+
+    $hey echo "* $kw"
+    sed ${addr}d `bundled_commav two` > $v
+    rlog $v 2>$err \
+        && problem "rlog did not fail $context"
+    grep -n -H "missing string after.*$kw" $err >/dev/null \
+        || problem "wrong diagnostic $context"
+}
+
+try 19,20 desc
+try 25,26 log
+try 28,30 text
+
+exit 0
+
+# t806 ends here

@@ -1,0 +1,62 @@
+# t301 --- rlog on RCS file w/ bad ‘integrity’
+#
+# Copyright (C) 2013-2022 Thien-Thi Nguyen
+#
+# This program is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+##
+# We expect rlog to barf on an RCS file w/ bad ‘integrity’.
+#
+# This test checks that rlog exits failurefully, but DOES NOT
+# check the error message.
+#
+# TODO: Validate error message.
+##
+
+. $srcdir/common
+split_std_out_err no
+
+echo '                                       -*-org-*-'
+echo '* rlog:' `which rlog`
+
+barf ()
+{
+    # $1 -- title, in the form of ADJECTIVE-PHRASE
+    # $2 -- shell command to create $v
+    blurb="on invalid ($1) RCS file"
+    echo "* (barf) $1"
+    must "$2"
+    $hey echo "** $v"
+    $hey sed 's/^/|/' $v
+    $hey echo "** invocation"
+    rlog $v
+    res=$?
+    test 0 = $res && problem "rlog did not barf $blurb"
+    test 1 = $res || problem "bad rlog exit value ($res) $blurb"
+}
+
+src=`bundled_commav empty`
+
+barf "non-string value" \
+    'sed "/^comment/s/^/integrity 42;/" $src > $v'
+
+barf "spurious '@' (U+40)" \
+    'sed "/^comment/s/^/integrity @@@@;/" $src > $v'
+
+barf "two spurious '@' (U+40)" \
+    'sed "/^comment/s/^/integrity @@@@@@;/" $src > $v'
+
+exit 0
+
+# t301 ends here

@@ -1,0 +1,109 @@
+# t370 --- rlog w/ various (-r, -l, -w, -s, -d) filters
+#
+# Copyright (C) 2013-2022 Thien-Thi Nguyen
+#
+# This program is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. $srcdir/common
+split_std_out_err no
+
+rout=$wd/rlog.out
+rerr=$wd/rlog.err
+$hey echo '   rlog:' `which rlog` '                  -*- org -*-'
+
+try ()
+{
+    count=$1
+    flag=$2
+    yes=$3
+    fv=$4
+
+    $hey echo "* $count $flag '$yes' $fv"
+    cp -f `bundled_commav $fv` $v
+    $hey set -x
+
+    cmd="rlog $flag$yes"
+    # Don't use $cmd here.  Instead, spell it out so that
+    # we can use doublequotes to enable ‘yes’ w/ embedded space.
+    must 'rlog "$flag$yes" $v 1>$rout 2>$rerr'
+    silence_means_death $rout "$cmd"
+    noiselessness_rules $rerr "$cmd"
+    sel="`sed '/.*selected revisions: /!d;s///' $rout`"
+    test -z "$sel" && sel=0
+    test $count = "$sel" \
+        || problem "count mismatch: expected $count, got '$sel'"
+    $hey set +x
+}
+
+##
+# Check ‘rlog -r[REV]’.
+##
+
+try 0 -r ''      empty
+try 1 -r ''      b.d/11,v
+try 1 -r ''      b.d/19,v
+try 9 -r 1.1:    b.d/19,v
+try 4 -r 1.1:.4  b.d/19,v
+try 9 -r :1.9    b.d/19,v
+try 9 -r :.9     b.d/19,v
+try 4 -r .6:.9   b.d/19,v
+try 1 -r 1.      b.d/19,v
+try 9 -r 1       b.d/19,v
+try 0 -r 42      b.d/19,v
+
+##
+# Check ‘rlog -l[WHO]’.
+##
+
+try 0 -l ttn empty
+try 1 -l ttn b.d/11,v
+try 0 -l zow b.d/11,v
+
+##
+# Check ‘rlog -w[WHO]’.
+##
+
+try 0 -w ttn empty
+try 9 -w ttn b.d/1112,v
+try 0 -w zow b.d/1112,v
+try 18 -w ',zurg,ttn,,zurg' b
+
+##
+# Check ‘rlog -sSTATE’.
+##
+
+try 0 -s Exp empty
+try 1 -s QQQ b.d/1111,v
+try 9 -s Exp b.d/1111,v
+try 0 -s Rel b.d/1111,v
+
+##
+# Check ‘rlog -dDATE’.
+##
+
+try 0 -d 2010-04 empty
+try 1 -d 2010-04 b.d/19,v
+try 2 -d '2010-04;2012-04' b.d/19,v
+try 4 -d '2010-04<2012-04' b.d/19,v
+try 0 -d '2010-04>2012-04' b.d/19,v
+
+try 15 -d '<2010-04-18 09:39.04' b.d/1117,v
+try 16 -d '<2010-04-18 09:39.05' b.d/1117,v
+
+try 1 -d '1980<' ancient
+try 0 -d '2000<' ancient
+
+exit 0
+
+# t370 ends here

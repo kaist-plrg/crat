@@ -1,0 +1,83 @@
+# t780 --- rcs -o
+#
+# Copyright (C) 2013-2022 Thien-Thi Nguyen
+#
+# This program is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. $srcdir/common
+split_std_out_err no
+
+$hey echo ' rcs:' `which rcs` '             -*- org -*-'
+
+cp `bundled_commav b.d/1612,v` $v
+
+##
+# Check ‘rcs -oBYE’ with valid BYE.
+##
+
+revs ()
+{
+    rlog $v | sed '/^revision/!d'
+}
+
+zonk ()
+{
+    exp=$1
+    bye=$2
+
+    $hey echo '* bye' $bye
+    must 'rcs -o"$bye" $v'
+    $hey revs
+    got=`revs | wc -l`
+    test $exp = $got \
+        || problem "unexpected revision count (exp $exp, got $got)"
+}
+
+$hey echo '* initial'
+$hey revs
+$hey revs | wc -l
+
+zonk 17           1.2
+zonk 14       1.3-1.5
+zonk 11       1.7:1.9
+zonk  8 '1.1.1.3 : 1.1.1.5'
+
+##
+# Check ‘rcs -oBYE’ with invalid BYE.
+##
+
+rout=$wd/r.out
+rerr=$wd/r.err
+
+xfail ()
+{
+    bye=$1
+    description=$2
+
+    $hey echo '* xfail' $bye
+    rcs -o"$bye" $v 1>$rout 2>$rerr \
+        && problem "‘rcs -o$bye’ ($description) did not fail"
+    noiselessness_rules $rout
+    silence_means_death $rerr
+    grep "$description" $rerr \
+        || problem "diagnostic missing '$description'"
+}
+
+xfail 1.1          'branch point'
+xfail 1.6          'branch point'
+xfail 4.20         'revision 4 absent'
+
+exit 0
+
+# t780 ends here

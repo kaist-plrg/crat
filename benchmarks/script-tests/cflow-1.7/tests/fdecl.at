@@ -1,0 +1,35 @@
+# This file is part of GNU cflow testsuite. -*- Autotest -*-
+# Copyright (C) 2005-2021 Sergey Poznyakoff
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 3, or (at
+# your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+AT_SETUP([forward function declarations])
+AT_KEYWORDS([fdecl])
+
+CFLOW_OPT([-v],[
+CFLOW_CHECK([
+int foo(int x,int y), bar(long u);
+
+int
+foo(int x, int y)
+{
+     bar();
+}
+],
+[foo() <int foo (int x, int y) at prog:5>:
+    bar()
+])
+])
+
+AT_CLEANUP

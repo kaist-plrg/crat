@@ -10,6 +10,7 @@ import signal
 BENCH_ROOT = Path("benchmarks")
 CONFIG_ROOT = BENCH_ROOT / "configs"
 BIN_TEST_DIR = BENCH_ROOT / "bin-tests"
+SCRIPT_TEST_DIR = BENCH_ROOT / "script-tests"
 RS_ORIG = BENCH_ROOT / "rs"
 TRANSFORM_DIRS = {
     "resolve": BENCH_ROOT / "rs-resolved",
@@ -140,34 +141,49 @@ def test_one(stage, bench, release=False):
     print(f"[Test] {bench}")
 
     test_file = BIN_TEST_DIR / f"{bench}.txt"
-    if not test_file.exists():
-        print(f"[Skip] no test: {bench}")
-        return
+    script_file = SCRIPT_TEST_DIR / f"{bench}.sh"
 
-    bench_dir = TRANSFORM_DIRS[stage] / bench
-    bin_subdir = "release" if release else "debug"
-    with open(test_file) as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith("#"):
-                continue
+    if test_file.exists():
+        bench_dir = TRANSFORM_DIRS[stage] / bench
+        bin_subdir = "release" if release else "debug"
+        with open(test_file) as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
 
-            expected_failure = line.startswith("!")
-            name = line[1:] if expected_failure else line
-            bin_path = Path("target") / bin_subdir / name
+                expected_failure = line.startswith("!")
+                name = line[1:] if expected_failure else line
+                bin_path = Path("target") / bin_subdir / name
 
-            print(f"[Exec] {bin_path}")
-            try:
+                print(f"[Exec] {bin_path}")
                 result = subprocess.run([str(bin_path)], cwd=bench_dir)
                 success = (result.returncode == 0 and not expected_failure) or \
                           (result.returncode != 0 and expected_failure)
                 status = "ok" if success else "FAIL"
                 print(f"  => {status}")
+
                 if not success:
                     sys.exit(1)
-            except Exception as e:
-                print(f"  => [ERROR] {e}")
-                sys.exit(1)
+
+    elif script_file.exists():
+        tmp_dir = BENCH_ROOT / "tmp"
+        tmp_dir.mkdir(exist_ok=True)
+
+        cmd = [str(script_file), str(tmp_dir), str(TRANSFORM_DIRS[stage])]
+        if release:
+            cmd.append("--release")
+
+        print(f"[Exec] {' '.join(cmd)}")
+        try:
+            subprocess.run(cmd, check=True)
+            print("  => ok")
+        except subprocess.CalledProcessError:
+            print("  => FAIL")
+            sys.exit(1)
+
+    else:
+        print(f"[Skip] no test: {bench}")
 
 def test(stage, bench=None, release=False):
     if bench:

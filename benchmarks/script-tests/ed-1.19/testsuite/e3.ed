@@ -1,0 +1,5 @@
+H
+e test.bin
+1d
+E !cat test.bin
+w out.o

@@ -1,0 +1,73 @@
+# t607 --- rcs -s
+#
+# Copyright (C) 2013-2022 Thien-Thi Nguyen
+#
+# This program is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. $srcdir/common
+split_std_out_err no
+
+cp -f `bundled_commav two` $v
+
+$hey echo '   rcs:' `which rcs` '            -*- org -*-'
+
+##
+# Check that ‘rcs -sSPEC’ barfs on invalid SPEC.
+##
+
+xfail ()
+{
+    state=$1
+    $hey echo "* xfail $state"
+
+    rcs -s"$state" $v \
+        && problem "‘rcs -s$state’ did not fail"
+}
+
+xfail
+xfail :
+xfail :4.20
+xfail `printf '\021\022\023'`:4.20
+xfail 'foo bar'
+xfail 'foo:bar'
+xfail not-a-bad-name-but-a-bad-revision:4.1
+
+##
+# Check that ‘rcs -sSPEC’ w/ valid SPEC sets the state.
+##
+
+rerr=$wd/rcs.err
+
+try ()
+{
+    sspec=$1
+    state="`echo $sspec | sed 's/:.*//'`"
+    cmd="rcs -s$sspec $v"
+    $hey echo "* try $sspec"
+
+    must '$cmd > $rerr'
+    noiselessness_rules $rerr "$cmd"
+    grep "state $state" $v \
+        || problem "‘$cmd’ did not set state"
+}
+
+try ZOW
+try wonderful:4.20
+try the-end:4
+try start:.20
+try four..twenty-one:.
+
+exit 0
+
+# t607 ends here

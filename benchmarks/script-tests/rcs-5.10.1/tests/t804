@@ -1,0 +1,48 @@
+# t804 --- revert on unchanged on a branch
+#
+# Copyright (C) 2014-2022 Thien-Thi Nguyen
+#
+# This program is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. $srcdir/common
+split_std_out_err
+
+cxc=$wd/,x,
+
+must 'cp `bundled_commav two-with-branch` $v'
+
+chk ()
+{
+    must 'ci $w'
+    test ! -f $cxc \
+        || problem "temporary file not temporary: $cxc"
+}
+
+##
+# Sanity check: Do co/ci (no changes) on trunk.
+# (This was working fine.)
+##
+must 'co -l $w'
+chk
+
+##
+# Now do it on a branch.
+# (This was the regression.)
+##
+must 'co -l4.20.1.1 $w'
+chk
+
+exit 0
+
+# t804 ends here

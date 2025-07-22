@@ -1,0 +1,78 @@
+# -----------------------------------------------------------------------------
+# perc.mtc.in
+#
+# Monte Carlo simulation input file for Tetrachloroethylene (TCE, PERC)
+#
+# This file contains simulation descriptions from 2 experiments from
+# "Kinetics of Tetracholoroethylene in Volunteers; Influence of
+# Exposure Concentration and Work Load," A.C. Monster, G. Boersma,
+# and H. Steenweg, Int. Arch. Occup. Environ. Health, v42, 1989,
+# pp303-309
+#
+# The model parameters are Monte Carlo sampled to create sampled
+# values of the output variables.
+#
+# Copyright (c) 1993-2017 Free Software Foundation, Inc.
+#------------------------------------------------------------------------------
+
+Integrate (Lsodes, 1e-6, 1e-6, 1);
+
+MonteCarlo ("perc.mtc.out", 2, -56761.1164);
+
+Distrib (LeanBodyWt,   Uniform, 50,     70);
+
+Distrib (Pct_M_fat,    Uniform, 0.2,    0.3);
+Distrib (Pct_LM_liv,   Uniform, 0.03,   0.04);
+Distrib (Pct_LM_wp,    Uniform, 0.25,   0.3);
+
+Distrib (Pct_Flow_fat, Uniform, 0.06,   0.08);
+Distrib (Pct_Flow_liv, Uniform, 0.20,   0.3);
+Distrib (Pct_Flow_pp,  Uniform, 0.20,   0.25);
+
+Distrib (PC_fat,       Uniform, 110,    150);
+Distrib (PC_liv,       Uniform, 5.0,    8.0);
+Distrib (PC_wp,        Uniform, PC_liv, 8.5); # dependence on PC_liv
+Distrib (PC_pp,        Uniform, 1.6,    1.8);
+Distrib (PC_art,       Uniform, 12,     15);
+
+Distrib (Vent_Perf,   Uniform, 0.8,    1.3);
+Distrib (sc_Vmax,      Uniform, 0.04,   0.06);
+Distrib (Km,           Uniform, 7,      13.0);
+
+Distrib (Flow_pul,     Uniform, 7.4,    7.6);
+
+#---------------------------------------------------------
+# The first two simulations describe Dr. Monster's
+# exposure experiments.
+#
+# Inhalation is specified as a dose of magnitude InhMag for the
+# given Exposure time.
+#
+# Inhalation is given in ppm
+#---------------------------------------------------------
+
+Simulation { # 1:
+
+  InhMag = 72;            # ppm
+  Period = 1e10;          # Only one dose
+  Exposure = 240;         # 4 hour exposure
+
+  # Post-exposure measurements at Bef.End. [5' 30'] 2hr 18 42 67 91 139 163
+
+  Print (C_exh_ug, 239.9, 245, 270, 360, 1320, 2760, 4260, 5700, 8580, 10020);
+  Print (C_ven, 239.9, 360, 1320, 2760, 4260, 5700, 8580, 10020);
+}
+
+Simulation { # 2:
+
+  InhMag = 144;           # ppm
+  Period = 1e10;          # Only one dose
+  Exposure = 240;         # 4 hour exposure
+
+  # Post-exposure measurements at Bef.End. [5' 30'] 2hr 18 42 67 91 139 163
+
+  Print (C_exh_ug, 239.9, 245, 270, 360, 1320, 2760, 4260, 5700, 8580, 10020);
+  Print (C_ven, 239.9, 360, 1320, 2760, 4260, 5700, 8580, 10020);
+}
+
+END.

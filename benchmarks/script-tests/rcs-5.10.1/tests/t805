@@ -1,0 +1,74 @@
+# t805 --- stdio/fd desync regression
+#
+# Copyright (C) 2014-2022 Thien-Thi Nguyen
+#
+# This program is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. $srcdir/common
+split_std_out_err no
+unset TMPDIR
+
+##
+# Check that using the RM_STDIO code path doesn't truncate
+# the work file on Cygwin due to lost stdio/fd synchronization.
+# This test derives from a 5.8 regression (maybe).
+# See: <http://lists.gnu.org/archive/html/bug-rcs/2014-06/msg00000.html>.
+##
+
+##
+# NB: We jam env ‘RCS_MEM_LIMIT=0’ to force stdio operation.
+##
+RCS_MEM_LIMIT=0
+export RCS_MEM_LIMIT
+
+piped_out_size ()
+{
+    co -p $w | wc -c
+}
+
+ca_1_ash_16='65535 65536 65537'
+ca_1_ash_18='262143 262144 262145'
+other_interesting_values='262140 262150'
+
+$hey set -x
+
+for n in $ca_1_ash_16 \
+         $ca_1_ash_18 \
+         $other_interesting_values
+do
+    rm -f $v
+    # Check in initial revision (1.1), with small contents.
+    echo foo > $w
+    ci -l $w < /dev/null
+    test 4 = `piped_out_size` \
+        || problem "incorrect initial size: $size (expected 4)"
+    # Check in second revision (1.2), size $n bytes.
+    # Note, adding "-f" to the ci command prevents the bug.
+    printf "%${n}s" '' > $w
+    ci -m"blafasel" -l $w
+    cp -f $w $w.$n
+    cp -f $v $v.$n
+    # When n=262143, the following gives 262143 (correct);
+    # when n=262144, the following gives 65535 (wrong).
+    test $n = `piped_out_size` \
+        || problem "unexpected size: $size (expected $n)"
+    # The following succeeds with n=262143, but fails with n=262144:
+    #   co: RCS/foo,v:32805: edit script refers to line past end of file
+    #   co aborted
+    must co -p1.1 $w > /dev/null
+done
+
+exit 0
+
+# t805 ends here

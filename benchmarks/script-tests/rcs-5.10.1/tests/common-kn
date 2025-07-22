@@ -1,0 +1,55 @@
+# common-kn (kw normalization) variables / subroutines
+
+# Copyright (C) 2010-2022 Thien-Thi Nguyen
+#
+# This file is part of GNU RCS.
+#
+# GNU RCS is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# GNU RCS is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# (shell-script-mode)
+
+# variables
+
+expected=$wd/expected
+actual=$wd/actual
+normal=$wd/normal
+doubt=$wd/diff.out
+
+# functions
+
+prep_b_comparison ()
+{
+    must 'cp `bundled_commav b` $v'
+    wdabs="`cd $wd ; pwd`"
+    cat > $wd/x-normal <<EOF
+s|${wdabs}|/home/ttn/build/GNU/rcs/tests/fake|g
+s|x,v|b,v|g
+EOF
+}
+
+normalize_b_and_diff ()
+{
+    # $1 -- title
+    title="$1"
+    must "sed -f $wd/x-normal $actual > $normal"
+    diff -u $expected $normal 1> $doubt 2>&1
+    if test -s $expected ; then
+        silence_means_death $actual "$title"
+    else
+        noiselessness_rules $actual "$title"
+    fi
+    noiselessness_rules $doubt "$title"
+}
+
+# common-kn ends here

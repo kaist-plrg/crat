@@ -1,0 +1,52 @@
+# t630 --- co -S -l
+#
+# Copyright (C) 2011-2022 Thien-Thi Nguyen
+#
+# This program is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. $srcdir/common
+co --help >/dev/null 2>&1 || exit 77
+co --help | grep -F -e ' -S' >/dev/null || exit 77
+split_std_out_err no
+
+##
+# Check that "co -S -l" DTRT.
+##
+
+lcount ()
+{
+    rlog $v | sed '/^locks/,/^access/!d' | tee $wd/extract | wc -l
+}
+
+$hey set -x
+
+cp `bundled_commav two` $v
+
+##
+# * HEAD
+##
+co    -l -f $w || problem 'co -l #1'
+co    -l -f $w || problem 'co -l #2'
+co -S -l -f $w && problem 'co -S did not fail'
+test 3 = `lcount` || problem 'unexpected number of locks'
+
+##
+# * non-HEAD does not interfere w/ current lock
+##
+co -S -l4.20 -f $w || problem 'co -S on non-HEAD failed'
+test 4 = `lcount` || problem 'unexpected number of locks'
+
+exit 0
+
+# t630 ends here

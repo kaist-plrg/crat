@@ -1,0 +1,6 @@
+H
+6,10w !sort > tmp.txt 2>&1
+10r tmp.txt
+6,10d
+!rm tmp.txt
+wq out.o

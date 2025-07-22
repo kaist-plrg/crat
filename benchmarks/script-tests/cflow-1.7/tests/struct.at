@@ -1,0 +1,133 @@
+# Process this file with autom4te to create testsuite. -*- Autotest -*-
+# Copyright (C) 2005-2021 Sergey Poznyakoff
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 3, or (at
+# your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+AT_BANNER([struct])
+
+CFLOW_TEST([struct definition followed by attribute],
+[struct struct-attr attribute],
+[struct bar {
+     struct foo *dummy;
+} __attribute__((aligned(8)));
+
+int
+main(int argc, char **argv)
+{
+}
+],
+[main() <int main (int argc, char **argv) at prog:6>
+])
+
+CFLOW_OPT([--symbol __attribute__:wrapper],[
+CFLOW_TEST([struct definition followed by wrapper],
+[struct struct01 struct-wrapper wrapper],
+[struct bar {
+     struct foo *dummy;
+} __attribute__((aligned(8)));
+
+int
+main(int argc, char **argv)
+{
+}
+],
+[main() <int main (int argc, char **argv) at prog:6>
+])
+])
+
+CFLOW_TEST([ANSI C function returning a struct],
+[struct struct02 ret-struct],
+[struct s *
+foo(int arg)
+{
+	bar();
+} 
+int
+main(int argc, char **argv)
+{
+	foo();
+}
+],
+[main() <int main (int argc, char **argv) at prog:7>:
+    foo() <struct s *foo (int arg) at prog:2>:
+        bar()
+])
+
+CFLOW_TEST([K&R C function returning a struct],
+[struct struct03 ret-struct],
+[struct s *
+foo(arg)
+	int arg;
+{
+	bar();
+} 
+int
+main(argc, argv)
+	int argc;
+	char **argv;
+{
+	foo();
+}
+],
+[main() <int main (argc, argv) at prog:8>:
+    foo() <struct s *foo (arg) at prog:2>:
+        bar()
+])
+
+CFLOW_OPT([-m foo],[
+CFLOW_TEST([struct as argument],
+[struct struct04 arg-struct],
+[int 
+foo(struct bar *x)
+{
+}
+],
+[foo() <int foo (struct bar *x) at prog:2>
+])
+])
+
+CFLOW_OPT([-x -ix],[
+CFLOW_TEST([struct variable],
+[struct struct05 var-struct],
+[struct { int x; int y; } point;
+],
+[point * prog:1 struct { ... } point
+])
+])
+
+CFLOW_OPT([-x -ix],[
+CFLOW_TEST([array of structs],
+[struct struct06 arr-struct],
+[[struct X {
+  char *name;
+} X[] = {
+  { "foo" },
+};
+]],
+[[X * prog:3 struct X { char *name } X[]
+]])
+])
+
+CFLOW_TEST([union in typedefs],
+[struct struct07 union typedef],
+[int foo(int status)
+{
+    /*
+     * The following construct is a simplified expansion of the
+     * WTERMSIG macro from glibc.
+     */
+    int x = (((((union { unisgned __in; int __i; }) { .__in = (status) }).__i)) & 0x7f);
+}],
+[foo() <int foo (int status) at prog:1>
+])

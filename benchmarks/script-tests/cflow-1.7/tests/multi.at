@@ -1,0 +1,104 @@
+# This file is part of GNU cflow testsuite. -*- Autotest -*-
+# Copyright (C) 2006, 2007, 2010 Jerry St.Clair
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 3, or (at
+# your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+AT_SETUP([multiple source files])
+AT_KEYWORDS([multi])
+
+CFLOW_OPT([-ix_], [
+
+dnl Source file #1
+AT_DATA([multi1], [
+#include "multi2.h"
+#include "multi3.h"
+
+static int stat = 1;
+
+int main(int argc, char **argv)
+{
+  static int local_stat;
+  local_stat = foo1(glob) + foo2(stat);
+  return local_stat;
+}
+])
+
+dnl Source file #2
+AT_DATA([multi2], [
+#include "multi2.h"
+#include "multi3.h"
+
+int glob = 2;
+static int stat = 10;
+
+static void _bar(int x)
+{
+  glob = foo2(x);
+}
+
+int foo1(int y)
+{
+  int local = 1;
+  _bar(local);
+  return stat;
+}
+])
+
+dnl Source file #3
+AT_DATA([multi3], [
+#include "multi3.h"
+
+static int stat = 100;
+
+static void _bar(int x)
+{
+  stat += x;
+}
+
+int foo2(int y)
+{
+  static int local_stat = 1;
+  _bar(local_stat + y + glob);
+  return local_stat;
+}
+])
+
+dnl Expected output
+AT_DATA([expout], 
+[main() <int main (int argc, char **argv) at multi1:7>:
+    local_stat <int local_stat at multi1:9>
+    foo1() <int foo1 (int y) at multi2:13>:
+        _bar() <void _bar (int x) at multi2:8>:
+            glob <int glob at multi2:5>
+            foo2() <int foo2 (int y) at multi3:11>:
+                _bar() <void _bar (int x) at multi3:6>:
+                    stat <int stat at multi3:4>
+                local_stat <int local_stat at multi3:13>
+                glob <int glob at multi2:5>
+        stat <int stat at multi2:6>
+    glob <int glob at multi2:5>
+    foo2() <int foo2 (int y) at multi3:11>:
+        _bar() <void _bar (int x) at multi3:6>:
+            stat <int stat at multi3:4>
+        local_stat <int local_stat at multi3:13>
+        glob <int glob at multi2:5>
+    stat <int stat at multi1:5>
+])
+
+AT_CHECK([cflow ]TEST_CFLOW_OPTIONS[ multi1 multi2 multi3], [0], [expout])
+
+])
+
+AT_CLEANUP
+

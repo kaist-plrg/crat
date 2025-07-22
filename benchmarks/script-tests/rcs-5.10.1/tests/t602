@@ -1,0 +1,35 @@
+# t602 --- both ‘BRNUM’ and ‘BRNUM.’ resolve to branch tip
+#
+# Copyright (C) 2010-2022 Thien-Thi Nguyen
+#
+# This program is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. $srcdir/common
+split_std_out_err no
+$hey set -x
+
+##
+# Check that both ‘BRNUM’ and ‘BRNUM.’ resolve to the branch tip.
+# This test derives from a pre-5.8-release regression (and bugfix).
+##
+
+must 'cp `bundled_commav two` $v'
+must 'co -p4  $v >$wd/DOT-0'
+must 'co -p4. $v >$wd/DOT-1'
+test '' = `diff $wd/DOT-0 $wd/DOT-1` \
+    && 'co -pX, where X:{BRNUM, BRNUM.}, does not resolve to branch tip'
+
+exit 0
+
+# t602 ends here

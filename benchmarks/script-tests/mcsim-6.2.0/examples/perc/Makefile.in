@@ -1,0 +1,116 @@
+#!/bin/bash
+
+#cd $srcdir/examples/perc
+cd examples/perc
+
+
+# =============================
+# Test mod
+echo
+echo Testing mod on perc.model
+rm model.c &> /dev/null
+../../mod/mod perc.model &> /dev/null
+
+TEST=0
+TEST1=0
+(diff -I "   Date:  " model.c ref_model.c > mod.log) || TEST1=1
+if test $TEST1 -eq 1;
+ then echo '-FAILED- (check mod.log)'
+ else echo '-PASSED-'
+fi;
+
+if test $TEST -eq 1 -o $TEST1 -eq 1;
+then TEST=1;
+else TEST=0;
+fi;
+
+
+# =============================
+# Test makemcsim
+echo
+echo Testing makemcsim on perc.model
+echo Compiling mcsim.perc...
+TEST2=0
+(@CC@ -o mcsim.perc -I../../sim -I../.. -I@prefix@/include -L../../sim -L@prefix@/lib model.c ../../sim/*.c @LIBS@ &> compile.log) || TEST2=1
+if test $TEST2 -eq 1;
+ then echo '-FAILED- (check compile.log)'
+ else echo '-PASSED-'
+fi;
+
+if test $TEST -eq 1 -o $TEST2 -eq 1;
+then TEST=1;
+else TEST=0;
+fi;
+
+
+# =============================
+# Test perc.lsodes.in    
+echo
+echo Testing Lsodes with perc.lsodes.in ...
+TEST3=0
+(./mcsim.perc perc.lsodes.in sim.out &> sim.log) || TEST3=1
+if test $TEST3 -eq 1;
+ then echo '-FAILED- (check sim.log)'
+ else echo '-PASSED-'
+fi;
+
+echo
+echo 'Check that file examples/perc/sim.out contains reasonable output'
+echo '(compare to perc.lsodes.out, small rounding errors can be ignored)'
+echo
+
+if test $TEST -eq 1 -o $TEST3 -eq 1;
+then TEST=1;
+else TEST=0;
+fi;
+
+
+# =============================
+# Test perc.mtc.in    
+echo
+echo Testing MonteCarlo with perc.mtc.in ...
+TEST4=0
+(./mcsim.perc perc.mtc.in mtcsim.out &> mtc.log) || TEST4=1
+if test $TEST4 -eq 1;
+ then echo '-FAILED- (check mtc.log)'
+ else echo '-PASSED-'
+fi;
+
+echo
+echo 'Check that file examples/perc/mtcsim.out contains reasonable output'
+echo '(compare to perc.mtc.out, random sampling may differ)'
+echo
+
+if test $TEST -eq 1 -o $TEST4 -eq 1;
+then TEST=1;
+else TEST=0;
+fi;
+
+
+# =============================
+# Test perc.setpoint.in    
+echo
+echo Testing SetPoints with perc.setpoint.in ...
+TEST5=0
+(./mcsim.perc perc.setpoint.in setsim.out &> set.log) || TEST5=1
+if test $TEST5 -eq 1;
+ then echo '-FAILED- (check set.log)'
+ else echo '-PASSED-'
+fi;
+
+echo
+echo 'Check that file examples/perc/setsim.out contains reasonable output'
+echo '(compare to perc.setpoint.out, small rounding errors can be ignored)'
+echo
+
+if test $TEST -eq 1 -o $TEST5 -eq 1;
+then TEST=1;
+else TEST=0;
+fi;
+
+
+# =============================
+# final verdict
+
+exit $TEST
+

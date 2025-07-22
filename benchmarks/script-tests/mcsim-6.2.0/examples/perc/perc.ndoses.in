@@ -1,0 +1,26 @@
+#------------------------------------------------------------------------------
+# perc.ndoses.in
+#
+# Simulation input file for Tetrachloroethylene (TCE, PERC)
+#
+# Copyright (c) 1993-2017 Free Software Foundation, Inc.
+#------------------------------------------------------------------------------
+
+Integrate (Lsodes, 1e-6, 1e-6, 1);
+
+InhMag  = 1.0; # inhaled concentration
+IngDose = 1.0; # ingested dose
+
+Simulation {
+
+  # Inhalation concentration in ppm
+  C_inh = NDoses (3,
+                  InhMag, 0,    InhMag, 
+                  0,      2500, 5000);
+
+  Print (C_inh, C_liv, C_ven, C_exh, C_exh_ug, Q_met, Pct_metabolized, 
+         0, 1, 2499, 2500, 2501, 3999, 4000, 4001, 4999, 5000, 5001, 9999, 
+         10000);
+}
+
+END.

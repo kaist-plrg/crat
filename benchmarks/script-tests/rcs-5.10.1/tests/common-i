@@ -1,0 +1,94 @@
+# common-i (init testing) variables / subroutines / load-time actions
+
+# Copyright (C) 2010-2022 Thien-Thi Nguyen
+#
+# This file is part of GNU RCS.
+#
+# GNU RCS is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# GNU RCS is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# (shell-script-mode)
+
+# variables
+
+about=$wd/about
+spewo=$wd/spewo
+spewe=$wd/spewe
+rev_rx=
+log_rx=
+cmd=
+wdisp=
+
+# Normally, we want to that certain operations leave read-only files
+# (either working file or RCS file).  However, ...
+dont_check_readonly=false
+# ... if the "make check" user is able to write a purportedly read-only
+# file, even in the absense of write privs in the umask, those checks
+# will likely fail, so avoid that noise entirely in that case.
+(umask a-w && test -w $wd/toe >$wd/toe) && dont_check_readonly=true
+rm -f $wd/toe || problem "$wd/toe not removed"
+
+# functions
+
+badv ()
+{
+    # $1 -- description
+    bad_RCSfile "$1 (cmd: $cmd)"
+}
+
+check_w_removed ()
+{
+    test ! -f $w || problem "$w not removed"
+}
+
+check_w_readonly ()
+{
+    test -f $w || problem "$w does not exist"
+    $dont_check_readonly || test ! -w $w || problem "$w writable"
+}
+
+check_initialization_command ()
+{
+    # $1 -- ci command plus options
+    cmd="$1"
+    $hey echo "* $cmd"
+    # Prep each time for "natural" mode bits.
+    must 'rm -f $w $v && echo something > $w'
+    # Do it.
+    must "$cmd $w 1> $spewo 2> $spewe"
+    # Check stdout, stderr.
+    noiselessness_rules $spewo "$cmd ($spewo)" ; $hey sed 's/^/o|/' $spewo
+    silence_means_death $spewe "$cmd ($spewe)" ; $hey sed 's/^/e|/' $spewe
+    # Check RCS file.
+    test   -r $v || badv 'not written' ; $hey sed 's/^/v|/' $v
+    test   -s $v || badv 'exists but is zero bytes long'
+    $dont_check_readonly || test ! -w $v || badv 'writable'
+    test 2 = `grep -c "$rev_rx" $v` || badv 'missing tree and/or log'
+    test 1 = `grep -c "$log_rx" $v` || badv 'missing log message'
+    # Check working file disposition.
+    check_w_$wdisp
+}
+
+triple ()
+{
+    # $1 -- command plus options (but not -t)
+    check_initialization_command "$1 -t-something"
+    check_initialization_command "$1 -t$about"
+    check_initialization_command "echo mary | $1"
+}
+
+# load-time actions
+
+must 'echo about > $about'
+
+# common-i ends here

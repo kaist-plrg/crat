@@ -1,0 +1,63 @@
+# t600 --- rcs -n updates RCS file
+#
+# Copyright (C) 2010-2022 Thien-Thi Nguyen
+#
+# This program is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. $srcdir/common
+split_std_out_err no
+$hey set -x
+
+##
+# Check that "rcs -nNAME:" updates the RCS file correctly,
+# adding the assocation ‘NAME’.  Likewise "rcs -nNAME"
+# should remove that association.  This test derives from
+# a pre-5.8-release regression (and bugfix).
+##
+
+rout=$wd/rlog.out
+
+named ()
+{
+    must 'rlog $w > $rout'
+    grep '	WONDERFUL: 1.1' $rout
+    #     ^ TAB
+}
+
+must 'cp `bundled_commav one` $v'
+must 'co -u $w'
+
+# Name it (via rcs, not via ci).
+must 'rcs -nWONDERFUL: $w'
+named || problem 'rcs -nNAME: failed to update RCS file'
+
+# Remove the name.
+must 'rcs -nWONDERFUL $w'
+named && problem 'rcs -nNAME failed to update RCS file'
+
+##
+# Check that trying to set an invalid name (embedded '.') fails.
+##
+
+bout=$wd/bad-name-out
+berr=$wd/bad-name-err
+
+rcs -nnot.good $w 1>$bout 2>$berr \
+    && problem 'rcs -n w/ invalid name did not fail'
+noiselessness_rules $bout 'rcs -n'
+silence_means_death $berr 'rcs -n'
+
+exit 0
+
+# t600 ends here

@@ -1,0 +1,47 @@
+# t510 --- ci -i
+#
+# Copyright (C) 2010-2022 Thien-Thi Nguyen
+#
+# This program is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. $srcdir/common
+split_std_out_err no
+. $srcdir/common-i
+
+##
+# Check that ‘ci -i’ works, with varying other options.
+# Specifically, the command should:
+# - write nothing to stdout
+# - write something (unspecified) to stderr
+# - create the RCS file
+#   - read-only, non-empty
+#   - with revision ‘1.1’ in both the tree and log
+#   - with the internally generated log message "Initial revision"
+# - remove the working file
+##
+
+$hey echo '                                      -*- org -*-'
+
+wdisp=removed
+rev_rx='^1\.1$'
+log_rx='^@Initial revision$'
+
+triple 'ci -i'
+triple 'ci -i -w00t'
+triple 'ci -i -nomoly'
+triple 'ci -i -w00t -nomoly'
+
+exit 0
+
+# t510 ends here

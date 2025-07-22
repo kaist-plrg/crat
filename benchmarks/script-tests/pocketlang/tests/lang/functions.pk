@@ -1,0 +1,21 @@
+
+## Function Tests.
+
+def f1 return 'f1' end assert(f1() == 'f1')
+def f2() return 'f2' end assert(f2() == 'f2')
+def f3(a, b, c, d) return c end
+assert(f3('a', 'b', 'c', 'd') == 'c')
+
+## Local variables of inner funcions.
+def f4
+  l1 = 3.14
+  f5 = fn
+    l2 = 42
+    return l2
+  end
+  assert(f5() == 42)
+end
+f4()
+
+# If we got here, that means all test were passed.
+print('All TESTS PASSED')

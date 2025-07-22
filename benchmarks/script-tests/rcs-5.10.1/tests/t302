@@ -1,0 +1,40 @@
+# t302 --- warning for lock held on non-existent revision
+#
+# Copyright (C) 2016-2022 Thien-Thi Nguyen
+#
+# This program is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+##
+# Check that rlog warns when a user holds a lock
+# to a non-existent revision.
+##
+
+. $srcdir/common
+split_std_out_err
+
+rerr=$wd/rerr
+
+must 'sed 5s/1/2/g `bundled_commav b.d/11,v` > $v'
+must 'rlog $v 2>$rerr'
+
+test -s $rerr \
+    || problem 'no diagnostic output'
+
+grep 'warning: user.*holds.*lock.*non-existent revision' \
+     $rerr 1>/dev/null \
+    || problem 'incorrect diagnostic'
+
+exit 0
+
+# t302 ends here

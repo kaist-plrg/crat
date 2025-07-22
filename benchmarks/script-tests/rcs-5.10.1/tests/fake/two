@@ -1,0 +1,39 @@
+head	4.21;
+access;
+symbols;
+locks; strict;
+comment	@# @;
+
+4.21
+date	2010.10.02.16.41.32;	author ttn;	state Exp;
+branches;
+next	4.20;
+
+4.20
+date	2010.10.02.16.41.32;	author ttn;	state Exp;
+branches;
+next	;
+
+
+desc
+@t000
+@
+
+
+4.21
+log
+@ANOTHER
+@
+text
+@non@@empty
+more@@junk
+@
+
+
+4.20
+log
+@HELLO@@THERE
+@
+text
+@d2 1
+@

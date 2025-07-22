@@ -1,0 +1,44 @@
+H
+g/./m0
+g//a\
+hello world
+# lines beginning with a `#' should be ignored
+g/hello /# even in global commands \
+s/lo/p!/\
+a\
+order\
+.\
+# and in the command list \
+i\
+chaos\
+.\
+-1s/l/L
+u
+u
+17,33g/[A-I]/-1d\
++1c\
+hello world\
+.\
+47
+;d
+# don't change current address if no match
+g/xxx/1d
+;j
+g/help! world/I/chaos/d\
+-;/order/;d
+# split lines
+g/./s/hello world/hello\
+world/
+# use replacement from last substitution
+g/./s/animated/%/
+g/./Is/difficulty/%
+# to be undone
+g/./s//x/g
+u
+w out.o
+a
+hello
+.
+g/hello/Q
+# not reached
+w out.o

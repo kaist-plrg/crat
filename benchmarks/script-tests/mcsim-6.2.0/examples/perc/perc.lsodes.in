@@ -1,0 +1,67 @@
+#------------------------------------------------------------------------------
+# perc.lsodes.in
+#
+# Simulation input file for Tetrachloroethylene (TCE, PERC)
+# Use the Lsodes option of the Integrate command.
+#
+# This file contains simulation descriptions from 2 experiments from
+# "Kinetics of Tetracholoroethylene in Volunteers; Influence of
+# Exposure Concentration and Work Load," A.C. Monster, G. Boersma,
+# and H. Steenweg, Int. Arch. Occup. Environ. Health, v42, 1989,
+# pp303-309.
+#
+# The paper documents measurements of levels of TCE in blood and
+# exhaled air for a group of 6 subjects exposed to two
+# different concentrations of TCE in air.
+#
+# The two experiments describe 4 hr exposures to 72 and 144 ppm
+# of TCE. Measurements are compared to data from Fig. 2.
+#
+# Copyright (c) 1993-2017 Free Software Foundation, Inc.
+#------------------------------------------------------------------------------
+
+OutputFile ("perc.lsodes.out");
+
+Integrate (Lsodes, 1e-6, 1e-6, 1); # set last flag to 2 to use the Jacobian
+
+#---------------------------------------------------------
+# The following two Simulations describe Dr. Monster's
+# exposure experiments.
+#
+# Inhalation is specified as a dose of magnitude InhMag for the
+# given Exposure time.
+#
+# Inhalation is given in ppm
+#---------------------------------------------------------
+
+Simulation { # 1:
+
+  InhMag = 72;            # ppm
+  Period = 1e10;          # Only one dose
+  Exposure = 240;         # 4 hour exposure
+
+  # Post-exposure measurements at Bef.End. [5' 30'] 2hr 18 42 67 91 139 163
+
+  Print (Q_fat, Q_wp, Q_pp, Q_liv, Q_exh, Q_met, 
+         200, 239.9, 240, 240.1, 360, 1320, 2760, 4260, 5700, 8580, 10020);
+
+  Print (C_exh_ug, 239.9, 245, 270, 360, 1320, 2760, 4260, 5700, 8580, 10020);
+  Print (C_ven,    239.9, 360, 1320, 2760, 4260, 5700, 8580, 10020);
+}
+
+Simulation { # 2:
+
+  InhMag = 144;           # ppm
+  Period = 1e10;          # Only one dose
+  Exposure = 240;         # 4 hour exposure
+
+  # Post-exposure measurements at Bef.End. [5' 30'] 2hr 18 42 67 91 139 163
+
+  Print (Q_fat, Q_wp, Q_pp, Q_liv, Q_exh, Q_met, 
+         200, 239.9, 240, 240.1, 360, 1320, 2760, 4260, 5700, 8580, 10020);
+
+  Print (C_exh_ug, 239.9, 245, 270, 360, 1320, 2760, 4260, 5700, 8580, 10020);
+  Print (C_ven,    239.9, 360, 1320, 2760, 4260, 5700, 8580, 10020);
+}
+
+END.

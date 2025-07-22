@@ -1,0 +1,143 @@
+# t420 --- co -p -j
+#
+# Copyright (C) 2010-2022 Thien-Thi Nguyen
+#
+# This program is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. $srcdir/common
+split_std_out_err no
+$hey echo '                                    -*- org -*-'
+$hey type co
+
+##
+# Check "co -p -jJOINLIST" for various values of JOINLIST,
+# both valid and invalid.  For valid values, also check output.
+##
+
+actual=$wd/actual
+normal=$actual.normal
+expected=$wd/expected
+doubt=$wd/diff.out
+
+cp `bundled_commav two-with-branch` $v
+
+##
+# * First, do invalid joinlist specs cause error?
+#   Here, invalid includes both "syntax invalid"
+#   as well as "syntax valid, semantics invalid".
+##
+
+bad ()
+{
+    # $1 -- title, in the form of ADJECTIVE-PHRASE
+    # $2 -- joinlist specification for "co -p -j"
+    $hey echo "* bad: $1 (-j$2)"
+
+    co -p -j"$2" $v > /dev/null &&
+    problem "co -p does not barf on invalid ($1) joinlist spec: $2"
+##
+#   TODO: Check error message
+##
+}
+
+bad 'empty'                               ','
+bad 'unrecognized symbolic name 1'        'foo'
+bad 'unrecognized symbolic name 2'        'foo:'
+bad 'incomplete join-pair'                '4.20:'
+bad 'undefined common ancestor'           '4.20'
+bad 'incomplete join-pair, multiple'      '4.20:4.21,4.20:'
+
+##
+# * Now test with valid joinlist specs.
+##
+
+try ()
+{
+    # $1 -- title, in the form of ADJECTIVE-PHRASE
+    # $2 -- more options for "co -p"
+    # $3 -- expected output, with leading newline (discarded)
+    $hey echo "* try: $1 ($2)"
+    cmd="co -p $2"
+    title="($1) $cmd"
+
+    must '$cmd $v > $actual'
+    silence_means_death $actual "$title"
+
+    # Get rid of teporary filename conflict label.
+    sed '/^>/s/ .*//' $actual > $normal
+    echo "$3" | sed 1d > $expected
+
+    diff -u $expected $normal > $doubt
+    test -s $doubt && say_what $title
+}
+
+##
+#   * The first handful of tests are "rational".
+##
+
+try 'empty' \
+    -j '
+nonempty
+morejunk'
+
+try 'simple' \
+    -j4.20:4.20.1.1 '
+nonempty
+<<<<<<< 4.21
+morejunk
+=======
+evenmorejunk
+>>>>>>>'
+
+try 'simple, inverted' \
+    -j4.20.1.1:4.20 '
+nonempty
+<<<<<<< 4.21
+morejunk
+=======
+>>>>>>>'
+
+##
+#   * The "two join specifications" tests are contrived
+#     primarily to ensure backward compatibility.
+#     The expected output is verbatim from RCS 5.7.
+##
+
+try 'two join specifications' \
+    -j4.20:4.20.1.1,4.20:4.20.1.1 '
+nonempty
+<<<<<<< 4.21,4.20:4.20.1.1
+<<<<<<< 4.21
+morejunk
+=======
+evenmorejunk
+>>>>>>>
+=======
+evenmorejunk
+>>>>>>>'
+
+try 'two join specifications, inverted' \
+    -j4.20.1.1:4.20,4.20.1.1:4.20 '
+nonempty
+<<<<<<< 4.21,4.20.1.1:4.20
+<<<<<<< 4.21
+morejunk
+=======
+>>>>>>>
+=======
+>>>>>>>'
+
+exit 0
+
+# t420 ends here

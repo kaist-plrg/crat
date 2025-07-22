@@ -1,0 +1,3 @@
+H
+s/\a\b\c/xyz/
+w out.ro

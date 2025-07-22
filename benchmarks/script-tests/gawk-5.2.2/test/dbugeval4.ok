@@ -1,0 +1,5 @@
+gawk: cmd. line:1: fatal: function `a' not defined
+fatal error during eval, need to restart.
+Restarting ...
+1
+EXIT CODE: 2

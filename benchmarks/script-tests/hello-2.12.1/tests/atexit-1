@@ -1,0 +1,31 @@
+#! /bin/sh
+# Test atexit handling.
+#
+# Copyright (C) 2019-2022 Free Software Foundation, Inc.
+#
+# Copying and distribution of this file, with or without modification,
+# are permitted in any medium without royalty provided the copyright
+# notice and this notice are preserved.
+
+trap 'rm -fr $tmpfiles' 1 2 3 15
+
+if ! [ -c /dev/full ]; then
+  # no such character device, skip this check
+  exit 77
+fi
+
+tmpfiles="$tmpfiles atexit-test1.out"
+: ${HELLO=hello}
+${HELLO} 2>&1 1>/dev/full | tr -d '\r' >atexit-test1.out
+
+# remove \r (CR) characters from the output, so that the tests work on
+# platforms with CRLF line endings.  There is apparently no reliable
+# method (across Cygwin, MingW, etc.) to force an eol style.
+
+: ${GREP=grep}
+${GREP} "^hello: write error" atexit-test1.out
+result=$?
+
+rm -fr $tmpfiles
+
+exit $result

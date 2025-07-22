@@ -1,0 +1,24 @@
+head	1.1;
+access;
+symbols;
+locks; strict;
+comment	@ + @;
+
+
+1.1
+date	2010.03.17.09.00.17;	author ttn;	state Exp;
+branches;
+next	;
+
+
+desc
+@foo foo@@foo@@@@ foo@@
+@
+
+
+1.1
+log
+@The empty base.
+@
+text
+@@

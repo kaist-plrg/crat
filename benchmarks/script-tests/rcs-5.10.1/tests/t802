@@ -1,0 +1,107 @@
+# t802 --- ci -dYYYY-wWW-D (ISO week and day) parsing
+#
+# Copyright (C) 2011-2022 Thien-Thi Nguyen
+#
+# This program is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. $srcdir/common
+split_std_out_err no
+. $srcdir/common-d
+
+##
+# Check that ‘ci -dYYYY-wWW-D’ (ISO week and day) is properly parsed.
+# This was a bug with RCS 5.7 and earlier.
+##
+
+##
+# * Week 0 (ISO is [1,53]; this is a GNU extension).
+#   We mix this in with week 52 of the previous year.
+##
+
+##
+#   * The first set straddles non-leap to non-leap.
+##
+try 2011-w00-1 2010/12/27
+try 2010-w52-2 2010/12/28
+try 2011-w00-3 2010/12/29
+try 2010-w52-4 2010/12/30
+try 2011-w00-5 2010/12/31
+try 2010-w52-6 2011/01/01
+try 2011-w00-7 2011/01/02
+
+##
+#   * The second set straddles leap to non-leap.
+##
+try 2017-w00-1 2016/12/26
+try 2016-w52-2 2016/12/27
+try 2017-w00-3 2016/12/28
+try 2016-w52-4 2016/12/29
+try 2017-w00-5 2016/12/30
+try 2016-w52-6 2016/12/31
+try 2017-w00-7 2017/01/01
+
+##
+# * Misc, from http://en.wikipedia.org/wiki/ISO_week_date
+##
+must 'rm -f $v && cp `bundled_commav empty` $v'
+
+try 2004-w53-6 2005/01/01
+try 2004-w53-7 2005/01/02
+try 2004-w53-7 2005/01/02
+try 2005-w52-6 2005/12/31
+try 2005-w52-6 2005/12/31
+try 2007-w01-1 2007/01/01
+try 2007-w01-1 2007/01/01
+try 2007-w52-7 2007/12/30
+try 2007-w52-7 2007/12/30
+try 2008-w01-1 2007/12/31
+try 2008-w01-2 2008/01/01
+try 2008-w01-2 2008/01/01
+try 2008-w52-7 2008/12/28
+try 2008-w52-7 2008/12/28
+try 2009-w01-1 2008/12/29
+try 2009-w01-1 2008/12/29
+try 2009-w01-1 2008/12/29
+try 2009-w01-1 2008/12/29
+try 2009-w01-2 2008/12/30
+try 2009-w01-2 2008/12/30
+try 2009-w01-3 2008/12/31
+try 2009-w01-3 2008/12/31
+try 2009-w01-3 2008/12/31
+try 2009-w01-3 2008/12/31
+try 2009-w01-4 2009/01/01
+try 2009-w01-4 2009/01/01
+try 2009-w01-4 2009/01/01
+try 2009-w53-4 2009/12/31
+try 2009-w53-4 2009/12/31
+try 2009-w53-4 2009/12/31
+try 2009-w53-4 2009/12/31
+try 2009-w53-5 2010/01/01
+try 2009-w53-5 2010/01/01
+try 2009-w53-6 2010/01/02
+try 2009-w53-6 2010/01/02
+try 2009-w53-7 2010/01/03
+try 2009-w53-7 2010/01/03
+try 2009-w53-7 2010/01/03
+try 2009-w53-7 2010/01/03
+
+##
+# * Misc, to spot check various corner cases.
+##
+try 2013-w01-1 2012/12/31
+try 2014-w01-1 2013/12/30
+
+exit 0
+
+# t802 ends here

@@ -1,0 +1,176 @@
+# t430 --- co -p -k
+#
+# Copyright (C) 2010-2022 Thien-Thi Nguyen
+#
+# This program is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. $srcdir/common
+. $srcdir/common-kn
+split_std_out_err no
+$hey echo '                                    -*- org -*-'
+$hey type co
+
+##
+# Check "co -p -kSUBST" works for various values of SUBST,
+# both valid and invalid.  For valid values, also check output.
+##
+
+prep_b_comparison
+
+doubt=$wd/diff.out
+co='co -p1.2'
+
+##
+# * First, does invalid substitution mode cause error?
+##
+
+xfail ()
+{
+    # $1 -- substitution mode
+    subst=$1
+    $hey echo "* xfail: $subst"
+
+    $co -k$subst $v > /dev/null &&
+    problem "co -p -k does not barf on invalid substition mode: $subst"
+##
+#   TODO: Check error message.
+##
+}
+
+xfail LOSE
+xfail xfail
+xfail kk
+xfail oo
+xfail bb
+
+##
+# * Now test with valid substitution mode, one of:
+#   kv, kvl, k, o, b, v
+##
+
+ok ()
+{
+    # $1 -- substitution mode
+    # $2 -- expected output, with leading newline (discarded)
+    subst=$1
+    title="$co -k$subst"
+    # We normally zonk eol whitespace via ~/.emacs fragment:
+    #  (add-to-list 'before-save-hook 'delete-trailing-whitespace)
+    # So, to preserve "meaningful" (expected) eol whitespace, the
+    # expected strings have lines ending in '|'; ignore those.
+    # IWBN to use ^Z or somesuch, but not all seds can handle that.
+    echo "$2" | sed '1d;s/|$//' > $expected
+    $hey echo "* ok: $subst"
+
+    must "$co -k$subst $v > $actual"
+    normalize_b_and_diff "$title"
+}
+
+ok kv '
+;; $Author: ttn $|
+;; $Date: 2010/03/30 09:45:02 $|
+;; $Header: /home/ttn/build/GNU/rcs/tests/fake/b,v 1.2 2010/03/30 09:45:02 ttn Exp $|
+;; $Id: b,v 1.2 2010/03/30 09:45:02 ttn Exp $|
+;; $Locker:  $|
+;; $Name:  $|
+;; $RCSfile: b,v $|
+;; $Revision: 1.2 $|
+;; $Source: /home/ttn/build/GNU/rcs/tests/fake/b,v $|
+;; $State: Exp $|
+;; $Log: b,v $|
+;; Revision 1.2  2010/03/30 09:45:02  ttn|
+;; Add empty headers.|
+;;|'
+
+##
+#   The ‘kvl’ and ‘kv’ output are identical because there is no locker.
+#   TODO: Add a case with locker.
+##
+ok kvl '
+;; $Author: ttn $|
+;; $Date: 2010/03/30 09:45:02 $|
+;; $Header: /home/ttn/build/GNU/rcs/tests/fake/b,v 1.2 2010/03/30 09:45:02 ttn Exp $|
+;; $Id: b,v 1.2 2010/03/30 09:45:02 ttn Exp $|
+;; $Locker:  $|
+;; $Name:  $|
+;; $RCSfile: b,v $|
+;; $Revision: 1.2 $|
+;; $Source: /home/ttn/build/GNU/rcs/tests/fake/b,v $|
+;; $State: Exp $|
+;; $Log: b,v $|
+;; Revision 1.2  2010/03/30 09:45:02  ttn|
+;; Add empty headers.|
+;;|'
+
+ok k '
+;; $Author$|
+;; $Date$|
+;; $Header$|
+;; $Id$|
+;; $Locker$|
+;; $Name$|
+;; $RCSfile$|
+;; $Revision$|
+;; $Source$|
+;; $State$|
+;; $Log$|
+;; Revision 1.2  2010/03/30 09:45:02  ttn|
+;; Add empty headers.|
+;;|'
+
+ok o '
+;; $Author$|
+;; $Date$|
+;; $Header$|
+;; $Id$|
+;; $Locker$|
+;; $Name$|
+;; $RCSfile$|
+;; $Revision$|
+;; $Source$|
+;; $State$|
+;; $Log$|'
+
+ok b '
+;; $Author$|
+;; $Date$|
+;; $Header$|
+;; $Id$|
+;; $Locker$|
+;; $Name$|
+;; $RCSfile$|
+;; $Revision$|
+;; $Source$|
+;; $State$|
+;; $Log$|'
+
+ok v '
+;; ttn|
+;; 2010/03/30 09:45:02|
+;; /home/ttn/build/GNU/rcs/tests/fake/b,v 1.2 2010/03/30 09:45:02 ttn Exp|
+;; b,v 1.2 2010/03/30 09:45:02 ttn Exp|
+;; |
+;; |
+;; b,v|
+;; 1.2|
+;; /home/ttn/build/GNU/rcs/tests/fake/b,v|
+;; Exp|
+;; b,v|
+;; Revision 1.2  2010/03/30 09:45:02  ttn|
+;; Add empty headers.|
+;;|'
+
+exit 0
+
+# t430 ends here

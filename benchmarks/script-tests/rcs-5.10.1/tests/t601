@@ -1,0 +1,61 @@
+# t601 --- rcs -a, rcs -e update RCS file
+#
+# Copyright (C) 2010-2022 Thien-Thi Nguyen
+#
+# This program is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. $srcdir/common
+split_std_out_err no
+$hey set -x
+
+##
+# Check that "rcs -a" and "rcs -e" update the RCS file correctly,
+# adding or deleting the specified login(s) to the access list.
+# This test derives from a pre-5.8-release regression (and bugfix).
+##
+
+rout=$wd/rlog.out
+
+getaccesslist ()
+{
+    echo `rlog $w | sed -e '/^access/,/^symbolic/!d;/^[as]/d'`
+}
+
+must 'cp `bundled_commav one` $v'
+must 'co -u $w'
+
+# Add some logins to the access list.
+must 'rcs -afoo,bar -abaz $w'
+
+# We expect the logins to appear in the RCS file.
+test 'foo bar baz' = "`getaccesslist`" \
+    || problem 'rcs -a does not update the RCS file'
+
+# Try to add some previously added logins.
+must 'rcs -abaz,bar $w'
+
+# We expect there to be no change.
+test 'foo bar baz' = "`getaccesslist`" \
+    || problem 'rcs -a with previously-added logins updated the RCS file'
+
+# Zonk one.
+must 'rcs -efoo $w'
+
+# We expect it to NOT appear in the RCS file.
+test 'bar baz' = "`getaccesslist`" \
+    || problem 'rcs -e does not update the RCS file'
+
+exit 0
+
+# t601 ends here

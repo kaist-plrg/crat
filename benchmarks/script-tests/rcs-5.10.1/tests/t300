@@ -1,0 +1,169 @@
+# t300 --- rlog on invalid RCS file
+#
+# Copyright (C) 2010-2022 Thien-Thi Nguyen
+#
+# This program is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+##
+# We expect rlog to barf on an invalid RCS file.
+#
+# This test checks that rlog exits failurefully, but DOES NOT
+# check the error message.  Invalid RCS files are formed first
+# by direct construction, then by introducing bad syntax into
+# otherwise well-formed RCS files, then by truncating otherwise
+# well-formed RCS files.
+#
+# TODO: Validate error message.
+##
+
+. $srcdir/common
+split_std_out_err no
+
+echo '                                       -*-org-*-'
+echo '* rlog:' `which rlog`
+
+# No file specified is a degenerate form of "invalid file".
+rlog && problem 'rlog with no args did not barf'
+
+barfstars='*'
+
+barf ()
+{
+    # $1 -- title, in the form of ADJECTIVE-PHRASE
+    # $2 -- shell command to create $v
+    blurb="on invalid ($1) RCS file"
+    echo "$barfstars (barf) $1"
+    must "$2"
+    $hey sed 's/^/|/' $v
+    rlog $v
+    res=$?
+    test 0 = $res && problem "rlog did not barf $blurb"
+    test 1 = $res || problem "bad rlog exit value ($res) $blurb"
+}
+
+barf 'zero size' \
+    'touch $v'
+
+barf 'blatant syntax error' \
+    'echo random junk > $v'
+
+barf 'bad keyword in header' \
+    'sed 10s/author/bother/ `bundled_commav zblob` > $v'
+
+barf 'missing author value in header' \
+    'sed 10s/.ttn// `bundled_commav zblob` > $v'
+
+barf 'invalid substitution mode' \
+    'sed 6s/b/BAD/ `bundled_commav zblob` > $v'
+
+barf 'head names a non-existent revision' \
+    'sed 1s/1/2/g `bundled_commav one` > $v'
+
+barf 'spurious edits w/o corresponding index' \
+    'sed "20s/1.7/1.6/;22,26d" `bundled_commav b.d/1612,v` > $v'
+
+zinvasion ()
+{
+    # $1 -- RCS file
+    # $2 -- (optional) list of line numbers
+    #       that are part of an @TEXT@ block
+    echo "* (zinvasion) $1"
+    commav=$1
+    atatlist="$2"
+    lines=`wc -l "$commav" | sed 's/ .*//'`
+    line=0
+    z=z
+
+    test "$atatlist" && atatlist=" $atatlist "
+    while test ! $line = $lines && line=`expr 1 + $line` ; do
+
+        test "$atatlist" &&
+        case "$atatlist" in
+            *" $line "*) z='z@z' ;;
+            *) z=z ;;
+        esac
+
+        barf 'typo at beginning of line '$line \
+            'sed '$line's/^/'$z'/ '$commav' > $v'
+
+        # Only do substutition (and testing) for non-empty lines.
+        if [ "`sed -n ${line}p $commav`" ] ; then
+
+            barf 'typo at first char of line '$line \
+                'sed '$line's/^./'$z'/ '$commav' > $v'
+
+            barf 'typo at last char of line '$line \
+                'sed '$line's/.$/'$z'/ '$commav' > $v'
+        fi
+
+        barf 'typo at end of line '$line \
+            'sed '$line's/$/'$z'/ '$commav' > $v'
+    done
+}
+
+barfstars='**'
+zinvasion `bundled_commav empty-minimal`
+zinvasion `bundled_commav empty`
+zinvasion `bundled_commav one` '19 20 22 23'
+
+jaws ()
+{
+    # $1 -- RCS file
+    eval `wc -l "$1" | sed 's/^/lines=/;s/ / commav=/'`
+    line=1
+
+    echo "* (jaws) $commav"
+    while test ! $line = $lines && line=`expr 1 + $line` ; do
+        barf 'truncated at line '$line \
+            'sed '$line',\$d '$commav' > $v'
+    done
+}
+
+jaws `bundled_commav empty-minimal`
+jaws `bundled_commav empty`
+jaws `bundled_commav one`
+
+zot ()
+{
+    # $1 -- title
+    # $2 -- sed script to munge two-with-branch
+    barf "$1" 'sed -e "'"$2"'" `bundled_commav two-with-branch` > $v'
+}
+
+echo '* branch pointer weirdness'
+barfstars='**'
+
+zot 'is branch point itself' \
+    '/4.20.1.1;/s//4.20;/'
+
+zot 'not a revision' \
+    '/4.20.1.1;/s//4.20.1;/'
+
+zot 'not based on branch point' \
+    '/4.20.1.1;/s//1.1.1.1;/'
+
+zot 'missing' \
+    '/4.20.1.1;/s//;/'
+
+zot 'beyond branch point' \
+    '/^branches$/s/$/ 4.20.1.42/'
+
+echo '* log weirdness'
+
+zot 'repeated revno' \
+    '48s/.1.1$//'
+
+exit 0
+
+# t300 ends here

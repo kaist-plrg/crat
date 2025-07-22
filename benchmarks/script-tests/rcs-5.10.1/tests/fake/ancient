@@ -1,0 +1,25 @@
+head	1.1;
+access;
+symbols;
+locks; strict;
+comment	@# @;
+
+
+1.1
+date	90.03.30.10.11.12;	author ttn;	state Old;
+branches;
+next	;
+
+
+desc
+@YY-only!
+@
+
+
+1.1
+log
+@ogre
+@
+text
+@extol
+@

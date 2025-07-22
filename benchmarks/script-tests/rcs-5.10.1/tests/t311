@@ -1,0 +1,47 @@
+# t311 --- rlog (parsing in general) accepts numeric state, author
+#
+# Copyright (C) 2010-2022 Thien-Thi Nguyen
+#
+# This program is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. $srcdir/common
+split_std_out_err no
+
+##
+# Check that rlog exits successfully for an RCS file where
+# identifiers for state or author are numeric (i.e., "[0-9]+").
+#
+# This is a feature introduced in RCS 5.8.
+##
+
+rout=$wd/rlog.out
+
+try ()
+{
+    # $1 -- field name
+    # $2 -- sed fragment
+    munged="with numeric $1"
+    sedscript=$2
+
+    must 'sed -e "$sedscript" `bundled_commav one` > $v'
+    rlog $v > $rout || problem "rlog barfed on RCS file $munged"
+    silence_means_death $rout "rlog $v ($munged)"
+}
+
+try 'state'  's/state Exp/state 42/'
+try 'author' 's/author ttn/author 42/'
+
+exit 0
+
+# t311 ends here

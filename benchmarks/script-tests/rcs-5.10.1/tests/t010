@@ -1,0 +1,47 @@
+# t010 --- btdt --version / --help
+#
+# Copyright (C) 2010-2022 Thien-Thi Nguyen
+#
+# This program is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. $srcdir/compgate
+. $srcdir/common
+split_std_out_err no
+
+##
+# Check that ./btdt handles ‘--version’ and ‘--help’.
+# This gives some (small) confidence that it built correctly.
+##
+
+bout=$wd/bout
+berr=$wd/berr
+
+$hey echo '                                       -*- org -*-'
+
+try ()
+{
+    # $1 -- cmd
+    cmd="$1"
+    $hey echo "* $cmd"
+    $cmd 1> $bout 2> $berr
+    noiselessness_rules $berr "$cmd" ; $hey sed 's/^/e|/' $berr
+    silence_means_death $bout "$cmd" ; $hey sed 's/^/o|/' $bout
+}
+
+try './btdt --version'
+try './btdt --help'
+
+exit 0
+
+# t010 ends here

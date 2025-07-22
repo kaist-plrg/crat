@@ -1,0 +1,6 @@
+H
+# appending a binary file does not add a newline
+r test.bin
+# but undo does not remove any newline already present
+u
+w out.o

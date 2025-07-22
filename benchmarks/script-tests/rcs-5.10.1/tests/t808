@@ -1,0 +1,54 @@
+# t808 --- ‘rlog -w’ defaults to user login
+#
+# Copyright (C) 2018-2022 Thien-Thi Nguyen
+#
+# This program is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. $srcdir/common
+split_std_out_err no
+$hey set -x
+
+rout=$wd/rout
+rerr=$wd/rerr
+
+user=`whoami`
+
+if ! test "$user" ; then
+   : 'far out, man ... whoami failed!'
+   user=jrluser
+   USER=$user
+   export USER
+   LOGNAME=$user
+   export LOGNAME
+fi
+
+must 'sed -e s/ttn/trulynobody/g \
+          -e s/zurg/$user/g      \
+      `bundled_commav b`         \
+      > $v'
+
+##
+# Check that ‘rlog -w’ defaults the WHO list to the current user.
+# (Regression introduced in RCS 5.8.)
+##
+
+must 'rlog -w $v 1>$rout 2>$rerr'
+noiselessness_rules $rerr rlog
+silence_means_death $rout rlog
+grep 'selected revisions: 2' $rout \
+    || problem 'expected two revisions (for user zurg)'
+
+exit 0
+
+# t808 ends here

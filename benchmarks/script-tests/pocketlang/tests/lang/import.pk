@@ -1,0 +1,37 @@
+
+## Testing import statement
+import lang
+import lang, path
+import lang as o, path as p
+from io import write
+from time import sleep as s
+
+import basics
+import controlflow as if_test
+from functions import f1, f2 as fn2, f3
+
+import imports.fns
+assert(fns.f1() == 'f1')
+assert(fns.f2() == 'f2')
+assert(fns.f3() == 'f3')
+
+## Import the script and bound it with a given name.
+import imports.fns as fns2
+assert(fns2 == fns)
+assert(fns2.f1 == fns.f1)
+
+## Test if the imported globals were initialized
+import imports.globals as gbl
+assert(gbl.g_1 == 3)
+assert(gbl.g_2 == gbl.get_a_value())
+
+## import "imports/foo/_init.pk::bar"
+from imports.foo import bar
+assert(bar() == "foo.bar")
+
+## Test cyclic import
+import imports.cyclic_a as a
+assert(a.get_b_fn()() == "cyclic b")
+
+# If we got here, that means all test were passed.
+print('All TESTS PASSED')

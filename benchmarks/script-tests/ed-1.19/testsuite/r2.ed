@@ -1,0 +1,4 @@
+H
+# appending a binary file does not add a newline
+r test.bin
+w out.o

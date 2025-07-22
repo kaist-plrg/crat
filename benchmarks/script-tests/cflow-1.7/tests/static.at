@@ -1,0 +1,62 @@
+# This file is part of GNU cflow testsuite. -*- Autotest -*-
+# Copyright (C) 2006-2021 Sergey Poznyakoff
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 3, or (at
+# your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+AT_SETUP([Static symbols with forward decls and -i^s])
+AT_KEYWORDS([static fdecl])
+
+# Up to version 1.1 static symbols with forward declarations caused
+# segmentation faults when used with -i^s.
+#
+# Synopsis: Normally static functions are not added to callee lists 
+# of their callers in -i^s mode (see add_reference() and call() in parser.c),
+# therefore cflow 1.1 assumed it was safe to free them in static_processor().
+# However, there is an important exception: if the function storage type is
+# not known at the time of reference.  Such functions are added to callee lists
+# and freeing them causes coredumps.
+#
+# To reproduce the case we need two source files: first with the actual test
+# program and the second, empty, one, whose purpose is to trigger additional
+# memory allocations after symbol deletion.
+#
+# Reported by: Laurent Fournie
+# References: <OFA772D453.E40E7252-ONC12571D8.0046430B-C12571D8.004B043A@rockwellcollins.com>
+
+AT_DATA([prog],[
+static void foo();
+
+int
+bar()
+{
+     foo();
+}
+
+static void
+foo()
+{
+     int x = 1;
+}
+])
+
+AT_DATA([2],[
+])
+
+CFLOW_OPT([-i^s],[
+CFLOW_CHECK_PROG([prog 2],
+[bar() <int bar () at prog:5>:
+])
+])
+
+AT_CLEANUP

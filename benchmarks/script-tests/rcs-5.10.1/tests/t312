@@ -1,0 +1,39 @@
+# t312 --- rlog outputs midline-ending log messages with trailing newline
+#
+# Copyright (C) 2011-2022 Thien-Thi Nguyen
+#
+# This program is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. $srcdir/common
+split_std_out_err no
+
+##
+# Check that rlog displays a trailing newline for
+# log messages that end without one.
+#
+# This test derives from a pre-5.8-release regression (and bugfix).
+##
+
+rout=$wd/rlog.out
+
+# Substitute the log message with one that does not end in newline.
+must 'sed "19d;20s/^/@midline/" `bundled_commav one` > $v'
+must 'rlog $v > $rout'
+
+grep 'midline===' $rout && problem \
+    'rlog output midline log message without trailing newline'
+
+exit 0
+
+# t312 ends here

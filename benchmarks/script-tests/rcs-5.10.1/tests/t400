@@ -1,0 +1,52 @@
+# t400 --- [stdio] editing routines properly copy trailing context
+#
+# Copyright (C) 2010-2022 Thien-Thi Nguyen
+#
+# This program is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. $srcdir/common
+split_std_out_err no
+
+##
+# Check that editing routines properly copy trailing context
+# (post-edit-region lines) when using stdio for a revision at
+# least two away from the trunk tip.  In this case RCS uses a
+# double-buffering technique which is prone to complexities in
+# buffer-state synchronization.
+##
+
+tout=$wd/t.out
+terr=$wd/t.err
+ideal=$wd/ideal
+doubt=$wd/diff.out
+
+##
+# NB: We jam env ‘RCS_MEM_LIMIT=0’ to force stdio operation.
+##
+RCS_MEM_LIMIT=0
+export RCS_MEM_LIMIT
+
+cmd="co -q -p1.1 $v"
+
+printf '%s\n%s\n' one two > $ideal
+
+cp `bundled_commav stdio-sync` $v
+must "$cmd 1> $tout 2> $terr"
+noiselessness_rules $terr "stderr for $cmd"
+diff $ideal $tout > $doubt
+noiselessness_rules $doubt "$cmd"
+
+exit 0
+
+# t400 ends here

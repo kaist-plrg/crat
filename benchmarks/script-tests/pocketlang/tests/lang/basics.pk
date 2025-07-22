@@ -1,0 +1,189 @@
+
+s = "foo"; s += "bar"
+assert(s == "foobar")
+assert( 1 + 2 * 3 == 7)
+assert((1 + 2)* 3 == 9)
+assert(42 % 40.0 == 2)
+assert("'\"'" == '\'"\'')
+assert("testing" == "test" + "ing")
+
+assert("foo \
+bar" == "foo bar")
+
+assert('abc ' * 3 == 'abc abc abc ')
+assert('' * 1000 == '')
+assert('foo' * 0 == '')
+
+assert(-0b10110010 == -178 and 0b11001010 == 202)
+assert(0b1111111111111111 == 65535)
+assert(
+  0b1111111111111111111111111111111111111111111111111111111111111111 ==
+  18446744073709551615)
+
+assert(0xc0ffee == 12648430)
+assert(0xa1b2c3 == 10597059 and 0xff == 255)
+assert(0xffffffffffffffff == 18446744073709551615)
+
+## Lists test.
+l1 = [1, false, null, fn print('hello') end, true]
+assert(l1[4])
+l1[3] = null; assert(!l1[3])
+l1 = [] + [] ; assert(l1.length == 0)
+l1 = [] + [1]; assert(l1.length == 1); assert(l1[0] == 1)
+l1 = [1] + []; assert(l1.length == 1); assert(l1[0] == 1)
+l2 = l1 + [1,2,3]; assert(l2.length == 4); assert(l2 == [1,1,2,3])
+l3 = l2 + l1 + l2; assert(l3 == [1,1,2,3,1,1,1,2,3])
+
+## list references are shared.
+l1 = [1];l2 = l1;l1 += [2]
+assert(l2[1] == 2)
+assert(l1 == l2)
+
+## in tests.
+assert(!('abc' in 'a'))
+assert(42 in [12, 42, 3.14])
+assert(!('a' in ['abc']))
+assert('key' in {'key':'value'})
+assert(!('foo' in {'bar':'baz'}))
+
+## Builtin functions tests.
+assert(str(42) == '42')
+
+## FIXME: add hash function.
+##h1 = math.hash("testing"); h2 = math.hash("test" + "ing")
+##assert(h1 == h2)
+
+## Logical statement test
+val = 0; a = false; b = true
+get_true = fn return true end
+if a and b then assert(false) end
+if a or b then val = 42 else assert(false) end assert(val == 42)
+if get_true() or false then val = 12 end assert(val == 12)
+
+if (get_true() or false) and ## New line after and.
+   ((a or b) or (a and b))
+  assert(true) ## Reachable.
+else
+  assert(false) ## Unreachable
+end
+
+## Newer logical or implementation.
+## a or b  === if (a) return a else return b
+## a and b === if (!a) return a else return b
+a = null; b = [1, 2, 3]
+assert((a or b) == [1, 2, 3]) ## Note == has higher precedence than and/or.
+assert((a and b) == null)
+assert((b or a) == [1, 2, 3])
+assert((a or b) == b or a)
+
+## Recursive str list/map
+l = [1]
+list_append(l, l)
+assert(str(l) == '[1, [...]]')
+m = {}
+m['m'] = m
+assert(str(m) == '{"m":{...}}')
+
+# Bitwise operation tests
+assert(0b1010 | 0b0101 == 0b1111)
+assert(0b1000 | 0b0001 == 0b1001)
+assert(0b0011 | 0b1001 == 0b1011)
+
+assert(0b1010 & 0b0101 == 0b0000)
+assert(0b1100 & 0b1010 == 0b1000)
+assert(0xabcd & 0xffff == 0xabcd)
+
+for i in 0..100 do assert(i^i == 0) end
+assert(0b0001 ^ 0b0011 == 0b0010)
+assert(0b0010 ^ 0b1001 == 0b1011)
+
+assert(0x1 << 0 == 0b1)
+assert(0b1 << 2 == 0b100)
+assert(0b1010 << 2 == 0b101000)
+
+assert(0b1 >> 1 == 0)
+assert(8 >> 1 == 0x4)
+assert(8 >> 2 == 0b10)
+assert(0xa >> 1 == 5)
+
+assert(~8 == -9)
+assert(~1 == -2)
+assert(~0b0 == -1)
+assert(~0x1 == -2)
+
+assert(1.345e1 == 13.45)
+assert(3.45e5 == 345000)
+assert(3.45e+5 == 3.45e5)
+assert(3.45e-2 == 0.0345)
+assert(3.45E-2 == 3.45e-2)
+
+x = 42  ; assert((x&=51) == 34)
+x = 123 ; assert((x&=324) == 64)
+for i in 0..1000
+  x = i; assert((x&=-1) == i)
+end
+
+x = 42  ; assert((x%=3) == 0)
+x = 27  ; assert((x%=8) == 3)
+
+x = 43690 ; assert((x|=21845) == 65535)
+x = 204   ; assert((x|=119) == 255)
+for i in 0..1000
+  x = i; assert((x|=0) == i)
+  x = i; assert((x|=-1) == -1)
+  x = i; assert((x|=i) == i)
+end
+
+x = 4321 ; assert((x^=1234) == 5171)
+x = 77   ; assert((x^=88) == 21)
+for i in 0..1000
+  x = i; assert((x^=i) == 0)
+  x = i; assert((x^=0) == i)
+  x = i; assert((x^=-1) == -i-1)
+end
+
+x = 99
+x >>= 2
+assert(x == 99 >> 2)
+
+x = 99
+x <<= 2
+assert(x == 99 << 2)
+
+x = 4
+assert(2**3 == 8)
+assert(-2**2 == -4 and (-2)**2 == 4)
+assert((x**=4) == 256)
+assert(x**.5 == 16)
+assert(4**-1 == .25)
+
+assert(.5 == 0.5)
+assert(.333 == .333)
+assert(.1 + 1 == 1.1)
+
+def getLength(test)
+  assert(test == "test")
+  return 4
+end
+assert("${getLength('${"test"}')}" == "${2 + 2}")
+
+name = "World"
+assert("Hello $name!" == "Hello World!")
+b = 'vb'; d = 'vd'; f = 'vf'
+assert("a ${ b + ' c ${d + " e ${f}"}' }" == "a vb c vd e vf")
+assert("$b$d$f" == "vbvdvf")
+
+def foo()
+  "a docstring to test"
+end
+assert(foo._docs == "a docstring to test")
+
+class Foo
+  "Testing for
+  class docstring"
+end
+assert(Foo._docs == "Testing for\n  class docstring")
+
+
+# If we got here, that means all test were passed.
+print('All TESTS PASSED')

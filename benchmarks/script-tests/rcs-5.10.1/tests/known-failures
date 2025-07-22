@@ -1,0 +1,198 @@
+#!/bin/sh
+# Copyright (C) 2010-2022 Thien-Thi Nguyen
+#
+# This file is part of GNU RCS.
+#
+# GNU RCS is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# GNU RCS is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+: These two lines allow Org Mode to hide \
+* the code part of the file # (shell-script-mode)
+
+##
+# Usage: known-failures REL
+#
+# Display the list of tests that fail for REL on a single line.
+# This is intended for use as part of the value of ‘XFAIL_TESTS’
+# in a "make check" command, for example:
+#
+#   make check XFAIL_TESTS="`./known-failures 5.7`" \
+#              PATHPREFIX=/usr/bin
+#
+# In this example, /usr/bin is where RCS 5.7 was installed.
+# As a special case, if REL is ‘--list’, display instead
+# a list of releases in the internal database.
+##
+
+if [ x"$1" = x--help ] ; then
+    sed '/^##/,/^##/!d;/^##/d;s/^# //g;s/^#$//g' $0
+    exit 0
+fi
+
+if [ x"$1" = x--version ] ; then
+    echo "known-failures (GNU RCS) 5.10.1"
+    exit 0
+fi
+
+if [ x"$1" = x--list ] ; then
+    sed '/^\* [0-9.]*$/!d;s/^..//' $0
+    exit 0
+fi
+
+if [ x"$1" = x ] ; then
+    echo "`basename $0`: missing arg (try --help)"
+    exit 1
+fi
+
+# This bletcherous hack implements a platform-specific
+#
+#   t805 ; stdio/fd position desync (fixed in 5.9.3)
+#
+# since the current data structure (simple list) does not admit
+# preconditions or filters.  Ugly and possibly buggy in itself!
+more=
+case 'linux-gnu' in
+    cygwin | darwin)
+        case $1 in
+            5.8 | 5.8.* | 5.9.[012])
+                more=t805
+                ;;
+            *)
+                ;;
+        esac
+        ;;
+    *)
+        ;;
+esac
+
+echo `sed '/^\* '$1'$/,/^$/!d;/^\*/d;s/;.*//' $0` $more
+exit 0
+
+* maintenance instructions (org-mode)
+  The rest of the file lists tests known to fail by RCS release.
+  Each list should end with a blank line.  Comments begin with
+  semicolon and go to end of line.
+
+  Along with the test name, add some commentary explaining why
+  that test is known to fail for that release.
+
+  Use "make known-failures" to regenerate it from the .in file.
+
+  The next-up release should have an empty entry during development;
+  test failures should be maintained in Makefile.am, like so:
+    XFAIL_TESTS += tNNN
+  On release, any remaining failures should be moved to the .in file.
+  (Obviously, the ideal is to eliminate them prior to release.)
+
+* 5.7
+  t150 ; no ‘--version’ / ‘--help’
+  t300 ; trailing junk incorrectly ignored
+  t303 ; rlog w/ non-'a', non-'d' dispatch in edit script
+  t311 ; cannot handle [0-9]+ for state, author
+  t313 ; rlog omits trailing newline for midline description
+  t314 ; rlog w/ various date-selection, timezone-output options
+  t608 ; ‘rcs -m:’ barfs on empty log message (made optional in 5.8)
+  t800 ; outdate everything leaves non-empty RCS file (fixed in 5.8)
+  t801 ; ‘ci -dYYYY-DOW’ => "invalid date/time format" (fixed in 5.8)
+  t802 ; ‘ci -dYYYY-wWW-D’ => "invalid date/time format" (fixed in 5.8)
+
+* 5.8
+  t070 ; default RCS file search regression (fixed in 5.10.0)
+  t301 ; ‘integrity’ syntax underspecified (fixed in 5.8.2)
+  t303 ; rlog w/ non-'a', non-'d' dispatch in edit script
+  t314 ; rlog w/ various date-selection, timezone-output options
+  t320 ; ‘rlog -zLT’ => uninitialized ‘struct tm’ (fixed in 5.8.1)
+       ; NB: test fails reliably only for x86-64 -- YMMV!
+  t370 ; ‘rlog -dD1<D2’ => debugging output to stderr (fixed in 5.8.1)
+  t803 ; sym deref w/ common prefix (fixed in 5.8.2)
+  t804 ; revert on unchanged on a branch (fixed in 5.9.3)
+  t810 ; ‘ci -l -d -T’ => RCS file mtime set to epoch (fixed in 5.8.1)
+  t806 ; invalid RCS file: missing string for desc, log, text (fixed in 5.10.0)
+  t807 ; rlog +/- summation w/ NUL in ed script
+  t808 ; ‘rlog -w’ defaults to user login
+
+* 5.8.1
+  t070 ; default RCS file search regression (fixed in 5.10.0)
+  t301 ; ‘integrity’ syntax underspecified (fixed in 5.8.2)
+  t303 ; rlog w/ non-'a', non-'d' dispatch in edit script
+  t314 ; rlog w/ various date-selection, timezone-output options
+  t803 ; sym deref w/ common prefix (fixed in 5.8.2)
+  t804 ; revert on unchanged on a branch (fixed in 5.9.3)
+  t806 ; invalid RCS file: missing string for desc, log, text (fixed in 5.10.0)
+  t807 ; rlog +/- summation w/ NUL in ed script
+  t808 ; ‘rlog -w’ defaults to user login
+
+* 5.8.2
+  t070 ; default RCS file search regression (fixed in 5.10.0)
+  t303 ; rlog w/ non-'a', non-'d' dispatch in edit script
+  t314 ; rlog w/ various date-selection, timezone-output options
+  t804 ; revert on unchanged on a branch (fixed in 5.9.3)
+  t806 ; invalid RCS file: missing string for desc, log, text (fixed in 5.10.0)
+  t807 ; rlog +/- summation w/ NUL in ed script
+  t808 ; ‘rlog -w’ defaults to user login
+
+* 5.9.0
+  t070 ; default RCS file search regression (fixed in 5.10.0)
+  t303 ; rlog w/ non-'a', non-'d' dispatch in edit script
+  t314 ; rlog w/ various date-selection, timezone-output options
+  t804 ; revert on unchanged on a branch (fixed in 5.9.3)
+  t806 ; invalid RCS file: missing string for desc, log, text (fixed in 5.10.0)
+  t807 ; rlog +/- summation w/ NUL in ed script
+  t808 ; ‘rlog -w’ defaults to user login
+
+* 5.9.1
+  t070 ; default RCS file search regression (fixed in 5.10.0)
+  t303 ; rlog w/ non-'a', non-'d' dispatch in edit script
+  t314 ; rlog w/ various date-selection, timezone-output options
+  t804 ; revert on unchanged on a branch (fixed in 5.9.3)
+  t806 ; invalid RCS file: missing string for desc, log, text (fixed in 5.10.0)
+  t807 ; rlog +/- summation w/ NUL in ed script
+  t808 ; ‘rlog -w’ defaults to user login
+
+* 5.9.2
+  t070 ; default RCS file search regression (fixed in 5.10.0)
+  t303 ; rlog w/ non-'a', non-'d' dispatch in edit script
+  t314 ; rlog w/ various date-selection, timezone-output options
+  t804 ; revert on unchanged on a branch (fixed in 5.9.3)
+  t806 ; invalid RCS file: missing string for desc, log, text (fixed in 5.10.0)
+  t807 ; rlog +/- summation w/ NUL in ed script
+  t808 ; ‘rlog -w’ defaults to user login
+
+* 5.9.3
+  t070 ; default RCS file search regression (fixed in 5.10.0)
+  t303 ; rlog w/ non-'a', non-'d' dispatch in edit script
+  t314 ; rlog w/ various date-selection, timezone-output options
+  ;; t805 under OSX (see "bletcherous hack" above)
+  t806 ; invalid RCS file: missing string for desc, log, text (fixed in 5.10.0)
+  t807 ; rlog +/- summation w/ NUL in ed script
+  t808 ; ‘rlog -w’ defaults to user login
+
+* 5.9.4
+  t070 ; default RCS file search regression (fixed in 5.10.0)
+  t303 ; rlog w/ non-'a', non-'d' dispatch in edit script
+  t314 ; rlog w/ various date-selection, timezone-output options
+  t806 ; invalid RCS file: missing string for desc, log, text (fixed in 5.10.0)
+  t807 ; rlog +/- summation w/ NUL in ed script
+  t808 ; ‘rlog -w’ defaults to user login
+
+* 5.10.0
+  t303 ; rlog w/ non-'a', non-'d' dispatch in edit script
+
+* 5.10.1
+
+* end matter
+*** Local variables:
+*** mode: org
+*** End:
+
+# known-failures ends here

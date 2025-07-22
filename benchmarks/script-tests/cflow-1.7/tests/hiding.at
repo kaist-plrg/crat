@@ -1,0 +1,65 @@
+# This file is part of GNU cflow testsuite. -*- Autotest -*-
+# Copyright (C) 2006, 2007, 2010 Jerry St.Clair
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 3, or (at
+# your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+AT_SETUP([hiding of global and file static identifiers])
+AT_KEYWORDS([hiding])
+
+CFLOW_OPT([-ix_], [
+
+CFLOW_CHECK([
+static int s = 1;
+int g = -100;
+
+static
+int foo()
+{
+  static int s = 10;     /* hides file static variable */
+  return s;
+}
+
+static
+int bar()
+{
+  static int foo = 100;  /* hides file static function */
+  return foo + g;
+}
+
+int baz()
+{
+  int g = 100;           /* hides global variable */
+  return s + g;
+}
+
+int main()
+{
+  return (g + s + foo() + bar() + baz());
+}
+],
+[main() <int main () at prog:25>:
+    g <int g at prog:3>
+    s <int s at prog:2>
+    foo() <int foo () at prog:6>:
+        s <int s at prog:8>
+    bar() <int bar () at prog:13>:
+        foo <int foo at prog:15>
+        g <int g at prog:3>
+    baz() <int baz () at prog:19>:
+        s <int s at prog:2>
+])
+])
+
+AT_CLEANUP
+

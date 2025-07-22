@@ -1,0 +1,83 @@
+# Process this file with autom4te to create testsuite. -*- Autotest -*-
+# Copyright (C) 2005-2021 Sergey Poznyakoff
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 3, or (at
+# your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# We need a recent Autotest.
+m4_version_prereq([2.69])
+
+m4_define([TEST_CFLOW_OPTIONS],[])
+
+dnl CFLOW_CHECK_PROG(PROGNAME,OUTPUT,[STDERR],[RUN-IF-FAIL], [RUN-IF-PASS])
+m4_define([CFLOW_CHECK_PROG],[
+dnl Save sample output
+AT_DATA([expout],[$2])
+AT_CHECK([cflow ]TEST_CFLOW_OPTIONS[ $1],
+[0],
+[expout],
+[$3],[$4],[$5])])
+
+dnl CFLOW_CHECK(TEXT,OUTPUT,[STDERR],[RUN-IF-FAIL], [RUN-IF-PASS])
+m4_define([CFLOW_CHECK],[
+dnl Save the program
+AT_DATA([prog],[$1
+])
+CFLOW_CHECK_PROG([prog],m4_shift($@))])
+
+m4_define([CFLOW_OPT],[
+m4_pushdef([TEST_CFLOW_OPTIONS],[$1])
+$2
+m4_popdef([TEST_CFLOW_OPTIONS])])
+
+m4_pushdef([CFLOW_TEST],
+[AT_SETUP([$1])
+AT_KEYWORDS([$2])
+CFLOW_CHECK(m4_shift(m4_shift($@)))
+AT_CLEANUP
+])
+
+AT_INIT
+
+CFLOW_TEST_INIT
+
+AT_TESTED([cflow])
+
+m4_include([version.at])
+m4_include([direct.at])
+m4_include([reverse.at])
+m4_include([recurse.at])
+m4_include([attr.at])
+m4_include([awrapper.at])
+m4_include([pwrapper.at])
+m4_include([knr.at])
+m4_include([fdecl.at])
+m4_include([static.at])
+m4_include([include.at])
+m4_include([ssblock.at])
+m4_include([funcarg.at])
+m4_include([parm.at])
+m4_include([nfparg.at])
+m4_include([nfarg.at])
+m4_include([hiding.at])
+m4_include([multi.at])
+m4_include([bartest.at])
+m4_include([decl01.at])
+m4_include([invalid.at])
+m4_include([memberof.at])
+
+m4_include([struct.at])
+m4_include([typedef.at])
+m4_include([all.at])
+
+# End of testsuite.at

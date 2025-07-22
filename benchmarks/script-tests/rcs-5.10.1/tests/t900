@@ -1,0 +1,104 @@
+# t900 --- (re)create the RCS files fake/b, fake/b.d/*
+#
+# Copyright (C) 2010-2022 Thien-Thi Nguyen
+#
+# This program is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. $srcdir/common
+. $srcdir/common-kn
+split_std_out_err no
+$hey echo '                                       -*- org -*-'
+
+##
+# Run the program $srcdir/fake/b.make to make ‘b’ and ‘b.d’.
+# Massage these a bit and compare them with that in $srcdir/fake.
+# NB: We jam env vars ‘LOGNAME’ and ‘USER’ (both) to "ttn"
+# to make comparison easier.
+##
+
+LOGNAME=ttn 2>/dev/null ; export LOGNAME
+USER=ttn ; export USER
+
+prep_b_comparison
+TMPDIR="$wdabs"
+$hey echo '* b.make'
+must 'sh `bundled_commav b.make` $wd'
+
+try ()
+{
+    # $1 -- relative filename
+    expected="`bundled_commav $1`"
+    actual="$wd/$1"
+    normalize_b_and_diff "$actual post 'desc'"
+}
+
+##
+# * Check that the RCS file is identical to the fake one.
+##
+
+$hey echo '* RCS file'
+try b
+
+##
+# * Check b.d/* files are identical to fake/b.d/* files.
+##
+
+under ()
+{
+    # $1 -- filename under {fake,$wd}/b.d
+    f=b.d/$1
+    $hey echo '**' $f
+
+    try $f
+}
+
+bunch ()
+{
+    # $1 -- stem
+    stem=$1
+    $hey echo '*' $stem
+
+    under $stem,v
+    under $stem,vu
+    under $stem.ci
+    under $stem.cou
+    under $stem.col
+}
+
+bunch 11
+bunch 1111
+bunch 1112
+bunch 1113
+bunch 1114
+bunch 1115
+bunch 1116
+bunch 1117
+bunch 12
+bunch 13
+bunch 14
+bunch 15
+bunch 16
+bunch 1611
+bunch 1612
+bunch 17
+bunch 18
+bunch 19
+
+$hey echo '* misc'
+under WOW.cou
+under ZOW.cou
+
+exit 0
+
+# t900 ends here

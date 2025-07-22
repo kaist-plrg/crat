@@ -1,0 +1,57 @@
+# t609 --- ‘rcs -I -l’ when already locked by someone else
+#
+# Copyright (C) 2013-2022 Thien-Thi Nguyen
+#
+# This program is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. $srcdir/common
+split_std_out_err no
+rout=$wd/rcs.out
+rerr=$wd/rcs.err
+
+$hey echo '   rcs:' `which rcs` '            -*- org -*-'
+
+##
+# Check that the original lock remains if given input "no".
+##
+
+cp -f `bundled_commav two` $v
+must 'rm -f $w && co -l $w'
+must 'sed "/strict;/s/^./ X/" $v > $v.MUNGED && cp -f $v.MUNGED $v'
+cmd='rcs -I -l4.21'
+echo no | $cmd $w 1>$rout 2>$rerr \
+    && problem "‘$cmd’ did not fail"
+noiselessness_rules $rout "$cmd"
+silence_means_death $rerr "$cmd"
+must 'grep "already locked" $rerr'
+must 'grep "still locked" $rerr'
+
+##
+# Check that the original lock is broken if given input "yes".
+##
+
+cp -f `bundled_commav two` $v
+must 'rm -f $w && co -l $w'
+must 'sed "/strict;/s/^./ X/" $v > $v.MUNGED && cp -f $v.MUNGED $v'
+cmd='rcs -I -l4.21'
+must 'echo yes | $cmd $w 1>$rout 2>$rerr'
+noiselessness_rules $rout "$cmd"
+silence_means_death $rerr "$cmd"
+must 'grep "already locked" $rerr'
+grep "still locked" $rerr \
+    && problem 'original lock not broken'
+
+exit 0
+
+# t609 ends here

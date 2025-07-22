@@ -1,0 +1,2 @@
+indent: input/bug206785.c:22: Warning:Unterminated string constant
+indent: input/bug206785.c:22: Error:Unexpected end of file

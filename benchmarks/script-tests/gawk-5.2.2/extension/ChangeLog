@@ -1,0 +1,416 @@
+2023-05-07         Arnold D. Robbins     <arnold@skeeve.com>
+
+
+	* 5.2.2: Release tar ball made.
+
+2023-05-07         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* configure.ac: Update version.
+
+2023-04-14         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* filefuncs.c, readdir.c, readdir_test.c, time.c: Update
+	copyright year.
+
+2023-03-29         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* filefuncs.c: Fix a typo in a comment. Thanks to
+	zhou shvinq <zhoushuiqing321@outlook.com> for the report.
+
+2023-03-12         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* time.c: Include ../missing_d/strptime.c if the strptime()
+	isn't available natively. Adjust other ifdefs.
+	Thanks to Eli Zaretskii for the encouragement.
+
+2023-03-12  Eli Zaretskii  <eliz@gnu.org>
+
+	* readdir_test.c (dir_can_take_file): Adjust condition to changes
+	in io.c.
+
+2023-02-27         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* readdir.c (dir_can_take_file): Test is more flexible, based on
+	change in gawk's iop.c:iop_alloc() function.
+
+2023-02-09         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* readdir.c (dir_can_take_control_of): If ! HAVE_OPENDIR,
+	don't leak any open file descriptor. Thanks to
+	Eli Zaretskii <eliz@gnu.org> for the bug report.
+
+2023-01-22         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* configure.ac: Check also for strptime.
+	Update copyright year.
+	* time.3am: Update copyright. Undeprecate this extension.
+	Add strptime() doc.
+	* time.c (issue_warning): Removed function and use.
+	(do_strptime): Added.
+	(ext_version): Bump to 1.2.
+
+2022-11-17         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* 5.2.1: Release tar ball made.
+
+2022-11-17         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* configure.ac: Update version.
+
+2022-10-28         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* Makefile.am (DEBUG): New variable with debug compilation flags.
+	* configure.ac: Rework debug compilation to use DEBUG in Makefile.am
+	and to add %no-lines to grammar files. Works around GDB issue
+	with macros and #line directives. Thanks to Ulrich Drepper
+	for the help and for the suggestions.
+
+2022-10-26         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* configure.ac: Try to get macros to work in the debugger.
+
+2022-10-23         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* configure.ac: Add handling of persistent malloc stuff. This is
+	for dealing with M1 macOS.
+	* configure.ac: Sync code for .developing with main configure.ac.
+
+2022-10-14         Andrew J. Schorr      <aschorr@telemetry-investments.com>
+
+	* rwarray.c (array_handle_t): Removed.
+	(readelem): No longer need the array_handle_t parameter.
+	All calls adjusted.
+	(readvalue): No longer need the array_handle_t parameter.
+	All calls adjusted. Use create_array() instead calling
+	through the array_handle_t parameter.
+	(regular_array_handle, global_array_handle): Removed.
+	* testext.c: Add more prints for array restoration tests.
+
+2022-09-17         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* rwarray.c (do_poke): Handle namespaced variables (foo::bar).
+	Thanks to J Naman, <gawker@703n.com> for the report.
+
+2022-09-04         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* 5.2.0: Release tar ball made.
+
+2022-07-14         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* time.c: Update copyright.
+
+2022-07-11         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* time.c: Add a warning upon load that the extension is deprecated.
+	* time.3am: Document same. Update copyright year and date.
+
+2022-07-01         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* Makefile.am, intdiv.c, readfile.c, rwarray.3am, rwarray.c,
+	testext.c: Update copyright year.
+
+2022-06-17         Corinna Vinschen      <vinschen@redhat.com>
+
+	Changes required on Cygwin to build extension DLLs successfully.
+
+	* Makefile.am: Add $(LIBMPFR) to rwarray and testext LIBADD.
+	* Makefile.in: Regenerate.
+
+2022-06-06         Andrew J. Schorr      <aschorr@telemetry-investments.com>
+
+	* rwarray.c (free_value): For arrays, we actually need to call
+	the new API function destroy_array to release the allocated NODE,
+	rather than clear_array.
+
+2022-06-01         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* rwarray.c: Add ifdefs for MPFR in a few places that were
+	missing. The extension wouldn't compile if HAVE_MPFR was
+	not defined.
+
+2022-04-05         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* testext.c (test_array_param): Init new_array to avoid
+	compiler warnings. Thanks to Michal Jaegermann for the report.
+
+2022-04-01         Arnold D. Robbins     <arnold@skeeve.com>
+
+	Small fix from the persistent-gawk guys.
+
+	* rwarray.c (read_number): Fix typo in case MPFR isn't available.
+
+2022-03-11         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* rwarray.3am: Typo fixes, update copyright and modification dates.
+
+2022-02-25         Andrew J. Schorr      <aschorr@telemetry-investments.com>
+
+	Memory issues with MPFR, fix part 1.
+
+	* intdiv.c (do_intdiv): Don't clear quotient and remainder.
+	* testext.c (test_scalar): Add GMP/MPFR support.
+
+2022-02-22         Arnold D. Robbins     <arnold@skeeve.com>
+
+	Fix resource links found by Coverity. Thanks to
+	Jakub Martisko <jamartis@redhat.com> for the report.
+
+	* readfile.c (do_readfile): Close fd if text == NULL.
+
+2021-12-10         Andrew J. Schorr      <aschorr@telemetry-investments.com>
+
+	* rwarray.c (write_number): Update comment to reflect that we are
+	now using mpfr_get_default_rounding_mode() instead of MPFR_RNDN.
+
+2021-12-10         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* rwarray.c (write_number, read_number): Reformat comments a bit.
+
+2021-12-09         Andrew J. Schorr      <aschorr@telemetry-investments.com>
+
+	* rwarray.c (write_number, read_number): Use
+	mpfr_get_default_rounding_mode() instead of arbitrarily choosing
+	MPFR_RNDN, taking advantage of the fact that core gawk maintains
+	this using the ROUNDMODE global variable.
+
+2021-12-08         Andrew J. Schorr      <aschorr@telemetry-investments.com>
+
+	* rwarray.c: Fix valgrind complaints related to creating mpz and mpfr
+	values on the stack in read_number by passing down storage from
+	the calling function that loads the data into gawk.
+	(value_storage): New union type to contain mpz_t or mpfr_t data.
+	(read_global): Allocate value_storage on the stack and pass a pointer
+	to read_elem.
+	(read_array): Ditto.
+	(read_elem): Receive new arg pointing to value_storage, and pass it
+	down to read_value.
+	(read_value): Receive new arg pointing to value_storage, and pass it
+	down to read_number.
+	(read_number): Receive new arg pointing to value_storage, and create
+	mpz and mpfr variables using that storage instead of in the local
+	scope.
+
+2021-12-08         Andrew J. Schorr      <aschorr@telemetry-investments.com>
+
+	* rwarray.c: Add new functions writeall and readall to implement
+	persistent state.
+	(write_backend): New helper function containing most of the logic
+	from do_writea. Note that we do not need to check nargs < 2 because
+	gawk will issue a fatal error if a function is called with fewer
+	than min_required_args. Clean up some minor issues with error
+	handling.
+	(do_writea): Grab the array argument and use write_backend to
+	do the rest of the work.
+	(do_writeall): Lookup SYMTAB and invoke write_backend.
+	(free_value): New function to free memory for data we end up ignoring
+	because the variables exist already.
+	(do_poke): Attempt to create variables that don't exist already or
+	are undefined.
+	(regular_array_handle): Wrapper around create_array.
+	(global_array_handle): Call create_array unless the variable exists
+	already and is an array with zero elements.
+	(read_global): New function used by readall to load global variables
+	from a file.
+	(read_one): New function to read a single array from a file.
+	(read_backend): New helper function containing most of the logic
+	from do_reada. Remove the superfluous nargs check. Read the file
+	prologue and then call read_global or read_one as appropriate to load
+	the data.
+	(do_reada): Grab the array argument and call read_backend with
+	read_one to load the data.
+	(do_readall): Call read_backend with read_global to load the data.
+	(read_array): Call read_elem with additional arg regular_array_handle.
+	(read_elem): Add a function argument controlling array creation to
+	pass down to read_value.
+	(read_value): Add a function argument to call for array creation
+	instead of calling create_array directly, since we may need to use
+	an existing array when populating global arrays in readall.
+	(func_table): Add writeall and readall.
+	* rwarray.3am: Document new functions writeall and readall.
+
+2021-12-08         Andrew J. Schorr      <aschorr@telemetry-investments.com>
+
+	* testext.c (test_array_create): New function to create an array
+	by name that enables testing whether an undefined variable can
+	be converted by the API into an array.
+	(populate_array): New helper function.
+	(fill_in_array): Use populate_array to fill in the elements.
+	(func_table): Add test_array_create.
+
+2021-12-08         Andrew J. Schorr      <aschorr@telemetry-investments.com>
+
+	* rwarray.c (write_number): Since mpfr_fpif_export is experimental
+	and not available in older versions of mpfr, add an ifdef to
+	use mpfr_out_str instead.
+	(read_number): Similarly, use mpfr_inp_str instead of
+	mpfr_fpif_import.
+
+2021-11-18         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* rwarray.c: Add support for writing/reading GMP and MPFR values.
+	Rework usage of constants while we're at it and bump version
+	numbers.
+
+2021-11-07         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* rwarray0.c: Removed, it wasn't used.
+	* Makefile.am: Updated.
+
+2021-10-27         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* 5.1.1: Release tar ball made.
+
+2021-10-13         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* ordchr.c: Update copyright year.
+
+2021-09-27         Andrew J. Schorr      <aschorr@telemetry-investments.com>
+
+	* ordchr.c (do_ord): Add white space around cast.
+
+2021-09-27         Andrew J. Schorr      <aschorr@telemetry-investments.com>
+
+	* ordchr.c (do_ord): Need to cast to unsigned char to avoid returning
+	negative values.
+
+2021-09-22         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* configure.ac: Update version to 5.1.1 in preparation for release.
+
+2021-09-10         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* configure.ac: Updated for Autoconf 2.71. Removes various warnings.
+	* configh.in, configure: Regenerated.
+
+	Unrelated:
+
+	* aclocal.m4: Regenerated: Automake 1.16.4.
+
+2021-09-09         Arnold D. Robbins     <arnold@skeeve.com>
+
+	Move to Autoconf 2.71 (finally!)
+
+	* aclocal.m4, configh.in, configure: Regenerated.
+
+2021-05-05         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* CMakeLists.txt: Removed.
+
+2021-05-05         Arnold D. Robbins     <arnold@skeeve.com>
+
+	Get `make distcheck' working again:
+
+	* Makefile.am (EXTRA_DIST): Remove files that are now in build-aux.
+	* aclocal.m4: Regenerated.
+
+2021-03-30         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* rwarray.c (write_value): Add support for writing boolean values.
+	(read_value): Ditto.
+
+2021-03-29         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* testext.c (var_test): Fix a comment. Update copyright year.
+
+2021-03-22         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* testext.c (valrep2str): Add support for AWK_BOOL.
+
+2020-07-26         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* intdiv.c (do_intdiv): Change quotient and remainder to
+	local variables. No need to allocate/free them via the API.
+
+2020-07-22         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* configure.ac: Use parent directory's m4 and build-aux.
+	* Makefile.am (ACLOCAL_AMFLAGS): Updated.
+	* m4, build-aux: Subdirectories removed.
+	* Makefile.in: Regenerated.
+
+2020-07-21         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* configure.ac (AM_INIT_AUTOMAKE): Update to 1.16.
+
+2020-07-20  gettextize  <bug-gnu-gettext@gnu.org>
+
+	* configure.ac (AM_GNU_GETTEXT_VERSION): Bump to 0.20.2.
+
+2020-07-13         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* intdiv.c (do_intdiv): Release the quotient and remainder
+	values when done with them. Fixes a memory leak. Thanks to
+	Andrew Schorr and valgrind for the report.
+
+2020-06-10         Arnold D. Robbins     <arnold@skeeve.com>
+
+	Miscellanious fixes from Michael Builov <mbuilov@gmail.com>.
+
+	* gawkfts.c (fts_open): Fix memory leak: fts_sort() allocates
+	sp->fts_array, but it's not freed if next fts_alloc() fails.
+	(fts_build): Need to free "head" list before returning NULL
+	on failure.
+	* readdir.c (get_inode): On Windows handle leak: opened handle
+	was not closed.
+	* filefuncs.c (get_inode): On Windows handle leak: opened handle
+	was not closed.
+	(fill_stat_array): Correct the block size calculation.
+	(init_filefuncs, do_fts): According to the documentation,
+	setting the FTS_NOCHDIR flag should only disable the optimization of
+	changing the current directory when scanning directories.
+	However, setting this flag in the gawk script also included setting
+	FTS_SKIP, which prevented recursive directory traversal. Fix this.
+	* rwarray0.c (read_value): Result of read_array() is awk_bool_t,
+	not error code. Fix the check.
+
+2020-04-14         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* 5.1.0: Release tar ball made.
+
+2020-03-11         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* filefuncs.c, ordchr.c, rwarray.c, rwarray0.c: Message updates.
+
+2020-03-06         Jannick               <thirdedition@gmx.net>
+
+	* Makefile.am: Remove trailing spaces.
+	* configure.ac: Use GAWK_CANONICAL_HOST instead of AC_CANONICAL_HOST.
+	Update call to LT_INIT.
+
+2019-11-21         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* time.3am: Document that this extension is now obsolete.
+
+2019-11-03         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* readdir.3am: Document that readdir extension can cause a
+	fatal error, which should be handled with BEGINFILE.
+
+2019-10-16         Andrew J. Schorr      <aschorr@telemetry-investments.com>
+
+	* filefuncs.3am: Enhance the stat() documentation to explain that
+	the returned "name" value equals the argument to the function.
+
+2019-08-21         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* filefuncs.c: Fix a typo in a comment. Update copyright year.
+	* filefuncs.3am: Document statvfs. Thanks to Andrew Schorr
+	for noticing it was missing. Update copyright year.
+
+2019-06-26         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* inplace.3am: Update to match current code's behavior.
+
+2019-06-18         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* 5.0.1: Release tar ball made.
+
+2019-04-18         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* Makefile.am (EXTRA_DIST): Add ChangeLog.1 to the list. Ooops.
+
+2019-04-12         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* ChangeLog.1: Rotated ChangeLog into this file.
+	* ChangeLog: Created anew for gawk 5.0.0 and on.
+	* 5.0.0: Release tar ball made.

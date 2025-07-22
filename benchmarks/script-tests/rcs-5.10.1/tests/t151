@@ -1,0 +1,44 @@
+# t151 --- ‘rcs --commands’ and ‘rcs --aliases’
+#
+# Copyright (C) 2016-2022 Thien-Thi Nguyen
+#
+# This program is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. $srcdir/common
+split_std_out_err
+$hey set -x
+
+##
+# These options were introduced in RCS 5.9.0.
+# (Skip the test for prior versions.)
+##
+. $srcdir/common-v
+version_at_least 5.9.0 || exit 77
+
+try ()
+{
+    # $1 -- option (without leading "--")
+    opt=$1
+    cmd="rcs --$opt"
+    must '$cmd > $wd/$opt'
+    silence_means_death $wd/$opt "$cmd"
+    noiselessness_rules $wd/out  "$cmd"
+}
+
+try commands
+try aliases
+
+exit 0
+
+# t151 ends here

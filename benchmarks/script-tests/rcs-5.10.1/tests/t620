@@ -1,0 +1,77 @@
+# t620 --- strange invocation: ci, co, merge, rcs, rcsdiff, rcsmerge, rlog
+#
+# Copyright (C) 2011-2022 Thien-Thi Nguyen
+#
+# This program is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. $srcdir/common
+split_std_out_err no
+
+##
+# Check that these programs:
+#   ci, co, merge, rcs, rcsdiff, rcsmerge, rlog
+# fail when invoked "strangely".
+##
+
+$hey set -x
+
+invoke ()
+{
+    # $1 -- program
+    program=$1
+    $program $arg && problem "$program invoked $blurb did not fail"
+}
+
+full ()
+{
+    invoke ci
+    invoke co
+    invoke merge
+    invoke rcs
+    invoke rcsdiff
+    invoke rcsmerge
+    invoke rlog
+}
+
+##
+# * without args
+##
+arg=
+blurb='w/o args'
+full
+
+##
+# * on /dev/null
+##
+arg='/dev/null'
+blurb="on $arg"
+full
+
+##
+# * on a system directory
+##
+arg='/tmp'
+blurb="on $arg (not user-owned)"
+full
+
+##
+# * on $wd (user-owned)
+##
+arg=$wd
+blurb="on $arg (user-owned)"
+full
+
+exit 0
+
+# t620 ends here

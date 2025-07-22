@@ -1,0 +1,148 @@
+# t030 --- C function ‘getoldkeys’
+#
+# Copyright (C) 2010-2022 Thien-Thi Nguyen
+#
+# This program is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. $srcdir/compgate
+. $srcdir/common
+split_std_out_err no
+
+##
+# Check that function ‘getoldkeys’ finds old keys.
+##
+
+gout=$wd/gout
+gerr=$wd/gerr
+expected=$wd/expected
+doubt=$wd/g.diff
+
+$hey echo '                                       -*- org -*-'
+
+# Sanity check (and coverage booster :-D).
+cmd='./btdt getoldkeys'
+eval $cmd \
+    && problem "‘$cmd’ did not fail"
+
+try ()
+{
+    # $1 -- filename
+    # $2 -- expected output
+    filename=`bundled_commav b.d/$1.cou`
+    echo "$2" > $expected
+    $hey echo "* $filename"
+    ./btdt getoldkeys "$filename" 1> $gout 2> $gerr
+    noiselessness_rules $gerr "$filename" ; $hey sed 's/^/e|/' $gerr
+    silence_means_death $gout "$filename" ; $hey sed 's/^/o|/' $gout
+    diff $gout $expected 1> $doubt 2>&1 ; $hey sed 's/^/d|/' $doubt
+    noiselessness_rules $doubt "$filename"
+}
+
+try 11 'valid: true'
+
+try 1111 'valid: true'
+
+try 1112 'valid: true'
+
+try 1113 'valid: true'
+
+try 1114 'valid: true
+revno: 7 "1.1.1.4"
+date: 24 "2010/03/18 06:12:32+0000"
+author: 3 "ttn"
+state: 3 "Exp"'
+
+try 1115 'valid: true
+revno: 7 "1.1.1.5"
+date: 24 "2010/03/18 06:21:03+0000"
+author: 3 "ttn"
+state: 3 "Exp"'
+
+try 1116 'valid: true
+revno: 7 "1.1.1.6"
+date: 24 "2010/03/18 06:22:00+0000"
+author: 3 "ttn"
+state: 3 "Exp"'
+
+try 1117 'valid: true
+revno: 7 "1.1.1.7"
+date: 24 "2010/03/28 16:04:26+0000"
+author: 3 "ttn"
+state: 3 "Exp"'
+
+try 12 'valid: true
+revno: 3 "1.2"
+date: 24 "2010/03/30 09:45:02+0000"
+author: 3 "ttn"
+state: 3 "Exp"'
+
+try 15 'valid: true
+revno: 3 "1.5"
+date: 24 "2010/03/30 09:46:50+0000"
+author: 3 "ttn"
+state: 3 "Exp"'
+
+try 16 'valid: true
+revno: 3 "1.6"
+date: 24 "2010/04/12 12:16:58+0000"
+author: 3 "ttn"
+state: 3 "Exp"'
+
+try 1611 'valid: true
+revno: 7 "1.6.1.1"
+date: 24 "2010/05/05 12:18:30+0000"
+author: 3 "ttn"
+state: 3 "Exp"'
+
+try 1612 'valid: true
+revno: 7 "1.6.1.2"
+date: 24 "2010/10/21 22:48:48+0000"
+author: 3 "ttn"
+state: 3 "Exp"'
+
+try 17 'valid: true
+revno: 3 "1.7"
+date: 24 "2010/04/12 13:20:50+0000"
+author: 3 "ttn"
+state: 3 "Exp"'
+
+try 18 'valid: true
+revno: 3 "1.8"
+date: 24 "2010/04/12 13:23:04+0000"
+author: 3 "ttn"
+state: 3 "Exp"'
+
+try 19 'valid: true
+revno: 3 "1.9"
+date: 24 "2010/04/18 09:39:02+0000"
+author: 3 "ttn"
+state: 3 "QQQ"'
+
+try WOW 'valid: true
+revno: 7 "1.1.1.5"
+date: 24 "2010/03/18 06:21:03+0000"
+author: 3 "ttn"
+name: 3 "WOW"
+state: 3 "Exp"'
+
+try ZOW 'valid: true
+revno: 7 "1.6.1.2"
+date: 24 "2010/10/21 22:48:48+0000"
+author: 3 "ttn"
+name: 3 "ZOW"
+state: 3 "Exp"'
+
+exit 0
+
+# t030 ends here

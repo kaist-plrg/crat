@@ -1,0 +1,4 @@
+H
+w out.ro
+s/a/EOF in the middle of a replacement with newlines \
+should behave as a 'q' command

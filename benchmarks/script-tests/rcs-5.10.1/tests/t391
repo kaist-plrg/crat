@@ -1,0 +1,62 @@
+# t391 --- ident with Subversion-style keyword syntax
+#
+# Copyright (C) 2011-2022 Thien-Thi Nguyen
+#
+# This program is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. $srcdir/common
+ident --help >/dev/null 2>&1 || exit 77
+ident --help | grep '^Identify' >/dev/null || exit 77
+split_std_out_err no
+
+expected=$wd/expected
+actual=$wd/actual
+ierr=$wd/i.err
+doubt=$wd/diff.out
+
+##
+# Check ident with Subversion-style keyword syntax.
+##
+
+$hey echo '                                        -*- org -*-'
+
+try ()
+{
+    # $1 -- name
+    # $2 -- file contents
+    # $3 -- expected output
+    name="$1"
+    echo "$2" > $w
+    echo "$3" | sed '1d;s/^|//;s/|$//' > $expected
+
+    $hey echo "* $name"
+    ident -q $w 1> $actual 2> $ierr
+    diff -u $expected $actual > $doubt
+    noiselessness_rules $doubt "$name"
+    noiselessness_rules $ierr "(stderr) $name"
+}
+
+try 'double-colon at beginning' '
+ $Foo: bar $ (OK -- traditional)
+ $Bar::    baz$ (WRONG -- NO SPACE BEFORE $)
+ $Bar::    baz $ (OK -- SPACE BEFORE $)
+ $Qux:: frobby zow#$ (OK -- HASH BEFORE $)' '
+|t391.d/x:|
+|     $Foo: bar $|
+|     $Bar::    baz $|
+|     $Qux:: frobby zow#$|'
+
+exit 0
+
+# t391 ends here

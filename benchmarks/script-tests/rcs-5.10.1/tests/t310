@@ -1,0 +1,86 @@
+# t310 --- rlog on valid RCS file
+#
+# Copyright (C) 2010-2022 Thien-Thi Nguyen
+#
+# This program is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. $srcdir/common
+split_std_out_err no
+
+##
+# Check that rlog exits successfully
+# when called on the bundled RCS files.
+##
+
+rout=$wd/rlog.out
+
+norm ()
+{
+    # $1 -- title, in the form of ADJECTIVE-PHRASE
+    # $2 -- RCS file
+    must "cp -f $2 $v"
+    rlog $v > $rout || problem "rlog barfed on valid ($1) RCS file"
+    silence_means_death $rout "rlog $v (copied from $2)"
+}
+
+norm 'minimally-empty'       `bundled_commav empty-minimal`
+norm 'empty'                 `bundled_commav empty`
+norm 'single-entry'          `bundled_commav one`
+norm 'two-entry'             `bundled_commav two`
+norm '2-entry with branches' `bundled_commav two`
+
+must "sed '25s/ANOTHER/@/;26d' $v > $v-T"
+norm '2-entry w/ empty log'   $v-T
+elm='empty log message'
+grep -F "$elm" $rout \
+    || problem "missing \"$elm\" output"
+
+##
+# Check rlog on a CVS-created ,v (with ‘commitid’ keywords).
+##
+
+norm 'CVS-created (w/ commitid) keyword'  `bundled_commav rcsinfo`
+
+##
+# Also check that header key ‘integrity’
+# does not cause problems for those files.
+##
+
+cat > $wd/insert <<EOF
+integrity
+@@
+;
+EOF
+
+v_wint=$wd/with-integrity
+
+wint ()
+{
+    # $1 -- title, in the form of ADJECTIVE-PHRASE
+    # $2 -- RCS file
+    sed -e "/^locks/r $wd/insert" "$2" > $v_wint
+    silence_means_death $v_wint \
+        "sed-effected addition of integrity to $1 RCS file"
+    norm "$1, with integrity" $v_wint
+}
+
+wint 'minimally-empty'       `bundled_commav empty-minimal`
+wint 'empty'                 `bundled_commav empty`
+wint 'single-entry'          `bundled_commav one`
+wint 'two-entry'             `bundled_commav two`
+wint '2-entry with branches' `bundled_commav two`
+
+exit 0
+
+# t310 ends here

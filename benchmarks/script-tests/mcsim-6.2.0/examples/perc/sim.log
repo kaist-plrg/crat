@@ -1,0 +1,22 @@
+
+________________________________________
+
+MCSim v6.2.0
+
+Copyright (c) 1993-2020 Free Software Foundation, Inc.
+
+MCSim comes with ABSOLUTELY NO WARRANTY;
+This is free software, and you are welcome to redistribute it
+under certain conditions; see the GNU General Public License.
+
+* Using `perc.model' model in file "model.c" created by ../../mod/mod v6.2.0
+
+Reading experiment 1.
+Reading experiment 2.
+
+Doing analysis - 2 normal experiments
+experiment 1
+experiment 2
+Wrote output file "sim.out"
+Done.
+

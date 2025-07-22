@@ -1,0 +1,296 @@
+# t314 --- rlog w/ various date-selection, timezone-output options
+#
+# Copyright (C) 2016-2022 Thien-Thi Nguyen
+#
+# This program is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. $srcdir/common
+split_std_out_err no
+unset TZ
+
+$hey echo '                                   -*- org -*-'
+
+exp=$wd/exp
+got=$wd/got
+
+get ()
+{
+    # $1 -- filename of bundled ,v to use
+    sel=$1
+
+    $hey echo "* with $sel"
+    must "cp -f `bundled_commav $sel` $v"
+}
+
+try ()
+{
+    # $1 -- title
+    # $2 -- options
+    # $3 -- expected date-portion output (can be multiline)
+    title="$1"
+    options="$2"
+    expected="$3"
+
+    $hey echo "*** $title ($options)"
+    if [ -z "$expected" ] ; then
+        >$exp
+    else
+        printf '%s\n' $expected | sed 's/=/ /' >$exp
+    fi
+    eval rlog $options $v \
+        | sed '/^date: /!d;s///;s/;.*//' \
+              >$got
+
+    $hey sed 's/^/    /' $got
+    diff -u $exp $got \
+         || say_what "$title ($options)"
+
+}
+
+flail ()
+{
+    # $1 -- options
+    # $2 -- fragment of expected error output (diagnostic)
+    options="$1"
+    diagnostic="$2"
+
+    eval rlog $options $v 2>$wd/rout \
+        && problem "‘rlog $options’ did not fail"
+    grep "$diagnostic" $wd/rout \
+        || problem "could not find diagnostic frag: $diagnostic"
+}
+
+##
+# Check invalid ‘-d’ and ‘-z’ option on an empty RCS file.
+##
+
+get empty
+
+flail '-zNOSUCH' 'not a known time zone'
+flail '-dNOSUCH' 'unknown date/time'
+
+##
+# Check various ‘-d’ and ‘-z’ options on a one-revision RCS file.
+##
+
+get one
+
+try 'no date or time-zone options' \
+    '' '
+2010/10/02=04:35:26
+'
+
+try 'before 2016' \
+    '-d2016' '
+2010/10/02=04:35:26
+'
+
+try 'before 2010' \
+    '-d2010' ''
+
+try 'precisely the earliest date' \
+    '-d"2010/10/02 04:35:26"' '
+2010/10/02=04:35:26
+'
+
+try 'precisely one second before the earliest date' \
+    '-d"October 2, 2010 04:35:25"' ''
+
+try 'time-zone "+0000"' \
+    '-z+0000' '
+2010-10-02=04:35:26+00
+'
+
+try 'time-zone "-0000"' \
+    '-z-0000' '
+2010-10-02=04:35:26+00
+'
+
+try 'time zone "-1000"' \
+    '-z-1000' '
+2010-10-01=18:35:26-10
+'
+
+try 'time zone "+1100"' \
+    '-z+1100' '
+2010-10-02=15:35:26+11
+'
+
+try 'time zone "+11:11:11"' \
+    '-z+11:11:11' '
+2010-10-02=15:46:37+11:11:11
+'
+
+try 'time zone "UTC"' \
+    '-zUTC' '
+2010-10-02=04:35:26+00
+'
+
+##
+# Same checks, using an RCS file w/ more revisions.
+##
+
+get b.d/1117,v
+
+try 'no date or time-zone options' \
+    '' '
+2010/04/18=09:39:02
+2010/04/12=13:23:04
+2010/04/12=13:20:50
+2010/04/12=12:16:58
+2010/03/30=09:46:50
+2010/03/30=09:46:24
+2010/03/30=09:45:42
+2010/03/30=09:45:02
+2010/03/17=09:00:17
+2010/03/28=16:04:26
+2010/03/18=06:22:00
+2010/03/18=06:21:03
+2010/03/18=06:12:32
+2010/03/17=09:11:48
+2010/03/17=09:01:43
+2010/03/17=09:01:43
+'
+
+try 'before 2016' \
+    '-d2016' '
+2010/04/18=09:39:02
+'
+
+try 'before 2010' \
+    '-d2010' ''
+
+try 'precisely the earliest date' \
+    '-d"2010/03/17 09:00:17"' '
+2010/03/17=09:00:17
+'
+
+try 'precisely one second before the earliest date' \
+    '-d"March 17, 2010 09:00:16"' ''
+
+try 'time-zone "+0000"' \
+    '-z+0000' '
+2010-04-18=09:39:02+00
+2010-04-12=13:23:04+00
+2010-04-12=13:20:50+00
+2010-04-12=12:16:58+00
+2010-03-30=09:46:50+00
+2010-03-30=09:46:24+00
+2010-03-30=09:45:42+00
+2010-03-30=09:45:02+00
+2010-03-17=09:00:17+00
+2010-03-28=16:04:26+00
+2010-03-18=06:22:00+00
+2010-03-18=06:21:03+00
+2010-03-18=06:12:32+00
+2010-03-17=09:11:48+00
+2010-03-17=09:01:43+00
+2010-03-17=09:01:43+00
+'
+
+try 'time-zone "-0000"' \
+    '-z-0000' '
+2010-04-18=09:39:02+00
+2010-04-12=13:23:04+00
+2010-04-12=13:20:50+00
+2010-04-12=12:16:58+00
+2010-03-30=09:46:50+00
+2010-03-30=09:46:24+00
+2010-03-30=09:45:42+00
+2010-03-30=09:45:02+00
+2010-03-17=09:00:17+00
+2010-03-28=16:04:26+00
+2010-03-18=06:22:00+00
+2010-03-18=06:21:03+00
+2010-03-18=06:12:32+00
+2010-03-17=09:11:48+00
+2010-03-17=09:01:43+00
+2010-03-17=09:01:43+00
+'
+
+try 'time zone "-1000"' \
+    '-z-1000' '
+2010-04-17=23:39:02-10
+2010-04-12=03:23:04-10
+2010-04-12=03:20:50-10
+2010-04-12=02:16:58-10
+2010-03-29=23:46:50-10
+2010-03-29=23:46:24-10
+2010-03-29=23:45:42-10
+2010-03-29=23:45:02-10
+2010-03-16=23:00:17-10
+2010-03-28=06:04:26-10
+2010-03-17=20:22:00-10
+2010-03-17=20:21:03-10
+2010-03-17=20:12:32-10
+2010-03-16=23:11:48-10
+2010-03-16=23:01:43-10
+2010-03-16=23:01:43-10
+'
+
+try 'time zone "+1100"' \
+    '-z+1100' '
+2010-04-18=20:39:02+11
+2010-04-13=00:23:04+11
+2010-04-13=00:20:50+11
+2010-04-12=23:16:58+11
+2010-03-30=20:46:50+11
+2010-03-30=20:46:24+11
+2010-03-30=20:45:42+11
+2010-03-30=20:45:02+11
+2010-03-17=20:00:17+11
+2010-03-29=03:04:26+11
+2010-03-18=17:22:00+11
+2010-03-18=17:21:03+11
+2010-03-18=17:12:32+11
+2010-03-17=20:11:48+11
+2010-03-17=20:01:43+11
+2010-03-17=20:01:43+11
+'
+
+try 'time-zone "UTC"' \
+    '-zUTC' '
+2010-04-18=09:39:02+00
+2010-04-12=13:23:04+00
+2010-04-12=13:20:50+00
+2010-04-12=12:16:58+00
+2010-03-30=09:46:50+00
+2010-03-30=09:46:24+00
+2010-03-30=09:45:42+00
+2010-03-30=09:45:02+00
+2010-03-17=09:00:17+00
+2010-03-28=16:04:26+00
+2010-03-18=06:22:00+00
+2010-03-18=06:21:03+00
+2010-03-18=06:12:32+00
+2010-03-17=09:11:48+00
+2010-03-17=09:01:43+00
+2010-03-17=09:01:43+00
+'
+
+##
+# Check ranges (i.e., with ‘<’ and ‘>’ in -dSPEC).
+##
+
+try 'range 2010-03-17 to 2010-03-18' \
+    '-d"2010-03-17<2010-03-18"' '
+2010/03/17=09:00:17
+2010/03/17=09:11:48
+2010/03/17=09:01:43
+2010/03/17=09:01:43
+'
+
+exit 0
+
+# t314 ends here

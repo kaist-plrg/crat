@@ -1,0 +1,2 @@
+eval "a()"
+eval "print 1"

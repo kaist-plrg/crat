@@ -1,0 +1,5 @@
+H
+$m7
+,s/xxx/yyy/
+.m$
+w out.ro

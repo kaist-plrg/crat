@@ -1,0 +1,51 @@
+# common-v (versioning) variables / subroutines
+
+# Copyright (C) 2016-2022 Thien-Thi Nguyen
+#
+# This file is part of GNU RCS.
+#
+# GNU RCS is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# GNU RCS is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# (shell-script-mode)
+
+# variables
+
+# Look at the last "word" on the first line of ‘rcs --version’ output.
+ver=`rcs --version 2>&1 | sed -e 's/.* //' -e 1q`
+
+# RCS 5.7 and earlier do not support ‘--version’, displaying instead:
+#  rcs: unknown option: --version
+# In that case, try again w/ ‘-V’.
+test x"$ver" = x--version \
+    && ver=`rcs -V 2>&1 | sed -e 's/.* //' -e 1q`
+
+# functions
+
+vsort ()
+{
+    # Poor man's ‘sort -V’.
+    # Thanks autotools!  Long live GNU coreutils!
+    # (grep "grep -nHFe 'sort -' ../configure")
+    sort -t '.' -n -k1,1 -k2,2 -k3,3 -k4,4 -k5,5
+}
+
+version_at_least ()
+{
+    # $1 -- minimal version number (MAJOR.MINOR or MAJOR.MINOR.PATCH)
+    minver=$1
+    first=`printf '%s\n%s\n' $ver $minver | vsort | sed 1q`
+    test x"$first" = x"$minver"
+}
+
+# common-v ends here

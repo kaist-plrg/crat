@@ -1,0 +1,86 @@
+# t790 --- rcsclean
+#
+# Copyright (C) 2013-2022 Thien-Thi Nguyen
+#
+# This program is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. $srcdir/common
+split_std_out_err no
+
+must 'cp -f `bundled_commav one` $v'
+
+cd $wd
+TMPDIR=.
+
+##
+# Can we do nothing successfully?
+##
+must 'rcsclean'
+must 'rcsclean -q'
+must 'rcsclean -kk'
+must 'rcsclean -kk -kk'
+must 'rcsclean -V4'
+
+##
+# Check cwd operational mode (no args).
+##
+must 'cp -f x,v y,v'
+must 'co -u x y'
+if ! [ -f x ] || ! [ -f y ] ; then
+    problem 'co failed to create the working file'
+fi
+must 'rcsclean'
+if [ -f x ] || [ -f y ] ; then
+    problem 'rcsclean failed to remove the working file'
+fi
+must 'rm -f x,v y,v'
+
+##
+# Also check warning.
+##
+cmd='rcsclean -V4 -V3'
+must "$cmd 1>rout 2>rerr"
+noiselessness_rules rout "$cmd"
+silence_means_death rerr "$cmd"
+grep 'redefinition.*-V' rerr 1>/dev/null \
+     || problem "incorrect diagnostic"
+
+##
+# Check handling of non-readable cwd.
+##
+must 'chmod u-r .'
+rcsclean 1>ro-cwd-out 2>ro-cwd-err
+res=$?
+must 'chmod u+r .'
+test 0 = $res \
+    && problem "cwd not readable, but rcsclean did not fail"
+noiselessness_rules ro-cwd-out rcsclean
+silence_means_death ro-cwd-err rcsclean
+
+##
+# Check that ‘rcsclean -T -u’ preserves RCS file mtime.
+##
+cd ..
+$hey set -x
+must 'cp `bundled_commav one` $v'
+must 'co -l $w'
+must 'touch -t 199910111213.14 $v'
+must 'cp -p $v $v.SAVE'
+must 'rcsclean -T -u $w'
+test 0 = `./btdt mtimecmp $v $v.SAVE` \
+    || problem 'rcsclean -T did not preserve the RCS file mtime'
+
+exit 0
+
+# t790 ends here

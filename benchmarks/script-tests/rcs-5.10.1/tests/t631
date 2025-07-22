@@ -1,0 +1,36 @@
+# t631 --- co -M
+#
+# Copyright (C) 2018-2022 Thien-Thi Nguyen
+#
+# This program is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. $srcdir/common
+split_std_out_err no
+
+##
+# Check that "co -M" sets the working file mtime correctly.
+##
+
+must 'cp `bundled_commav b` $v'
+must 'co -M1.3 $w'
+
+# 2010.03.30.09.45.42
+TZ=UTC touch -t 201003300945.42 $wd/ref
+
+test 0 = `./btdt mtimecmp $wd/ref $w` \
+    || problem "‘co -M’ set $w mtime incorrectly"
+
+exit 0
+
+# t631 ends here

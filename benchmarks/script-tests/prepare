@@ -1,0 +1,29 @@
+if [[ $# -lt 2 || $# -gt 3 ]]; then
+    echo "Usage: $0 <test_dir> <src_dir> [--release]" >&2
+    exit 1
+fi
+
+dir=debug
+
+if [ "$#" -eq 3 ]; then
+    if [ "$3" = "--release" ]; then
+        dir=release
+    else
+        printf 'Error: unknown option "%s" (expected --release)\n' "$3" >&2
+        exit 1
+    fi
+fi
+
+script_name="$(basename "$0")"
+name="${script_name%.sh}"
+
+if [ -d "$1/$name" ]; then 
+    chmod -R u+w "$1/$name"
+fi
+rm -rf "$1/$name"
+cp -r "$script_dir/$name" $1
+
+(
+    cd "$2/$name"
+    RUSTFLAGS="${RUSTFLAGS:--Awarnings}" cargo build $3
+)

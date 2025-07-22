@@ -1,0 +1,300 @@
+# Process this file with autom4te to create testsuite. -*- Autotest -*-
+# Copyright (C) 2005-2021 Sergey Poznyakoff
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 3, or (at
+# your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+AT_BANNER([all-functions mode])
+
+# Default case: in the absense of mail, --all is assumed
+CFLOW_TEST([default],
+[all all-default all00],
+[int
+foo(void)
+{
+	baz();
+}
+int
+bar(void)
+{
+	qux();
+}
+void
+qux(void)
+{
+	boom();
+}
+],
+[bar() <int bar (void) at prog:7>:
+    qux() <void qux (void) at prog:12>:
+        boom()
+foo() <int foo (void) at prog:2>:
+    baz()
+])
+
+# Default case: if main is present, only functions directly reachable from it
+# are displayed.
+CFLOW_TEST([default (main present)],
+[all all-default-main all01],
+[int
+foo(void)
+{
+	baz();
+}
+int
+bar(void)
+{
+	qux();
+}
+void
+qux(void)
+{
+	boom();
+}
+int
+main(void)
+{
+	zuuq();
+}
+],
+[main() <int main (void) at prog:17>:
+    zuuq()
+])	
+
+# If --main is supplied, only this function and calls reachable from it are
+# output.
+CFLOW_OPT([--main=foo],[
+CFLOW_TEST([the --main option],
+[all all--main all02],
+[int
+foo(void)
+{
+	baz();
+}
+int
+bar(void)
+{
+	qux();
+}
+void
+qux(void)
+{
+	boom();
+}
+],
+[foo() <int foo (void) at prog:2>:
+    baz()
+])	
+])
+
+# Single --all option: print all top-level functions and functions reachable
+# from them.
+CFLOW_OPT([--all],[
+CFLOW_TEST([the --all option],
+[all all--all all03],
+[int
+foo(void)
+{
+	baz();
+}
+int
+bar(void)
+{
+	qux();
+}
+void
+qux(void)
+{
+	boom();
+}
+],
+[bar() <int bar (void) at prog:7>:
+    qux() <void qux (void) at prog:12>:
+        boom()
+foo() <int foo (void) at prog:2>:
+    baz()
+])	
+])
+
+# Double --all options print all global functions, no matter whether reachable
+# from others.
+CFLOW_OPT([--all --all],[
+CFLOW_TEST([the --all --all option],
+[all all--all--all all04],
+[int
+foo(void)
+{
+	baz();
+}
+int
+bar(void)
+{
+	qux();
+}
+void
+qux(void)
+{
+	boom();
+}
+],
+[bar() <int bar (void) at prog:7>:
+    qux() <void qux (void) at prog:12>:
+        boom()
+foo() <int foo (void) at prog:2>:
+    baz()
+qux() <void qux (void) at prog:12>:
+    boom()
+])	
+])
+
+# The --all option applied to a source with main function: main graph is placed
+# on top.
+CFLOW_OPT([--all],[
+CFLOW_TEST([the --all option with main],
+[all all--all-main all05],
+[int
+foo(void)
+{
+	baz();
+}
+int
+bar(void)
+{
+	qux();
+}
+void
+qux(void)
+{
+	boom();
+}
+int
+main(void)
+{
+	zuuq();
+}
+],
+[main() <int main (void) at prog:17>:
+    zuuq()
+bar() <int bar (void) at prog:7>:
+    qux() <void qux (void) at prog:12>:
+        boom()
+foo() <int foo (void) at prog:2>:
+    baz()
+])	
+])
+
+# Double --all option applied to a source with main function: main graph is
+# placed on top, followed by graphs for all global functions.
+CFLOW_OPT([--all --all],[
+CFLOW_TEST([the --all --all option with main],
+[all all--all--all-main all06],
+[int
+foo(void)
+{
+	baz();
+}
+int
+bar(void)
+{
+	qux();
+}
+void
+qux(void)
+{
+	boom();
+}
+int
+main(void)
+{
+	zuuq();
+}
+],
+[main() <int main (void) at prog:17>:
+    zuuq()
+bar() <int bar (void) at prog:7>:
+    qux() <void qux (void) at prog:12>:
+        boom()
+foo() <int foo (void) at prog:2>:
+    baz()
+qux() <void qux (void) at prog:12>:
+    boom()
+])	
+])
+
+# The --no-main option is similar to --all, if the function main() is not
+# defined.
+CFLOW_OPT([--no-main],[
+CFLOW_TEST([the --no-main option],
+[all all--no-main all07],
+[int
+foo(void)
+{
+	baz();
+}
+int
+bar(void)
+{
+	qux();
+}
+void
+qux(void)
+{
+	boom();
+}
+],
+[bar() <int bar (void) at prog:7>:
+    qux() <void qux (void) at prog:12>:
+        boom()
+foo() <int foo (void) at prog:2>:
+    baz()
+])	
+])
+
+# If main() is defined, --no-main has the same effect as --all, except that
+# the graph for main() is placed according to the global lexicographic
+# ordering.
+CFLOW_OPT([--no-main],[
+CFLOW_TEST([the --no-main option with main],
+[all all--no-main-main all08],
+[int
+foo(void)
+{
+	baz();
+}
+int
+bar(void)
+{
+	qux();
+}
+void
+qux(void)
+{
+	boom();
+}
+int
+main(void)
+{
+	zuuq();
+}
+],
+[bar() <int bar (void) at prog:7>:
+    qux() <void qux (void) at prog:12>:
+        boom()
+foo() <int foo (void) at prog:2>:
+    baz()
+main() <int main (void) at prog:17>:
+    zuuq()
+])	
+])
+
+

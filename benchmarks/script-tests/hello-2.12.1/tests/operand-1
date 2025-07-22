@@ -1,0 +1,32 @@
+#! /bin/sh
+# Test extra operands fail correct way.
+#
+# Copyright (C) 2019 Free Software Foundation, Inc.
+#
+# Copying and distribution of this file, with or without modification,
+# are permitted in any medium without royalty provided the copyright
+# notice and this notice are preserved.
+
+trap 'rm -fr $tmpfiles' 1 2 3 15
+
+tmpfiles="operand-test1.ok"
+cat <<EOF >operand-test1.ok
+hello: extra operand: first
+Try 'hello --help' for more information.
+EOF
+
+tmpfiles="$tmpfiles operand-test1.out"
+: ${HELLO=hello}
+${HELLO} first second 2>&1 | tr -d '\r' >operand-test1.out
+
+# remove \r (CR) characters from the output, so that the tests work on
+# platforms with CRLF line endings.  There is apparently no reliable
+# method (across Cygwin, MingW, etc.) to force an eol style.
+
+: ${DIFF=diff}
+${DIFF} operand-test1.ok operand-test1.out
+result=$?
+
+rm -fr $tmpfiles
+
+exit $result

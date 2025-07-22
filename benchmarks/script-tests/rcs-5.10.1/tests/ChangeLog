@@ -1,0 +1,1861 @@
+2022-02-03  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	Release: 5.10.1
+
+2022-01-27  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Add test to check rlog handling of bad byte in edit script
+
+	* t303: New file.
+	* Makefile.am (TESTS): Add t303.
+	* known-failures.in (5.7, 5.8, 5.8.1, 5.8.2)
+	(5.9.0, 5.9.1., 5.9.2, 5.9.3, 5.9.4, 5.10.0): Add t303.
+
+2022-01-27  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Move RCS_UNUSED to beginning of param decl
+
+	* btdt.c (xorlf_do_it): ...here, for arg ‘argv’.
+
+2020-10-24  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Try to handle whoami(1) returning no info.
+
+	* t808 (user): If whoami(1) returns no info, no longer error out.
+	Instead, jam a value, and set env vars ‘LOGNAME’ and ‘USER’, as well.
+
+2020-10-23  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Don't test signal handling if stdin not ok.
+
+	<https://mail.gnu.org/archive/html/bug-rcs/2020-10/msg00014.html>
+
+	* t632: If stdin is not open and connected to
+	a tty, skip the signal handling portion of the test.
+
+2020-10-20  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	Release: 5.10.0
+
+2019-11-20  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v cov] Exercise decimal number parsing in date/time.
+
+	* t370 (try): Rework rlog(1) invocation to enable
+	parameter ‘yes’ to include spaces.
+	[top-level]: Add two test cases specifying a date/time
+	w/ a fractional minute.
+
+2019-10-29  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v cov] Invoke rcsmerge w/ no-op ‘-z’, ‘-T’ and ‘-V’.
+
+	* t470: ...here, in the invalid input cases.
+
+2019-10-27  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	Fix bug: Include trailing slash in default ‘-x’ value.
+
+	Regression introduced 2010-03-03, "Reduce
+	dependency-transitivity of src/Makefile variables."
+
+	* Makefile.am (XFAIL_TESTS): Remove t070.
+
+2019-10-27  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Add test to check default RCS file search.
+
+	* t070: New file.
+	* Makefile.am (TESTS, XFAIL_TESTS): Add t070.
+	* known-failures.in (5.8, 5.8.1, 5.8.2)
+	(5.9.0, 5.9.1, 5.9.2, 5.9.3, 5.9.4): Add t070.
+
+2018-04-27  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	rlog: Fix bug: For ‘-w’, default to user login.
+
+	Regression introduced 2010-05-03, "Use ‘struct link’ more".
+
+	* Makefile.am (XFAIL_TESTS): Remove t808.
+
+2018-04-27  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Add test to check that ‘rlog -w’ defaults to user login.
+
+	* t808: New file.
+	* Makefile.am (TESTS, XFAIL_TESTS): Add t808.
+	* known-failures.in (5.8, 5.8.1, 5.8.2)
+	(5.9.0, 5.9.1, 5.9.2, 5.9.3, 5.9.4): Add t808.
+
+2018-04-27  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Add case for ‘rlog -w’ test.
+
+	* t370: ...here, where the ‘-w’ arg includes commas.
+
+2018-04-27  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Expand no-arg case for ‘rcsclean’ test.
+
+	* t790: ...here, to two files.
+
+2018-04-25  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Add no-arg case for ‘rcsclean’ test.
+
+	* t790: ...here, w/ no args; check that
+	the working file in cwd is indeed deleted.
+	Prior to everything, at the first ‘cd $wd’,
+	set ‘TMPDIR’ correctly.
+
+2018-04-25  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v int] Remove debugging stat(1) invocations; add ‘must’.
+
+	Omission from 2018-04-23, "Add case to ‘rcsclean’ test".
+
+	* t790: ...here, for latest test case.
+
+2018-04-23  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Add case to ‘rcsclean’ test.
+
+	* t790: ...here, w/ options ‘-T -u’;
+	check that the RCS file mtime is preserved.
+
+2018-04-23  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Add case to ‘rcs -n’ test.
+
+	* t600: ...here, with invalid symbolic name.
+
+2018-04-23  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Add case for ‘rcs -s’.
+
+	* t607: ...here, where state includes '.',
+	and revision is specified also as '.'.
+
+2018-04-23  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Add two cases for ‘rlog -d’.
+
+	* t370: ...here, using a comma-v w/ two-digit year.
+
+2018-04-23  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v int] Add a fake comma-v w/ ancient date.
+
+	* fake/ancient: New file.
+	* fake/ancient.make: New file.
+
+2018-04-23  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Add case for merge(1) w/ invalid options, arguments test.
+
+	* t181: ...here, w/ command-line arg ‘-pqr’.
+
+2018-04-23  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int C] Drop trailing "p" or "_p" from boolean var names.
+
+	M(NEW,OLD) ≡ "Rename member to NEW from OLD".
+	* btdt.c (struct yeah): M (scram, scramp).
+	(main): Update references.
+
+2018-04-22  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Add case to ‘merge -p’ test.
+
+	* t180: Add case that specifies also ‘-q’;
+	check that it correctly suppresses conflict warnings.
+
+2018-04-22  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Add case for ‘co -l’ w/ writable workfile.
+
+	* t632: Add case where answer is defaulted.
+
+2018-04-22  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Add case to ‘rlog -z’ test.
+
+	* t314: Add case where the time zone has
+	non-zero minute and second components.
+
+2018-04-22  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Add two more cases to rcsdiff test.
+
+	* t160 [corrupted ed script]: New section.
+	(trycorr): New shell func.
+	[error expanding keywords while applying delta]: New case.
+	[edit script refers to line past end of file]: Likewise.
+
+2018-04-22  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Add test for ‘co -l’ w/ writable workfile.
+
+	* t632: New file.
+	* Makefile.am (TESTS): Add t632.
+
+2018-04-20  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Add test for ‘co -M’.
+
+	* t631: New file.
+	* Makefile.am (TESTS): Add t631.
+
+2018-04-20  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Add nonreadable cwd case for rcsclean test.
+
+	* t790: ...here, after all the other cases.
+
+2018-04-13  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v port] Use `COMMAND` instead of $(COMMAND).
+
+	This is in the spirit of 2012-03-20, "Use `COMMAND`
+	instead of $(COMMAND)" for a file added afterwards.
+
+	* t630: ...here.
+
+2018-04-05  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Avoid "test FILE1 -nt FILE2".
+
+	* t810: Use "btdt mtimecmp" instead of "test -nt".
+	Thanks to both sergio and Xose Vazquez Perez
+	for indirectly signalling this problem.  See 2018-04-05,
+	"Add support for "btdt mtimecmp FILE1 FILE2"" for details.
+
+2018-04-05  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Add support for "btdt mtimecmp FILE1 FILE2".
+
+	Older versions of "test FILE1 -nt FILE2" return
+	an incorrect result when the underlying filesystem
+	supports timestamps w/ subsecond resolution.
+	See <https://savannah.gnu.org/bugs/index.php?52288>,
+	<http://lists.gnu.org/archive/html/bug-rcs/2017-10/msg00002.html>,
+	<http://lists.gnu.org/archive/html/bug-rcs/2016-07/msg00000.html>.
+
+	* btdt.c: #include "stat-time.h", "timespec.h".
+	(mtimecmp_usage): New string.
+	(mtimecmp_grok, mtimecmp_do_it): New funcs.
+	(yeah): Add entry ‘mtimecmp’.
+
+2017-10-28  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[build] Use gnulib module ‘utimens’.
+
+	* Makefile.am (btdt_LDADD): Append $(LIB_CLOCK_GETTIME).
+
+2016-10-31  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v cov] Add test case for rlog "empty log message" output.
+
+	* t310: ...here, immediately prior to ‘commitid’ test case.
+
+2016-10-30  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v cov] Add another ‘rcs -s’ test case.
+
+	* t607: Add case for multichar invalid identifier.
+
+2016-10-30  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v cov] Add some '@' chars in ‘log’, ‘text’ strings.
+
+	* fake/two (4.21): Add '@' in ‘text’ string.
+	(4.20): Add '@' in ‘log’ string.
+	* t160: Update accordingly.
+
+2016-10-30  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Add some checks for unrecognized date/time handling.
+
+	* t314 (flail): New func.
+	<top-level>: Add two checks for ‘rlog -d’ and ‘rlog -z’.
+
+2016-10-29  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Add test for ‘rcs -i -kSUBST’.
+
+	* t500: New file.
+	* Makefile.am (TESTS): Add t500.
+
+2016-10-29  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Add check for rcsdiff handling of "slightly binary" files.
+
+	* t160: ...here, after all other checks.
+
+2016-10-29  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v int] Precompute nul-in-ed-script RCS file.
+
+	* fake/nul-in-ed-script.GNUmakefile: New file.
+	* fake/nul-in-ed-script: New file.
+	* t807: Don't create $v; instead, copy from ‘nul-in-ed-script’.
+
+2016-10-29  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	rlog: Fix bug: Handle ed script with embedded NUL.
+
+	* Makefile.am (XFAIL_TESTS): Remove t807.
+
+2016-10-29  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Add test for rlog +/- summation in presence of NUL.
+
+	* t807: New file.
+	* Makefile.am (TESTS, XFAIL_TESTS): Add t807.
+	* known-failures.in (5.8, 5.8.1, 5.8.2)
+	(5.9.0, 5.9.1, 5.9.2, 5.9.3, 5.9.4): Add t807.
+
+2016-10-27  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	Fix bug: Handle time-zone specified sans numeric offset.
+
+	* Makefile.am (XFAIL_TESTS): Remove t314.
+
+2016-10-27  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Add test for rlog ‘-d’ and ‘-z’.
+
+	* t314: New file.
+	* Makefile.am (TESTS, XFAIL_TESTS): Add t314.
+	* known-failures.in (5.7, 5.8, 5.8.1, 5.8.2)
+	(5.9.0, 5.9.1, 5.9.2, 5.9.3, 5.9.4): Add t314.
+
+2016-10-24  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Exercise env var ‘RCSINIT’ processing.
+
+	* t999: ...here, prior to last rlog(1) command, w/ a
+	value that includes multiple options, requiring a space.
+
+2016-10-22  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Add sanity check for ‘btdt getoldkeys’.
+
+	* t030: ...here, prior to other tests.
+
+2016-10-21  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Add checks for ‘rlog -V...’ errors.
+
+	* t150 (flail): New func.
+	<top-level>: Copy ‘empty’ comma-v to $v; do ‘set +e’;
+	use ‘flail’ to check ‘rlog -V2’ and ‘rlog -V5X’.
+
+2016-10-21  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Add check for warning for ‘rcs -V’.
+
+	* t150: ...here, for RCS 5.9.0 and later.
+
+2016-10-21  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Add case for rcsclean test.
+
+	* t790: Invoke w/ ‘-V4 -V3’; check stderr output, too.
+
+2016-10-21  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Add test for rlog warning for lock held on non-existent revision.
+
+	* t302: New file.
+	* Makefile.am (TESTS): Add t302.
+
+2016-10-21  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Add cases to "rlog on invalid RCS file" test.
+
+	* t300: Add three test cases:
+	invalid substitution mode,
+	head names a non-existent revision,
+	spurious edits w/o corresponding index.
+
+2016-10-21  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[grok] Fix bug: Detect/diagnose missing string correctly.
+
+	* Makefile.am (XFAIL_TESTS): Remove t806.
+
+2016-10-20  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Add test for missing string after ‘desc’, ‘log’, ‘text’.
+
+	* t806: New file.
+	* Makefile.am (TESTS, XFAIL_TESTS): Add t806.
+	* known-failures.in (5.8, 5.8.1, 5.8.2)
+	(5.9.0, 5.9.1, 5.9.2, 5.9.3, 5.9.4): Add t806.
+
+2016-10-14  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Add checks for ident(1) w/ various options, arguments.
+
+	* t390: Source $srcdir/common-v.
+	(flail): New func.
+	<Misc. command-line handling>:
+	Rewrite existing test to use ‘flail’;
+	add more tests; add tests for 5.9.0 and later.
+
+2016-10-13  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Add test for merge(1) w/ invalid options, arguments.
+
+	* t181: New file.
+	* Makefile.am (TESTS): Add t181.
+
+2016-10-13  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Add checks for ‘rcs no-such-command’ and ‘rcs --help COMMAND’.
+
+	* t150: Source $srcdir/common-v;
+	if prior to 5.9.0, exit early;
+	check that ‘rcs no-such-command’ fails;
+	check that ‘rcs --help COMMAND’ produces
+	identical output as ‘COMMAND --help’.
+
+2016-10-13  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Add check for invalid option handling.
+
+	* t150: ...here, with nonsense option ‘--no-such-option’.
+
+2016-10-13  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v int] Make versioning infrastructure handle ‘rcs -V’.
+
+	* common-v (ver): Don't normalize the version
+	for RCS 5.7 and earlier; instead, use ‘rcs -V’.
+
+2016-10-13  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Add test for ‘rcs --commands’ and ‘rcs --aliases’.
+
+	* t151: New file.
+	* Makefile.am (TESTS): Add t151.
+
+2016-10-13  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v int] Add versioning infrastructure.
+
+	* common-v: New file.
+	* Makefile.am (EXTRA_DIST): Add common-v.
+
+2015-02-20  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Spell "substitution" correctly.
+
+	* t380: ...here, in comments and error message.
+
+2015-02-02  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v slog] Jam both ‘LOGNAME’ and ‘USER’ env vars.
+
+	‘LOGNAME’ is readonly under AIX.  Reported by Michael Felt:
+	<http://lists.gnu.org/archive/html/bug-rcs/2015-01/msg00019.html>.
+
+	* t900: ...here.  Also, discard stderr for ‘LOGNAME’ assignment.
+
+2015-01-27  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v slog] Fix bug: Propagate makefile var ‘LIBTHREAD’.
+
+	This is related to ../src/Makefile.am change of similar title.
+
+	* Makefile.am (btdt_LDADD): Append $(LIBTHREAD), as well.
+
+2015-01-23  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v int] Make sure all tests end with "exit 0".
+
+	* t150: Add "exit 0" at end.
+	* t510: Likewise.
+	* t511: Likewise.
+	* t999: Likewise.
+
+2015-01-22  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	Release: 5.9.4
+
+2014-12-12  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] To deduce user, prefer POSIX over BSD over env vars.
+
+	* t999 (me): Rewrite code to set this var, first trying
+	‘id -un’, then ‘whoami’, then the env vars ‘LOGNAME’, ‘USER’.
+
+2014-12-12  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v int] Add abstraction: failed
+
+	* t999 (failed): New func.
+	<top-level>: Use it to replace ‘problem’ calls that end w/ "failed".
+
+2014-12-12  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v int] Use ‘problem’ more.
+
+	* t320: ...here, instead of ‘exit 1’.
+	* t999: Likewise, replacing ‘{ echo TEXT; exit 1; }’.  Also,
+	replace an incorrect scaffolding-error-exit w/ call to ‘problem’.
+
+2014-11-07  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v slog] Fix bug: Use printf(1), not yes(1) and head(1).
+
+	This is more portable.  Reported by Christian Wagner:
+	<http://lists.gnu.org/archive/html/bug-rcs/2014-11/msg00000.html>.
+
+	* t805 <check in 2nd revision>: ...here.
+
+2014-09-17  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	Release: 5.9.3
+
+2014-09-16  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Add platform-specific t805 to known-failures.
+
+	* known-failures.in (the code part of the file):
+	...here, by augmenting the output based on 2-tuple:
+	configure-substituted var ‘host_os’ and REL.
+
+2014-09-16  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Fix bug: Require exact REL match in known-failures.
+
+	* known-failures.in (the code part of the file): Include
+	‘$’ in sed script to avoid, e.g., "5.8" selecting "5.8.1".
+
+2014-09-13  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Add test for stdio/fd desync regression.
+
+	We don't also update known-failures.in and include the test
+	in ‘XFAIL_TESTS’, as per normal regression protocol, because
+	the regression manifests only under Cygwin, and the testing
+	machinery doesn't handle platform-specificity at this time.
+	Suggested by Achim Gratz, originally as "t820":
+	<http://lists.gnu.org/archive/html/bug-rcs/2014-06/msg00000.html>.
+
+	* t805: New file.
+	* Makefile.am (TESTS): Add t805.
+
+2014-08-16  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Confirm test for ci/co without change on branch now passes.
+
+	* Makefile.am (XFAIL_TESTS): Remove t804.
+
+2014-08-16  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Add test for ci/co without change on branch.
+
+	Reported by Bostjan Vilfan.
+
+	* t804: New file.
+	* Makefile.am (TESTS, XFAIL_TESTS): Add t804.
+	* known-failures.in (5.8, 5.8.1, 5.8.2)
+	(5.9.0, 5.9.1, 5.9.2): Add t804.
+
+2014-08-09  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[build] Use gnulib module ‘vla’.
+
+	* btdt.c (getoldkeys_do_it, grok_do_it, xorlf_do_it)
+	(main_t, main): Use ‘VLA_ELEMS’.
+
+2014-08-08  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[slog] Avoid recursing on ‘main’.
+
+	Reported by Achim Gratz, to avoid infinite loop under Cygwin:
+	<http://lists.gnu.org/archive/html/bug-rcs/2014-08/msg00015.html>.
+
+	* btdt.c (main): Switch order of --help and --version
+	handling blocks; make --version fall through to --help.
+
+2014-08-05  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[C] Use ‘ARSZ_FN_PARM’.
+
+	* btdt.c (main): ...here, for array arg.
+
+2014-08-02  Paul Eggert  <eggert@cs.ucla.edu>
+
+	Port to Solaris 10, which uses GCC 3.4.3.
+	* Makefile.am (TESTS_ENVIRONMENT): Use $(SHELL), not sh.
+	* btdt.c (main):
+	Comment out size of array parameter, as GCC 3.4.3 doesn't allow it.
+
+2013-11-28  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	Release: 5.9.2
+
+2013-10-17  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	Fix typo: Spell "compatib..." correctly!
+
+	Reported by Romain Francoise.
+
+	* t420: Do ‘s/compatab/compatib/g’.
+
+2013-10-04  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	Release: 5.9.1
+
+2013-09-25  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Fix bug: Avoid backslash in backticks.
+
+	* t440 (xfail_revno): Use "[.]" in sed script instead of "\.".
+	* t450 (xfail_revno): Likewise.
+	* t460 (xfail_revno): Likewise.
+	* t605 <top-level>: Likewise.
+
+2013-05-06  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	Release: 5.9.0
+
+2013-05-06  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v int] Make t391 self-skip if ‘ident --help’ omits the description.
+
+	The one-line description in ‘ident --help’ output is a
+	proxy for the Subversion fixed-width keywords support,
+	which has no easy way to discern w/o running the program.
+
+	* t391: If ‘ident --help’ output does
+	not include a one-line description, exit 77.
+	* known-failures.in (5.7, 5.8, 5.8.1, 5.8.2): Remove t391.
+
+2013-05-06  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v int] Make t630 self-skip if ‘co -S’ is not available.
+
+	* t630: If co(1) does not support ‘--help’, or
+	if ‘--help’ output does not indicate ‘-S’ support, exit 77.
+	* known-failures.in (5.7, 5.8, 5.8.1, 5.8.2): Remove t630.
+
+2013-05-03  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Don't bother testing ‘ident -V’.
+
+	* t390 <Misc. command-line handling>: ...here.
+
+2013-04-11  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	co: Add option ‘-S’ to enable "self-same" mode.
+
+	* t630: New file.
+	* Makefile.am (TESTS): Add t630.
+	* known-failures.in (5.7, 5.8, 5.8.1, 5.8.2): Add t630.
+
+2013-04-11  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	ident: Recognize Subversion "fixed-width keyword syntax".
+
+	* t391: New file.
+	* Makefile.am (TESTS): Add t391.
+	* known-failures.in (5.7, 5.8, 5.8.1, 5.8.2): Add t391.
+
+2013-04-10  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Update known-failures for 5.8.2.
+
+	* known-failures.in (5.8.2): New top-level heading.
+
+2013-04-04  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Release: 5.8.2
+
+2013-04-04  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Update known-failures for 5.8.
+
+	* known-failures.in (5.8): Remove t630.
+
+2013-04-02  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	Fix bug: Also check terminating nul in symbol deref search.
+
+	* Makefile.am (XFAIL_TESTS): Remove t803.
+
+2013-04-02  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[v] Add test for sym deref w/ common prefix regression; mark xfail.
+
+	Reported by Bostjan Vilfan.
+
+	* t803: New file.
+	* Makefile.am (TESTS, XFAIL_TESTS): Add t803.
+	* known-failures.in (5.8, 5.8.1): Add t803.
+
+2013-03-30  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	Fix bug: Define syntax for ‘integrity’ value.
+
+	* t301: New file.
+	* Makefile.am (TESTS): Add t301.
+	* known-failures.in (5.8): Add t301.
+	(5.8.1): New top-level heading.
+
+2012-06-05  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Release: 5.8.1
+
+2012-06-05  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Update known-failures for 5.7.
+
+	* known-failures.in (5.7): Add t608.
+
+2012-06-05  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Update known-failures for 5.8.
+
+	* known-failures.in (5.8): Update comments
+	for t370, t810; add t320, t630.
+
+2012-05-13  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add test for ‘rcs -o’.
+
+	* t780: New file.
+	* Makefile.am (TESTS): Add t780.
+
+2012-05-13  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add test for interactive lock breaking.
+
+	* t609: New file.
+	* Makefile.am (TESTS): Add t609.
+
+2012-05-12  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Refine unreadable comma-v case for ‘co -p’ test.
+
+	* t410 <unreadable comma-v>: If $v is actually readable
+	despite the ‘chmod -r’, don't bother doing the test case.
+
+2012-05-09  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add test for ‘rcs -m:’.
+
+	* t608: New file.
+	* Makefile.am (TESTS): Add t608.
+
+2012-05-09  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add case for rcsclean test.
+
+	* t790: Also invoke w/ ‘-V4’.
+
+2012-05-09  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add some cases for rcsclean test.
+
+	* t790: Also invoke w/ ‘-kk’ and ‘-kk -kk’.
+
+2012-05-09  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add another ‘$’ test case to ‘co -p’ test.
+
+	* t410 <spec. rev. ‘$’ w/ "badly terminated" corruption>: New test case.
+
+2012-05-09  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add another ‘$’ test case to ‘co -p’ test.
+
+	* t410 <special revision ‘$’ w/ corrupt working file>: New test case.
+
+2012-05-09  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add ‘$’ test case to ‘co -p’ test.
+
+	* t410 <special revision ‘$’>: New test case.
+
+2012-05-09  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add some cases to ident test.
+
+	* t390 <misc. command-line handling>: New test cases.
+
+2012-05-09  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add test for inaccessible TMPDIR.
+
+	* t153: New file.
+	* Makefile.am (TESTS): Add t153.
+
+2012-05-09  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add unreadable comma-v case to ‘co -p’ test.
+
+	* t410: Add case wherein comma-v is ‘chmod ugo-r’.
+
+2012-05-09  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add CVS-compat case to "rlog on valid RCS file" test.
+
+	* fake/rcsinfo: New file.
+	* t310 <CVS-created (w/ commitid) keyword>: New test case.
+
+2012-05-09  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add cases to "rlog on invalid RCS file" test.
+
+	* t300: Include which rlog in output.
+	<bad keyword in header>: New test case.
+	<missing author value in header>: Likewise.
+
+2012-05-09  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add test for ‘rcs -s’.
+
+	* t607: New file.
+	* Makefile.am (TESTS): Add t607.
+
+2012-05-08  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Incorporate ‘exit_failurefully’ into unique caller.
+
+	* btdt.c (bad_args): Use ‘_Exit (EXIT_FAILURE)’ directly.
+
+2012-05-08  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Redo "exit errorfully" specialization/implementation.
+
+	* btdt.c (bow_out): Delete func.
+	(main): Update ‘program’ init form.
+
+2012-05-08  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add test for rcsclean.
+
+	* t790: New file.
+	* Makefile.am (TESTS): Add t790.
+
+2012-05-08  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add test for rlog w/ various filters.
+
+	* t370: New file.
+	* known-failures.in (5.8): Add t370.
+	* Makefile.am (TESTS): Add t370.
+
+2012-03-20  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v port] Use `COMMAND` instead of $(COMMAND).
+
+	The former is Bourne-shell compatible; the latter is a bashism.
+	Reported by Nelson H. F. Beebe.
+
+	* common: Throughout, use `COMMAND` instead of $(COMMAND).
+	* common-d: Likewise.
+	* common-i: Likewise.
+	* common-kn: Likewise.
+	* compgate: Likewise.
+	* fake/b.make: Likewise.
+	* known-failures.in: Likewise.
+	* t030: Likewise.
+	* t050: Likewise.
+	* t160: Likewise.
+	* t300: Likewise.
+	* t310: Likewise.
+	* t311: Likewise.
+	* t312: Likewise.
+	* t313: Likewise.
+	* t320: Likewise.
+	* t380: Likewise.
+	* t390: Likewise.
+	* t400: Likewise.
+	* t410: Likewise.
+	* t420: Likewise.
+	* t440: Likewise.
+	* t450: Likewise.
+	* t460: Likewise.
+	* t470: Likewise.
+	* t600: Likewise.
+	* t601: Likewise.
+	* t602: Likewise.
+	* t605: Likewise.
+	* t606: Likewise.
+	* t800: Likewise.
+	* t802: Likewise.
+	* t900: Likewise.
+
+2012-01-15  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	ci: Fix bug: Don't discard working file mtime with ‘-T’.
+
+	* Makefile.am (XFAIL_TESTS): Remove t810.
+
+2012-01-15  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add test for 5.8 ‘ci -d -T’ regression; mark xfail.
+
+	* t810: New file.
+	* Makefile.am (TESTS, XFAIL_TESTS): Add t810.
+	* known-failures.in (5.8): Add t810.
+
+2011-12-26  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add test for 5.8 ‘rlog -zLT’ regression.
+
+	Normally for a regression test, we add it before the fix,
+	marked xfail, then in a separate commit apply the fix and
+	unmark it xfail.  In this case, however, failure only happens
+	on certain configurations (see ../src/ChangeLog 2011-12-26),
+	and we can't be bothered to add "conditional xfail" support.
+	Instead, we apply the fix and add the test separately, only.
+
+	* t320: New file.
+	* Makefile.am (TESTS): Add t320.
+
+2011-10-28  Paul Eggert  <eggert@CS.UCLA.EDU>
+
+	[v] Fix bug: Refine criteria for avoiding read-only checks.
+
+	Previously, tests using ‘dont_check_readonly’
+	failed if the "make check" user was root.
+	Reported by Ian Delaney, Aaron W. Swenson.
+
+	* common-i (dont_check_readonly): Don't compute based on
+	a ‘uname -s’ output; instead, check to see if the user can
+	write a purportedly read-only file, and inhibit based on that.
+
+2011-08-30  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Release: 5.8
+
+2011-06-12  Thien-Thi Nguyen  <ttn@ambire>
+
+	[C] Use ‘%zu’ for ‘size_t’ arg in format string.
+
+	* btdt.c (getoldkeys_spew): Use ‘%zu’ in
+	format string to output the string length of S.
+
+2011-02-01  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add testcase for rcsdiff "long options passthrough".
+
+	* t160 <long options passthrough>: New section.
+
+2011-02-01  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Generalize "argless invocation" to "invoked strangely".
+
+	* t620: On VERBOSE, do ‘set -x’.
+	(invoke, full): New funcs.
+	(arg, blurb): New vars.
+	(argless): Delete func.
+	<w/o args>: Rework to use new funcs, new vars.
+	<on /dev/null>: New section.
+	<on a system directory>: Likewise.
+	<on $wd>: Likewise.
+
+2011-01-31  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add test for "argless invocation".
+
+	* t620: New file.
+	* Makefile.am (TESTS): Add t620.
+
+2011-01-31  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add test case for "rlog with no args barfs".
+
+	* t300: Add test case: Invoke rlog with no args.
+
+2011-01-31  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add test for "rlog reporting of -kb".
+
+	* fake/zblob: New file.
+	* t380: New file.
+	* Makefile.am (TESTS): Add t380.
+
+2011-01-23  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Use more portable syntax for ‘case’ shell-statement.
+
+	Reported by Nelson H. F. Beebe.
+
+	* common-i <top-level>: In ‘case’ statement, drop open paren.
+	* common <top-level>: Likewise.
+	* t300 (zinvasion): Likewise.
+
+2011-01-22  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v int] Fix bug: Distribute tests/common-d, as well!
+
+	Omission from 2011-01-15, "Move common
+	date-testing elements to its own library".
+
+	* Makefile.am (EXTRA_DIST): Add common-d.
+
+2011-01-22  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[dtp] Fix bug: Handle ISO week+day dates.
+
+	* Makefile.am (XFAIL_TESTS): Remove t802.
+
+2011-01-22  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add test for "ci -dYYYY-wWW-D" handling; mark xfail.
+
+	* t802: New file.
+	* Makefile.am (TESTS, XFAIL_TESTS): Add t802.
+	* known-failures.in (5.7): Add t802.
+
+2011-01-15  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v int] Move common date-testing elements to its own library.
+
+	* common-d: New file.
+	* t801: Use common-d.
+
+2011-01-14  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Inhibit file read-only checks under Cygwin.
+
+	* common-i (dont_check_readonly): New var.
+	(check_w_readonly, check_initialization_command):
+	Use ‘dont_check_readonly’ to inhibit read-only checks.
+
+2011-01-13  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[dtp] Fix bug: Don't clobber ‘yday’ unconditionally.
+
+	* Makefile.am (XFAIL_TESTS): Remove t801.
+
+2011-01-13  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add test for "ci -dYYYY-DOW" handling; mark xfail.
+
+	* t801: New file.
+	* Makefile.am (TESTS, XFAIL_TESTS): Add t801.
+	* known-failures.in (5.7): Add t801.
+
+2011-01-11  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v int] Use ‘RCS_UNUSED’ more.
+
+	* btdt.c (xorlf_do_it): Mark second arg ‘RCS_UNUSED’.
+
+2011-01-11  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v int] Use sed ‘s’ instead of ‘i’ command, for portability.
+
+	* t312: Rework sed script to use ‘s’ instead of ‘i’.
+
+2011-01-11  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	rlog: Output trailing newline for midline description.
+
+	* t313: New file.
+	* Makefile.am (TESTS): Add t313.
+	* known-failures.in (5.7): Add t313.
+
+2011-01-11  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	rlog: Fix bug: Output trailing newline for midline log messages.
+
+	Regression introduced 2010-05-24, "Rewrite parsing".
+
+	* Makefile.am (XFAIL_TESTS): Remove t312.
+
+2011-01-11  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add test for "rlog w/ midline log message"; mark xfail.
+
+	* t312: New file.
+	* Makefile.am (TESTS, XFAIL_TESTS): Add t312.
+
+2011-01-10  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v int] Use ‘ci -u’ for t606.
+
+	* t606: Don't just ‘co -u’; instead,
+	modify the working file and do ‘ci -u’.
+
+2011-01-10  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Pass through ‘integrity’ field in RCS file.
+
+	* t310 (wint): New func; use it to also test reading
+	of bundled RCS files with ‘integrity’ field inserted.
+	* t606: New file.
+	* Makefile.am (TESTS): Add t606.
+
+2011-01-08  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v fake] Use literal newline b.make sed scripts.
+
+	* fake/b.make (1.3, 1.4, 1.5, 1.6, 1.1.1.6): Use '\' + '\n'
+	in the replacement portion of the ‘s’ command in these
+	sed scripts instead of two-byte string { '\', 'n' }.
+
+2011-01-07  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v int] Use id(1), not logname(1).
+
+	* t999: In case env vars ‘LOGNAME’ and ‘USER’ are not
+	set, use id(1) instead of logname(1) to deduce login.
+
+2011-01-06  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v int] Use logname(1) more.
+
+	* t999: In case env vars ‘LOGNAME’ and ‘USER’ are not set,
+	use logname(1) instead of who(1) + sed(1) to deduce login.
+
+2010-11-29  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[grok] Recognize duplicate delta log; throw error.
+
+	Omission from 2010-05-24, "Rewrite parsing".
+	* Makefile.am (XFAIL_TESTS): Remove t300.
+
+2010-11-29  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add testcase to "invalid RCS file" test; mark xfail.
+
+	* t300 (<log weirdness>): New section.
+	(<log weirdness> <repeated revno>): New test.
+	* Makefile.am (XFAIL_TESTS): Add t300.
+
+2010-11-29  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[grok] Fix bug: Check all branch forward references for match.
+
+	* Makefile.am (XFAIL_TESTS): Remove t300.
+
+2010-11-29  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add testcase to "invalid RCS file" test; mark xfail.
+
+	* t300 (<branch pointer weirdness> <beyond branch point>): New.
+	* Makefile.am (XFAIL_TESTS): Add t300.
+
+2010-11-29  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[grok] Fix bug: Check that new branch was forward referenced.
+
+	* Makefile.am (XFAIL_TESTS): Remove t300.
+
+2010-11-29  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add testcase to "invalid RCS file" test; mark xfail.
+
+	* t300 (<branch pointer weirdness> <missing>): New test case.
+	* Makefile.am (XFAIL_TESTS): Add t300.
+
+2010-11-29  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add more branch pointer weirdness to "invalid RCS file" test.
+
+	* t300 (<branch pointer weirdness>): Add two more testcases.
+
+2010-11-29  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[grok] Fix bug: Check that branches begin w/ branch point.
+
+	* Makefile.am (XFAIL): Remove t300.
+
+2010-11-29  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add testcase to "invalid RCS file" test; mark xfail.
+
+	* t300 (zot): New func.
+	(is branch point itself): New test case.
+	* Makefile.am (XFAIL_TESTS): Add t300.
+
+2010-11-28  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] For "invalid RCS file" test, also check rlog return value.
+
+	* t300 (barf): Also check return value.
+
+2010-11-19  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Fix bug: For unchanged checkin on branch, prune ‘newdelta’.
+
+	Expansion of 2010-11-14, "Fix bug: For
+	unchanged checkin, invalidate ‘newdelta’".
+	* Makefile.am (XFAIL_TESTS): Remove t605.
+
+2010-11-15  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Make "unchanged ci on branch" test more strict; mark xfail.
+
+	* t605: Also check that "branches 1.1.1.1;" is purged from $v.
+	* Makefile.am (XFAIL_TESTS): Add t605.
+
+2010-11-14  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Fix bug: For unchanged checkin, invalidate ‘newdelta’.
+
+	Regression introduced 2010-05-24, "Rewrite parsing".
+	* Makefile.am (XFAIL_TESTS): Remove t605.
+
+2010-11-14  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add an "unchanged ci on branch" test; mark xfail.
+
+	* t605: New file.
+	* Makefile.am (TESTS, XFAIL_TESTS): Add t605.
+	Suggested by Klaus T. Aehlig.
+
+2010-11-13  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Fix bug: Use ‘gr_revno’ more.
+
+	Regression introduced 2010-05-08,
+	"Add abstraction: delta_from_ref".
+	* Makefile.am (XFAIL_TESTS): Remove t604.
+
+2010-11-13  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add a "ci on branch with non-strict locking" test; mark xfail.
+
+	* t604: New file.
+	* Makefile.am (TESTS, XFAIL_TESTS): Add t604.
+	Suggested by Klaus T. Aehlig.
+
+2010-11-12  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Fix bug: Output leading '@' for "rcs -m" log in RCS file.
+
+	Omission from 2010-05-24, "Rewrite parsing".
+	* Makefile.am (XFAIL_TESTS): Remove t603.
+
+2010-11-12  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add a "rcs -m" test; mark it xfail.
+
+	* t603: New file.
+	* Makefile.am (TESTS): Add t603.
+	(XFAIL_TESTS): Add t603.
+
+2010-11-08  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add a "rcsmerge -p -kk" test.
+
+	* t470: New file.
+	* Makefile.am (TESTS): Add t470.
+
+2010-11-08  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add an ident test.
+
+	* t390: New file.
+	* Makefile.am (TESTS): Add t390.
+
+2010-11-07  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add a "merge -p" test.
+
+	* t180: New file.
+	* Makefile.am (TESTS): Add t180.
+
+2010-11-07  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add a rcsdiff test.
+
+	* t160: New file.
+	* Makefile.am (TESTS): Add t160.
+
+2010-11-04  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add a test to recreate fake/b, fake/b.d/*.
+
+	* t900: New file.
+	* Makefile.am (TESTS): Add t900.
+
+2010-11-04  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] For t999 rlog testing, don't sort; diff directly.
+
+	* t999: For rlog output, don't sort symbolic names;
+	diff the entire output, including symbolic names, directly.
+
+2010-11-03  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v int] If b.make is given an arg, cd there first.
+
+	* fake/b.make: If $1 is specified, do ‘cd $1’.
+
+2010-11-03  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Fix bug: Maintain ‘GROK (deltas)’ in proper order.
+
+	Omission from 2010-05-24, "Rewrite parsing".
+	* Makefile.am (XFAIL_TESTS): Remove t050.
+
+2010-11-03  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add a "grok edits-order" test; mark it xfail.
+
+	* btdt.c: #include "b-complain.h",
+	"b-divvy.h", "b-esds.h", "b-fro.h", "b-grok.h".
+	(MORE): New #define.
+	(grok_usage): New string.
+	(grok_do_it): New func.
+	(yeah): Add entry ‘grok’.
+	* t050: New file.
+	* Makefile.am (XFAIL_TESTS): Add t050.
+	(TESTS): Add t050.
+
+2010-11-02  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add a ‘co -p -d’ test.
+
+	* t460: New file.
+	* Makefile.am (TESTS): Add t460.
+
+2010-11-02  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v int] Fix bug: Propagate ‘title’ var properly.
+
+	Omission from 2010-10-30, "Add tests for ‘co -p’ and ‘co -p -k’".
+	* common-kn (normalize_b_and_diff): Set var ‘title’; use it.
+
+2010-11-02  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add a ‘co -p -s’ test.
+
+	* t450: New file.
+	* Makefile.am (TESTS): Add t450.
+
+2010-11-02  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add a ‘co -p -w’ test.
+
+	* t440: New file.
+	* Makefile.am (TESTS): Add t440.
+
+2010-11-01  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Make ‘zurg’ author of b edits "greetings", "earthlings".
+
+	* fake/b.make (1.3, 1.4): Specify ‘-wzurg’.
+	* fake/b.d/1111,v: Regenerate.
+	* fake/b.d/1111,vu: Regenerate.
+	* fake/b.d/1112,v: Regenerate.
+	* fake/b.d/1112,vu: Regenerate.
+	* fake/b.d/1113,v: Regenerate.
+	* fake/b.d/1113,vu: Regenerate.
+	* fake/b.d/1114,v: Regenerate.
+	* fake/b.d/1114,vu: Regenerate.
+	* fake/b.d/1115,v: Regenerate.
+	* fake/b.d/1115,vu: Regenerate.
+	* fake/b.d/1116,v: Regenerate.
+	* fake/b.d/1116,vu: Regenerate.
+	* fake/b.d/1117,v: Regenerate.
+	* fake/b.d/1117,vu: Regenerate.
+	* fake/b.d/13,v: Regenerate.
+	* fake/b.d/13,vu: Regenerate.
+	* fake/b.d/13.col: Regenerate.
+	* fake/b.d/13.cou: Regenerate.
+	* fake/b.d/14,v: Regenerate.
+	* fake/b.d/14,vu: Regenerate.
+	* fake/b.d/14.ci: Regenerate.
+	* fake/b.d/14.col: Regenerate.
+	* fake/b.d/14.cou: Regenerate.
+	* fake/b.d/15,v: Regenerate.
+	* fake/b.d/15,vu: Regenerate.
+	* fake/b.d/15.ci: Regenerate.
+	* fake/b.d/15.col: Regenerate.
+	* fake/b.d/15.cou: Regenerate.
+	* fake/b.d/16,v: Regenerate.
+	* fake/b.d/16,vu: Regenerate.
+	* fake/b.d/16.ci: Regenerate.
+	* fake/b.d/16.col: Regenerate.
+	* fake/b.d/16.cou: Regenerate.
+	* fake/b.d/1611,v: Regenerate.
+	* fake/b.d/1611,vu: Regenerate.
+	* fake/b.d/1611.ci: Regenerate.
+	* fake/b.d/1611.col: Regenerate.
+	* fake/b.d/1611.cou: Regenerate.
+	* fake/b.d/1612,v: Regenerate.
+	* fake/b.d/1612,vu: Regenerate.
+	* fake/b.d/1612.ci: Regenerate.
+	* fake/b.d/1612.col: Regenerate.
+	* fake/b.d/1612.cou: Regenerate.
+	* fake/b.d/17,v: Regenerate.
+	* fake/b.d/17,vu: Regenerate.
+	* fake/b.d/17.ci: Regenerate.
+	* fake/b.d/17.col: Regenerate.
+	* fake/b.d/17.cou: Regenerate.
+	* fake/b.d/18,v: Regenerate.
+	* fake/b.d/18,vu: Regenerate.
+	* fake/b.d/18.ci: Regenerate.
+	* fake/b.d/18.col: Regenerate.
+	* fake/b.d/18.cou: Regenerate.
+	* fake/b.d/19,v: Regenerate.
+	* fake/b.d/19,vu: Regenerate.
+	* fake/b.d/19.ci: Regenerate.
+	* fake/b.d/19.col: Regenerate.
+	* fake/b.d/19.cou: Regenerate.
+	* fake/b.d/ZOW.cou: Regenerate.
+
+2010-10-31  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v int] Incorporate xorlf into "btdt xorlf".
+
+	* btdt.c (xorlf_usage): New string.
+	(xorlf_do_it): New func.
+	(yeah): Add entry ‘xorlf’.
+	* t999 (xorlf): Update.
+	* Makefile.am (check_PROGRAMS): Remove xorlf.
+	* xorlf.c: Delete file.
+
+2010-10-22  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add test to check C function ‘getoldkeys’.
+
+	* btdt.c (getoldkeys_usage): New string.
+	(getoldkeys_spew, getoldkeys_do_it): New funcs.
+	(yeah): Add entry ‘getoldkeys’.
+	* t030: New file.
+	* Makefile.am (TESTS): Add t030.
+
+2010-10-30  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add tests for ‘co -p’ and ‘co -p -k’.
+
+	* common-kn: New file.
+	* t410: New file.
+	* t430: New file.
+	* Makefile.am (TESTS): Add t410, t430.
+	(EXTRA_DIST): Add common-kn.
+
+2010-10-30  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add some more fake files.
+
+	* fake/b.make (checkin): Take $4 as optional
+	symbolic name; take $5 as optional other args.
+	(1.9, 1.1.1.5, 1.6.1.2): Update call to ‘checkin’.
+	* fake/b.d/WOW.cou: New file.
+	* fake/b.d/ZOW.cou: New file.
+	* fake/b.d/1115.cou: Regenerate.
+	* fake/b.d/1612.cou: Regenerate.
+
+2010-10-30  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] For t999 rlog testing, sort only the symbolic names.
+
+	* t999: Sort only the symbolic names; specify ‘LANG=C’;
+	revert to direct comparison for other rlog output lines.
+
+2010-10-30  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add some more fake files.
+
+	* fake/b: New file.
+	* fake/b.d: New directory.
+	* fake/b.d/11,v: New file.
+	* fake/b.d/11,vu: New file.
+	* fake/b.d/11.ci: New file.
+	* fake/b.d/11.col: New file.
+	* fake/b.d/11.cou: New file.
+	* fake/b.d/1111,v: New file.
+	* fake/b.d/1111,vu: New file.
+	* fake/b.d/1111.ci: New file.
+	* fake/b.d/1111.col: New file.
+	* fake/b.d/1111.cou: New file.
+	* fake/b.d/1112,v: New file.
+	* fake/b.d/1112,vu: New file.
+	* fake/b.d/1112.ci: New file.
+	* fake/b.d/1112.col: New file.
+	* fake/b.d/1112.cou: New file.
+	* fake/b.d/1113,v: New file.
+	* fake/b.d/1113,vu: New file.
+	* fake/b.d/1113.ci: New file.
+	* fake/b.d/1113.col: New file.
+	* fake/b.d/1113.cou: New file.
+	* fake/b.d/1114,v: New file.
+	* fake/b.d/1114,vu: New file.
+	* fake/b.d/1114.ci: New file.
+	* fake/b.d/1114.col: New file.
+	* fake/b.d/1114.cou: New file.
+	* fake/b.d/1115,v: New file.
+	* fake/b.d/1115,vu: New file.
+	* fake/b.d/1115.ci: New file.
+	* fake/b.d/1115.col: New file.
+	* fake/b.d/1115.cou: New file.
+	* fake/b.d/1116,v: New file.
+	* fake/b.d/1116,vu: New file.
+	* fake/b.d/1116.ci: New file.
+	* fake/b.d/1116.col: New file.
+	* fake/b.d/1116.cou: New file.
+	* fake/b.d/1117,v: New file.
+	* fake/b.d/1117,vu: New file.
+	* fake/b.d/1117.ci: New file.
+	* fake/b.d/1117.col: New file.
+	* fake/b.d/1117.cou: New file.
+	* fake/b.d/12,v: New file.
+	* fake/b.d/12,vu: New file.
+	* fake/b.d/12.ci: New file.
+	* fake/b.d/12.col: New file.
+	* fake/b.d/12.cou: New file.
+	* fake/b.d/13,v: New file.
+	* fake/b.d/13,vu: New file.
+	* fake/b.d/13.ci: New file.
+	* fake/b.d/13.col: New file.
+	* fake/b.d/13.cou: New file.
+	* fake/b.d/14,v: New file.
+	* fake/b.d/14,vu: New file.
+	* fake/b.d/14.ci: New file.
+	* fake/b.d/14.col: New file.
+	* fake/b.d/14.cou: New file.
+	* fake/b.d/15,v: New file.
+	* fake/b.d/15,vu: New file.
+	* fake/b.d/15.ci: New file.
+	* fake/b.d/15.col: New file.
+	* fake/b.d/15.cou: New file.
+	* fake/b.d/16,v: New file.
+	* fake/b.d/16,vu: New file.
+	* fake/b.d/16.ci: New file.
+	* fake/b.d/16.col: New file.
+	* fake/b.d/16.cou: New file.
+	* fake/b.d/1611,v: New file.
+	* fake/b.d/1611,vu: New file.
+	* fake/b.d/1611.ci: New file.
+	* fake/b.d/1611.col: New file.
+	* fake/b.d/1611.cou: New file.
+	* fake/b.d/1612,v: New file.
+	* fake/b.d/1612,vu: New file.
+	* fake/b.d/1612.ci: New file.
+	* fake/b.d/1612.col: New file.
+	* fake/b.d/1612.cou: New file.
+	* fake/b.d/17,v: New file.
+	* fake/b.d/17,vu: New file.
+	* fake/b.d/17.ci: New file.
+	* fake/b.d/17.col: New file.
+	* fake/b.d/17.cou: New file.
+	* fake/b.d/18,v: New file.
+	* fake/b.d/18,vu: New file.
+	* fake/b.d/18.ci: New file.
+	* fake/b.d/18.col: New file.
+	* fake/b.d/18.cou: New file.
+	* fake/b.d/19,v: New file.
+	* fake/b.d/19,vu: New file.
+	* fake/b.d/19.ci: New file.
+	* fake/b.d/19.col: New file.
+	* fake/b.d/19.cou: New file.
+	* fake/b.make: New file.
+
+2010-10-29  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Fix bug: For stdio operation, prep ‘finishedit’ properly.
+
+	Regressions introduced 2010-04-17 and 2010-05-31, in
+	"Overhaul read-only file handling" and "Mark verbatim
+	region; reduce transitional tell/seek", respectively.
+	* Makefile.am (XFAIL_TESTS): Remove t400.
+
+2010-10-29  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add a "stdio trailing context sync" test; mark it xfail.
+
+	* fake/stdio-sync.GNUmakefile: New file.
+	* fake/stdio-sync: New file.
+	* t400: New file.
+	* Makefile.am (XFAIL_TESTS, TESTS): Add t400.
+
+2010-10-28  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Clear env var ‘RCSINIT’.
+
+	* common (RCSINIT): Set var to have no value.
+
+2010-10-20  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v int] Say "commands" instead of "tests" in btdt.c.
+
+	* btdt.c (YEAH): Construct dispatch func
+	name with suffix "_do_it" instead of "_test".
+
+2010-10-18  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add infrastructure for component testing.
+
+	* common: Prepend ‘PATHPREFIX’ to ‘PATH’ here.
+	* btdt.c: New file.
+	* compgate: New file.
+	* t010: New file.
+	* Makefile.am (check_PROGRAMS): Add btdt.
+	(AM_CPPFLAGS, btdt_LDADD): New vars.
+	(TESTS_ENVIRONMENT): Don't set ‘PATH’; set ‘PATHPREFIX’.
+	(TESTS): Add t010.
+	(EXTRA_DIST): Add compgate.
+	* README: Mention option ‘COMPONENTS=1’.
+
+2010-10-18  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v int] Run xorlf without args.
+
+	* t999: Run xorlf without args.
+
+2010-10-15  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Fix bug: Allocate ‘REPO (r)’ also for new repo.
+
+	Omission from 2010-05-24, "Rewrite parsing".
+	* Makefile.am (XFAIL_TESTS): Remove t510, t511.
+
+2010-10-15  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add some ‘ci -i’ tests; mark them xfail.
+
+	* common (noiselessness_rules, bad_RCSfile): New funcs.
+	* common-i: New file.
+	* t510: New file.
+	* t511: New file.
+	* Makefile.am (XFAIL_TESTS): Add t510, t511.
+	(TESTS): Add t510, t511.
+	(EXTRA_DIST): Add common-i.
+
+2010-10-14  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Reorganize tiers.
+
+	* t600: Rename from t500.
+	* t601: Rename from t501.
+	* t602: Rename from t502.
+	* t800: Rename from t700.
+	* Makefile.am (XFAIL_TESTS): New var.
+	(TESTS): Update.
+	* known-failures.in (5.7): Update.
+	* README: Update.
+
+2010-10-08  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Search ‘PATH’ for co / merge at runtime.
+
+	* Makefile.am (check_SCRIPTS): Delete var.
+	(PATHPREFIX): Update value.
+	(test-prep): Delete target.
+	(installcheck-local): Update dependency list.
+
+2010-10-07  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Avoid ":" as path separator; use $(PATH_SEPARATOR).
+
+	* Makefile.am (TESTS_ENVIRONMENT): Use $(PATH_SEPARATOR).
+
+2010-10-07  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Overhaul test suite.
+
+	* README: New file.
+	* known-failures.in: New file.
+	* fake: New directory.
+	* fake/empty: New file.
+	* fake/empty-minimal: Likewise.
+	* fake/one: Likewise.
+	* fake/two: Likewise.
+	* fake/two-with-branch: Likewise.
+	* common: Rewrite.
+	* alive.test: Delete file.
+	* t150: New file.
+	* t300: New file.
+	* t310: New file.
+	* t311: New file.
+	* t420: New file.
+	* t500: New file, factored from t001.test.
+	* t501: New file, factored from t001.test.
+	* t502: New file, factored from t001.test.
+	* t001.test: Delete file.
+	* t700: Rename from t000.test; simplify.
+	* t999: Rename from t999.test; add properly formatted
+	blurb for "make describe"; ‘cd $wd’ at beginning and ‘cd ..’
+	at end; set env var ‘TMPDIR’; don't honor env var ‘DEBUG’;
+	instead, honor ‘VERBOSE’; make RCS/ unconditionally;
+	don't delete it and the a.* files at end; don't use
+	‘42’ for state; instead, use ‘seriously-spurious’;
+	for rlog test, sort output prior to compare.
+	* Makefile.am (TESTS): Rewrite.
+	(EXTRA_DIST): Add fake.
+	(describe): New target.
+
+2010-10-04  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Centralize shell vars ‘w’, ‘v’.
+
+	* common (w, v): New vars.
+	* t000.test (w, v): Delete vars.
+	* t001.test (w, v): Likewise.
+
+2010-10-04  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Delete unused shell func.
+
+	* common (copyall): Delete func.
+
+2010-10-04  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Use Automake for generating top-level test driver.
+
+	* common: Rename from common.in.
+	* Makefile.am (EXTRA_DIST): Add common.
+	(check-TESTS): Delete target.
+	(srcdir): Delete now-redundant var.
+
+2010-10-04  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Make test wd in common; arrange for cleanup there, too.
+
+	* common.in: Add load-time actions: Make pristine test
+	working directory and optionally arrange for its removal.
+	* Makefile.am (check-TESTS): No longer do wd setup/cleanup.
+	* t999.test: At end, cd ..; don't delete working files.
+
+2010-10-04  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Do stdout/stderr split in shell func, not in makefile.
+
+	* Makefile.am (check-TESTS): Don't redirect stdout/stderr.
+	* common.in (split_std_out_err): New func.
+	(dontsplit): Delete func.
+	* alive.test: Use ‘split_std_out_err’.
+	* t000.test: Likewise.
+	* t001.test: Likewise.
+	* t999.test: Likewise.
+
+2010-10-04  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Use Automake for building xorlf.
+
+	* Makefile.am (check_PROGRAMS): New var.
+	* t999.test (xorlf): New var; use it for xorlf invocation.
+	* xorlf.c: New file.
+
+2010-10-03  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Use Automake for test preparation.
+
+	* Makefile.am (check_SCRIPTS): New var.
+	(check-TESTS): Clear prereq list.
+
+2010-09-30  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[maint] Simplify ‘PATHPREFIX’ Makefile-internal protocol.
+
+	* Makefile.am (PATHPREFIX): Init to the absolute name of
+	the 0pre/bin directory under the build-tree src/.
+	(TESTS_ENVIRONMENT): Don't run pwd(1).
+	(installcheck-local): Rename target from ‘installcheck’;
+	omit trailing colon from ‘PATHPREFIX’ specification.
+
+2010-09-29  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Centralize tests; do complicated test last.
+
+	* t999.test: Rename from ../src/alive.test; use ./common for init;
+	change to t999.d/ before starting; combine stdout/stderr; inhibit
+	cleanup if env var ‘KEEPD’ has value ‘1’.
+	* Makefile.am (TESTS): Add t999.test.
+
+2010-09-29  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Fix bug: Specify "./common" to avoid ‘PATH’ search.
+
+	* alive.test: Say ". ./common".
+	* t000.test: Likewise.
+	* t001.test: Likewise.
+	Reported by Ludovic Courtès.
+
+2010-06-24  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Update license to GPLv3+.
+
+	* Makefile.am: Update license notice.
+	* common.in: Likewise.
+
+2010-05-31  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Fix bug: Do a ‘co -l’ before modifying the working file.
+
+	Improper methodology introduced 2010-03-10,
+	"Fix bug: Remove all log messages when removing all revisions".
+	* t000.test: Do ‘co -l’ before composing the first revision.
+
+2010-05-25  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Fix bug: Output proper range for ‘RM_STDIO’ fro.
+
+	Regression introduced 2010-04-27, "Add abstraction: fro_spew_partial".
+	* t001.test: Add a test to check proper rlog(1) output,
+	given an RCS file bloated into into ‘RM_STDIO’ territory.
+
+2010-05-07  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Fix bug: Resolve ‘BRNUM.’ correctly.
+
+	Regression introduced 2010-04-21, "Add abstraction: fully_numeric".
+	* t001.test: Add a test to compare the output of "co -pX",
+	where X is ‘BRNUM’ in one case and ‘BRNUM.’ in another.
+
+2010-05-04  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	rcs: Fix bug: Correctly erase/append access-list entries.
+
+	Regression introduced 2010-04-28,
+	"Use ‘struct link’ instead of ‘struct access’".
+	* t001.test: Add some access-list modification tests.
+
+2010-05-04  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	rcs: Fix bug: Correctly delete symbolic name.
+
+	Regression introduced 2010-04-28,
+	"Replace ‘struct assoc’ with ‘struct wlink’ + ‘struct symdef’".
+	* t001.test: New file.
+	* Makefile.am (TESTS): Add t001.test.
+
+2010-03-19  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[build] Use GNU Automake.
+
+	* Makefile.am: New file.
+	* Makefile.in: Delete file.
+
+2010-03-13  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Also check expected `co' behavior on no-rev RCS file.
+
+	* t000.test <empty>: Check that `co -p' produces no output.
+
+2010-03-10  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Fix bug: Remove all log messages when removing all revisions.
+
+	* t000.test: Enable.  Also, add test
+	to check outdating non-tip root revision.
+
+2010-03-09  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[v] Add a directory dedicated to verification.
+
+	* Makefile.in: New file.
+	* alive.test: New file.
+	* common.in: New file.
+	* t000.test: New file.
+
+
+Copyright (C) 2010-2022 Thien-Thi Nguyen
+
+Copying and distribution of this file, with or without modification,
+are permitted provided the copyright notice and this notice are preserved.

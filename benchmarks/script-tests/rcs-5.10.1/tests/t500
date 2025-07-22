@@ -1,0 +1,56 @@
+# t500 --- does ‘rcs -i -kSUBST’ set the ‘expand’ keyword?
+#
+# Copyright (C) 2016-2022 Thien-Thi Nguyen
+#
+# This program is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. $srcdir/common
+split_std_out_err no
+
+##
+# Check that ‘rcs -i -kSUBST’ (SUBST ∈ {kvl, k, v, o, b})
+# sets the ‘expand’ admin-node keyword in the RCS file.
+# When SUBST is ‘kv’, however, check that it is NOT set.
+##
+
+try ()
+{
+    # $1 -- substitution mode
+    # $2 -- expected grep result (0: success, 1: failure)
+    k=$1
+    exp=$2
+
+    rm -f $w $v
+    must "rcs -i -t-$k -k$k $w"
+    grep "expand.*@$k@" $v 1>/dev/null
+    res=$?
+    if ! [ $res = $exp ] ; then
+        case $exp in
+            0) badness='missing' ;;
+            *) badness='spurious' ;;
+        esac
+        bad_RCSfile "$badness @$k@"
+    fi
+}
+
+try kv  1
+try kvl 0
+try k   0
+try v   0
+try o   0
+try b   0
+
+exit 0
+
+# t500 ends here

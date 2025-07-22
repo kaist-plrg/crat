@@ -1,0 +1,66 @@
+2023-05-07         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* 5.2.2: Release tar ball made.
+
+2022-11-17         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* 5.2.1: Release tar ball made.
+
+2022-09-04         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* 5.2.0: Release tar ball made.
+
+2021-10-27         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* 5.1.1: Release tar ball made.
+
+2021-06-18         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* remove-potcdate.sed: Deleted. It gets nuked by 'make distclean.
+
+2021-05-06         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* remove-potcdate.sed: New file.
+
+2020-07-20  gettextize  <bug-gnu-gettext@gnu.org>
+
+	* Makefile.in.in: Upgrade to gettext-0.20.2.
+	* Rules-quot: Upgrade to gettext-0.20.2.
+	* en@boldquot.header: Upgrade to gettext-0.20.2.
+	* en@quot.header: Upgrade to gettext-0.20.2.
+	* insert-header.sin: Upgrade to gettext-0.20.2.
+	* remove-potcdate.sin: Upgrade to gettext-0.20.2.
+
+2020-04-14         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* 5.1.0: Release tar ball made.
+
+2019-06-18         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* 5.0.1: Release tar ball made.
+
+2019-04-12         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* 5.0.0: Release tar ball made.
+
+2018-04-08         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* .gitignore: New file.
+
+2018-03-12         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* gawk-extensions.pot, stamp-po: New files that keep 'make check'
+	from making lots of noise.
+
+2018-03-07  gettextize  <bug-gnu-gettext@gnu.org>
+
+	* Makefile.in.in: New file, from gettext-0.19.7.
+	* Rules-quot: New file, from gettext-0.19.7.
+	* boldquot.sed: New file, from gettext-0.19.7.
+	* en@boldquot.header: New file, from gettext-0.19.7.
+	* en@quot.header: New file, from gettext-0.19.7.
+	* insert-header.sin: New file, from gettext-0.19.7.
+	* quot.sed: New file, from gettext-0.19.7.
+	* remove-potcdate.sin: New file, from gettext-0.19.7.
+	* POTFILES.in: New file.
+

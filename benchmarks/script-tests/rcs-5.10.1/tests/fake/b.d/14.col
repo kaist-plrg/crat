@@ -1,0 +1,22 @@
+;; $Author: zurg $
+;; $Date: 2010/03/30 09:46:24 $
+;; $Header: /home/ttn/build/GNU/rcs/tests/fake/b,v 1.4 2010/03/30 09:46:24 zurg Exp ttn $
+;; $Id: b,v 1.4 2010/03/30 09:46:24 zurg Exp ttn $
+;; $Locker: ttn $
+;; $Name:  $
+;; $RCSfile: b,v $
+;; $Revision: 1.4 $
+;; $Source: /home/ttn/build/GNU/rcs/tests/fake/b,v $
+;; $State: Exp $
+;; $Log: b,v $
+;; Revision 1.4  2010/03/30 09:46:24  zurg
+;; Add "earthlings".
+;;
+;; Revision 1.3  2010/03/30 09:45:42  zurg
+;; Add "greetings".
+;;
+;; Revision 1.2  2010/03/30 09:45:02  ttn
+;; Add empty headers.
+;;
+greetings
+earthlings

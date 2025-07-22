@@ -1,0 +1,67 @@
+H
+s/fam//
+s/il/%/
+s/ies/off\&%1spr\ing/
+1s/of/01/2
++10s/and/02/g
+# set current address to last modified line (6)
+,s/way/03
+u
+u
+s,man,04,1p
+10szallzf&z1
+-3s!no!%&%!
+9s'it'&05&'gp
+12s|of|%|p1
+s/\([^ ][^ ]*\)/(\1)/pg
+2s
+/4/sp
+/\(No\)/sr
+/\(.\)/sgpr
+,s&$&$&
+# set last regex to subst regex
+//p
+# use last regex as subst regex
+5s//%/lg
+,s%^%^%
+5i
+hello/[]world
+.
+s/[/]/ /
+s/[[:digit:][]/ /
+s/[]]/ /
+7s=\((03)\) =\1\
+=
+-1s($($(
+2s/a/1/l
+s/a/2/n
+s/a/3/p
+s/a/4/ln
+s/e/5/lp
+s/e/6/np
+s/e/7/lnp
+s/i/8
+s/u/%/
+s/u/%
+3s/ /_/lnp3
+s0e0103
+4sg
+6s5
+9sp
+10s
+11sg
+12sg
+,s/ (nature)/$\
+(nature)/
++12s/ (for)/$\
+(for)/
+6s/^/#/g
+6s/$/!\
+\
+/g
+7s,^,// line 7,g
+8s,^$,// line 8,g
+# to be undone
+,s/./x/g
+u
+w out.o

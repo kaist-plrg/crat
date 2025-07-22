@@ -1,0 +1,49 @@
+# common-d (date testing) variables / subroutines / load-time actions
+
+# Copyright (C) 2011-2022 Thien-Thi Nguyen
+#
+# This file is part of GNU RCS.
+#
+# GNU RCS is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# GNU RCS is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# (shell-script-mode)
+
+# variables
+
+rout=$wd/rlog.out
+
+# functions
+
+try ()
+{
+    # $1 -- date spec
+    # $2 -- grep pattern (regexp)
+    date=$1
+    rx=$2
+    $hey echo "* ${date}"
+    must 'ci -q -l -f -d${date} -mm $w $v'
+    must 'rlog -r $v > $rout'
+    grep "date: $rx" $rout \
+        || problem "date spec '${date}' did not yield '${rx}'"
+}
+
+# load-time actions
+
+$hey echo '                                      -*- org -*-'
+
+$hey echo '* prep'
+must 'cp `bundled_commav two` $v'
+must 'co -l $w $v'
+
+# common-d ends here

@@ -1,0 +1,50 @@
+# t606 --- lock/unlock with integrity
+#
+# Copyright (C) 2011-2022 Thien-Thi Nguyen
+#
+# This program is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. $srcdir/common
+split_std_out_err no
+
+##
+# Check that lock/unlock leaves the ‘integrity’ field unchanged.
+##
+
+cat > $wd/insert <<EOF
+integrity
+@@
+;
+EOF
+
+must 'sed -e "/^locks/r $wd/insert" `bundled_commav one` > $v'
+
+try ()
+{
+    # $1 -- command
+    command="$1"
+
+    must "$command $w $v"
+    must 'sed '\''/integrity/,/^;$/!d'\'' $v > $wd/cut'
+    diff $wd/insert $wd/cut > $wd/diff.out
+    noiselessness_rules $wd/diff.out "$command"
+}
+
+try 'co -l'
+must 'echo more >> $w'
+try 'ci -u -mmore'
+
+exit 0
+
+# t606 ends here

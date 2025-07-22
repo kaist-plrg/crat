@@ -1,0 +1,28 @@
+
+from io import File
+from path import join, dirname
+
+FILE_PATH = join(dirname(__file__), 'test_file.txt')
+
+def read_file()
+  f = open(FILE_PATH)
+
+  assert(f is File)
+
+  LINES = [
+    'line1 : foo\n',
+    'line2 : bar\n',
+    'line3 : baz\n',
+    'line4 : qux\n',
+  ]
+
+  line = ''; i = 0
+  while line = f.getline()
+    assert(LINES[i] == line)
+    i += 1
+  end
+
+  f.close()
+end
+
+read_file()

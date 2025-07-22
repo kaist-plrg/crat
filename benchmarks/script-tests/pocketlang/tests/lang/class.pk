@@ -1,0 +1,252 @@
+
+###############################################################################
+## Basics
+###############################################################################
+
+## TODO: write some tests here.
+
+## No enums supports (yet?)
+class Day end
+Day.SUNDAY    = 0
+Day.MONDAY    = 1
+Day.TUESDAY   = 2
+Day.WEDNESDAY = 3
+Day.THURSDAY  = 4
+Day.FRIDAY    = 5
+Day.SATURDAY  = 6
+
+assert(Day.SUNDAY == 0)
+assert(Day.FRIDAY == 5)
+
+
+###############################################################################
+## INHERITANCE
+###############################################################################
+
+class A
+end
+
+class B is A
+end
+
+a = A()
+print(a)
+
+b = B()
+assert((b is B) and (b is A))
+
+assert(B.parent == A)
+
+class Shape
+  def display()
+    return "${self.name} shape"
+  end
+end
+
+class Circle is Shape
+  def _init(r)
+    self.r = r
+    self.name = "circle"
+  end
+  def area()
+    return 3.14 * self.r * self.r
+  end
+end
+
+class Rectangle is Shape
+  def _init(w, h)
+    self.w = w; self.h = h
+    self.name = "rectangle"
+  end
+  def area()
+    return self.w * self.h
+  end
+end
+
+class Square is Rectangle
+  def _init(w)
+    ## TODO: Currently there is no way of calling super(w, h)
+    ## so we're setting our self here.
+    self.w = w; self.h = w
+    self.name = "square"
+  end
+end
+
+c = Circle(1)
+assert(c.display() == "circle shape")
+assert(c is Circle)
+assert(c is Shape)
+
+r = Rectangle(2, 3)
+assert(r is Shape)
+assert(r.area() == 6)
+
+s = Square(4)
+assert(s is Square)
+assert(s is Rectangle)
+assert(s is Shape)
+assert(s.area() == 16)
+
+###############################################################################
+## OPERATOR OVERLOADING
+###############################################################################
+
+class Vec2
+  def _init(x, y)
+    self.x = x; self.y = y
+  end
+  def _str
+    return "<${self.x}, ${self.y}>"
+  end
+  def +(other)
+    return Vec2(self.x + other.x,
+                self.y + other.y)
+  end
+  def +=(other)
+    self.x += other.x
+    self.y += other.y
+    return self
+  end
+  def ==(other)
+    return self.x == other.x and self.y == other.y
+  end
+end
+
+v1 = Vec2(1, 2); assert(v1.x == 1 and v1.y == 2)
+print("v1 = $v1")
+
+assert(str(v1) == "<1, 2>")
+
+v2 = Vec2(3, 4); assert(v2.x == 3 and v2.y == 4)
+print("v2 = $v2")
+
+v3 = v1 + v2
+print("v3 = $v3")
+
+assert(v1 == Vec2(1, 2))
+
+v1 += v2
+assert(v1 == v3)
+
+class Path
+  def _init(path)
+    self.path = path
+  end
+  def /(other)
+    if other is String
+      return Path(self.path + "/" + other)
+    elif other is Path
+      return Path(self.path + "/" + other.path)
+    else
+      assert(false, "Invalid type")
+    end
+  end
+  def _str
+    return self.path
+  end
+end
+
+local = Path("/usr/local")
+pocket = Path("bin/pocket")
+print('local/pocket = "${local/pocket}"')
+assert(str(local/pocket) == "/usr/local/bin/pocket")
+assert(str(local/"lib") == "/usr/local/lib")
+
+class N
+  def _init(val)
+    self.val = val
+  end
+  def _str()
+    return "N(${self.val})"
+  end
+  def +(other)
+    return N(self.val + other.val)
+  end
+  def +=(other)
+    self.val += other.val
+    return self
+  end
+  def %=(num)
+    self.val %= num
+    return self
+  end
+  def ==(other)
+    return self.val == other.val
+  end
+  def <<(num)
+    self.val *= 10
+    self.val += num
+    return self
+  end
+  def >>(other)
+    other.val = self.val % 10
+    self.val = (self.val - other.val) / 10
+  end
+  
+  def !self()
+    self.val -= 1
+    return self.val + 1
+  end
+end
+
+n1 = N(12)
+n2 = N(23)
+assert(n1 + n2 == N(n1.val + n2.val))
+n1 %= 5
+assert(n1.val == 2)
+
+n3 = N(4) << 8 << 3 << 6
+assert(n3 == N(4836))
+
+n4 = N(0)
+n3 >> n4; assert(n4.val == 6)
+n3 >> n4; assert(n4.val == 3)
+n3 >> n4; assert(n4.val == 8)
+n3 >> n4; assert(n4.val == 4)
+
+n5 = N(3)
+assert(!n5 == 3)
+assert(!n5 == 2)
+assert(!n5 == 1)
+
+###############################################################################
+## SUPER CLASS METHOD
+###############################################################################
+
+class A
+  def _init()
+    print("A init")
+  end
+  def foo()
+    print("A foo")
+    ret = self.bar()
+    assert(ret == "B.bar")
+    return "A.foo"
+  end
+  def bar()
+    print("A bar")
+    return "A.bar"
+  end
+end
+
+class B is A
+  def _init()
+    super()
+    print("B init")
+  end  
+  def foo()
+    print("B foo")
+    ret = super()
+    assert(ret == "A.foo")
+    return super.bar()
+  end
+  def bar()
+    print("B bar")
+    return "B.bar"
+  end
+end
+
+b = B()
+assert(b.foo() == "A.bar")
+
+print('ALL TESTS PASSED')

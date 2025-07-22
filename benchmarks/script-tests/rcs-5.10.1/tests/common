@@ -1,0 +1,96 @@
+# common variables / subroutines / load-time actions
+
+# Copyright (C) 2010-2022 Thien-Thi Nguyen
+#
+# This file is part of GNU RCS.
+#
+# GNU RCS is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# GNU RCS is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# (shell-script-mode)
+
+# variables
+PATH="`pwd`/../src:$PATH"
+RCSINIT=
+stem=`basename $0`
+wd=${stem}.d
+w=$wd/x
+v=$wd/x,v
+TMPDIR=$wd ; export TMPDIR
+
+result=
+
+if [ x"$VERBOSE" = x1 ]
+then hey= ; shh=':' ; KEEPD=1
+else shh= ; hey=':'
+fi
+
+# subroutines
+
+split_std_out_err ()
+{
+    exec 1>${wd}/out
+    if [ "x$1" = xno ]
+    then exec 2>&1
+    else exec 2>${wd}/err
+    fi
+}
+
+bundled_commav ()
+{
+    echo $srcdir/fake/$1
+}
+
+problem ()
+{
+    echo >&2 PROBLEM: "$@"
+    exit 1
+}
+
+must ()
+{
+    eval "$@" || problem command failed: "$@"
+}
+
+say_what ()
+{
+    problem unexpected output for: "$@"
+}
+
+noiselessness_rules ()
+{
+    # $1 -- filename
+    # $2 -- shell command
+    test -s $1 && say_what "$2"
+}
+
+silence_means_death ()
+{
+    # $1 -- filename
+    # $2 -- shell command
+    test -s $1 || problem "no output for: $2"
+}
+
+bad_RCSfile ()
+{
+    # $1 -- description in the form of ADJECTIVE-PHRASE
+    problem "$v $1"
+}
+
+# load-time actions
+
+rm -rf $wd && mkdir $wd || exit 1
+test x"$KEEPD" = x1 \
+    || trap 'result=$? ; test 0 = $result && rm -rf $wd' 0
+
+# common ends here

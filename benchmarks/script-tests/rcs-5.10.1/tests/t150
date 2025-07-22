@@ -1,0 +1,124 @@
+# t150 --- availability to shell, --version / --help / -V
+#
+# Copyright (C) 2010-2022 Thien-Thi Nguyen
+#
+# This program is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. $srcdir/common
+split_std_out_err no
+set -e
+
+programs='
+ci
+co
+ident
+merge
+rcs
+rcsclean
+rcsdiff
+rcsmerge
+rlog
+'
+
+##
+# Check that each program can be found by the shell
+# (via the ‘type’ command), and that each program displays
+# reasonable output when invoked with ‘--version’ and ‘--help’.
+##
+
+for p in $programs ; do
+    must 'type $p'
+
+    vcmd="$p --version"
+    vout=$wd/version-$p
+    must '$vcmd > $vout'
+    grep -F "$p (GNU RCS)" $vout || say_what $vcmd
+
+    hcmd="$p --help"
+    hout=$wd/help-$p
+    must '$hcmd > $hout'
+    grep -F 'Report bugs to' $hout || say_what $hcmd
+done
+
+##
+# Check that each program fails when given ‘--no-such-option’.
+##
+
+for p in $programs ; do
+    $p --no-such-option \
+        && problem "‘$p --no-such-option’ did not fail"
+done
+
+##
+# For RCS 5.9.0 and later, check ‘rcs no-such-command’ and
+# ‘rcs --help COMMAND’ where COMMAND ∉ {ident, merge, rcs}.
+##
+
+. $srcdir/common-v
+version_at_least 5.9.0 || exit 0
+
+rcs no-such-command \
+    && problem "‘rcs no-such-command’ did not fail"
+
+for p in $programs ; do
+    case $p in
+        ident|merge|rcs) continue ;;
+    esac
+    hcmd="rcs --help $p"
+    hout=$wd/help-$p
+    must '$hcmd | diff $hout -'
+done
+
+##
+# For RCS 5.9.0 and later, check that ‘rcs -V’ produces a warning.
+##
+
+rout=$wd/rout
+rerr=$wd/rerr
+cmd='rcs -V'
+must '$cmd 1>$rout 2>$rerr'
+silence_means_death $rout "$cmd"
+silence_means_death $rerr "$cmd"
+grep obsolete $rerr 1>/dev/null \
+     || problem 'invalid diagnostic'
+
+##
+# For RCS 5.9.0 and later, check that ‘rlog -V2’ and ‘rlog -V5X’
+# (on a valid RCS file) produce range and type errors, respectively.
+##
+
+cp -f `bundled_commav empty` $v
+set +e
+
+flail ()
+{
+    # $1 -- arg for ‘rlog -V’
+    # $2 -- pattern to grep for
+    cmd="rlog -V$1"
+    pattern="$2"
+
+    $cmd $v 1>$rout 2>$rerr \
+        && problem "‘$cmd’ did not fail"
+    silence_means_death $rerr "$cmd"
+    noiselessness_rules $rout "$cmd"
+    grep "$pattern" $rerr 1>/dev/null \
+        || problem 'invalid diagnostic'
+}
+
+flail 2  out.of.range
+flail 5X isn.t.a.number
+
+exit 0
+
+# t150 ends here

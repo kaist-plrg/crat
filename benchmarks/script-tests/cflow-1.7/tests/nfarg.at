@@ -1,0 +1,35 @@
+# This file is part of GNU cflow testsuite. -*- Autotest -*-
+# Copyright (C) 2005-2021 Sergey Poznyakoff
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 3, or (at
+# your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test for correct handling of nameless function arguments
+# These consitute an error in C. cflow-1.0 coredumped on them.
+# References: <200511031133.jA3BXgB04525@tamacom.com>
+
+# FIXME: Possibly it would be better to flag an error in such case, but
+# cflow is not supposed to be a substitute for cc or lint.
+
+AT_SETUP([nameless function arguments])
+AT_KEYWORDS([nfarg function arguments])
+
+CFLOW_CHECK([
+int main(int ())
+{
+}
+],
+[main() <int main (int ()) at prog:2>
+])
+
+AT_CLEANUP

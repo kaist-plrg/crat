@@ -1,0 +1,176 @@
+# t180 --- merge -p
+#
+# Copyright (C) 2010-2022 Thien-Thi Nguyen
+#
+# This program is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. $srcdir/common
+split_std_out_err no
+
+##
+# Do "merge -p" on various input files, checking exit value,
+# stderr and stdout for conflicts and successful operations.
+##
+
+mout=$wd/m.out
+merr=$wd/m.err
+eout=$wd/e.out
+eerr=$wd/e.err
+
+a=$wd/a
+b=$wd/b
+c=$wd/c
+
+cat > $a <<EOF
+every time i work with RCS and pause
+to think of past sessions quick and slow
+time films thicker, lumpy, an unrent gauze.
+EOF
+
+cat > $b <<EOF
+a non-VAX uproc inside, can you believe it?
+to think of past sessions quick and slow
+it be all the same, what six letters permit.
+EOF
+
+cat > $c <<EOF
+a non-VAX uproc inside, can you believe it?
+first Rx000 then 21xxx, odd names both;
+it be all the same, what six letters permit.
+EOF
+
+try ()
+{
+    # $1 -- expected exit value
+    # $2 -- file1
+    # $3 -- file2
+    # $4 -- file3
+    # $5 -- expected stderr
+    # $6 -- expected stdout
+    ev=$1
+    if test "$5"
+    then echo "$5" | sed 's/|$//' > $eerr
+    else > $eerr
+    fi
+    echo "$6" | sed '1d;s/^|//;s/|$//' > $eout
+
+    merge -p $2 $3 $4 1> $mout 2> $merr
+    test $ev = $? || problem "unexpected exit value: merge -p $2 $3 $4"
+    diff $eout $mout > $wd/diff.out
+    noiselessness_rules $wd/diff.out "(stdout) $1 $2 $3"
+    diff $eerr $merr > $wd/diff.out
+    noiselessness_rules $wd/diff.out "(stderr) $1 $2 $3"
+}
+
+conflicts='merge: warning: conflicts during merge'
+
+
+try 1 $a $b $c "$conflicts" '
+|<<<<<<< t180.d/a|
+|every time i work with RCS and pause|
+|to think of past sessions quick and slow|
+|time films thicker, lumpy, an unrent gauze.|
+|=======|
+|a non-VAX uproc inside, can you believe it?|
+|first Rx000 then 21xxx, odd names both;|
+|it be all the same, what six letters permit.|
+|>>>>>>> t180.d/c|'
+
+try 1 $a $c $b "$conflicts" '
+|<<<<<<< t180.d/a|
+|every time i work with RCS and pause|
+|to think of past sessions quick and slow|
+|time films thicker, lumpy, an unrent gauze.|
+|=======|
+|a non-VAX uproc inside, can you believe it?|
+|to think of past sessions quick and slow|
+|it be all the same, what six letters permit.|
+|>>>>>>> t180.d/b|'
+
+try 1 $b $a $c "$conflicts" '
+|<<<<<<< t180.d/b|
+|a non-VAX uproc inside, can you believe it?|
+|to think of past sessions quick and slow|
+|it be all the same, what six letters permit.|
+|=======|
+|a non-VAX uproc inside, can you believe it?|
+|first Rx000 then 21xxx, odd names both;|
+|it be all the same, what six letters permit.|
+|>>>>>>> t180.d/c|'
+
+try 1 $b $c $a "$conflicts" '
+|<<<<<<< t180.d/b|
+|a non-VAX uproc inside, can you believe it?|
+|to think of past sessions quick and slow|
+|it be all the same, what six letters permit.|
+|=======|
+|every time i work with RCS and pause|
+|to think of past sessions quick and slow|
+|time films thicker, lumpy, an unrent gauze.|
+|>>>>>>> t180.d/a|'
+
+try 1 $c $a $b "$conflicts" '
+|<<<<<<< t180.d/c|
+|a non-VAX uproc inside, can you believe it?|
+|first Rx000 then 21xxx, odd names both;|
+|it be all the same, what six letters permit.|
+|=======|
+|a non-VAX uproc inside, can you believe it?|
+|to think of past sessions quick and slow|
+|it be all the same, what six letters permit.|
+|>>>>>>> t180.d/b|'
+
+try 1 $c $b $a "$conflicts" '
+|<<<<<<< t180.d/c|
+|a non-VAX uproc inside, can you believe it?|
+|first Rx000 then 21xxx, odd names both;|
+|it be all the same, what six letters permit.|
+|=======|
+|every time i work with RCS and pause|
+|to think of past sessions quick and slow|
+|time films thicker, lumpy, an unrent gauze.|
+|>>>>>>> t180.d/a|'
+
+try 0 $a $a $b '' '
+|a non-VAX uproc inside, can you believe it?|
+|to think of past sessions quick and slow|
+|it be all the same, what six letters permit.|'
+
+try 0 $a $b $a '' '
+|every time i work with RCS and pause|
+|to think of past sessions quick and slow|
+|time films thicker, lumpy, an unrent gauze.|'
+
+try 0 $a $a $c '' '
+|a non-VAX uproc inside, can you believe it?|
+|first Rx000 then 21xxx, odd names both;|
+|it be all the same, what six letters permit.|'
+
+try 0 $a $c $a '' '
+|every time i work with RCS and pause|
+|to think of past sessions quick and slow|
+|time films thicker, lumpy, an unrent gauze.|'
+
+##
+# Check that "merge -p -q" produces no conflict warnings.
+##
+
+merge -p -q $a $b $c 1>$mout 2>$merr \
+    && problem '‘merge -p -q’ succeeded'
+silence_means_death $mout 'merge -p -q'
+noiselessness_rules $merr 'merge -p -q'
+
+exit 0
+
+# t180 ends here

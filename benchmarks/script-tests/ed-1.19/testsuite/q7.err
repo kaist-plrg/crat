@@ -1,0 +1,5 @@
+H
+w out.ro
+a
+hello
+# EOF in the middle of a line in input mode should behave as a 'q' command

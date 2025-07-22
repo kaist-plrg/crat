@@ -1,0 +1,41 @@
+H
+# empty append at address 0 should set the current address to 0
+0a
+.
++4a
+# this is not a comment
+.
+# empty append at current address should not modify the current address
+a
+.
+a
+hello world!
+.
+a
+hello world!!
+.
+0a
+hello world!!!
+.
+!read one	# shell escape should not modify the current address
+text for the read shell command above
+a
+shell escape marker
+.
+$a
+hello world!!!!
+.
+u
+u
+a
+hello world!!!!!
+.
+# match the first line
+0;/^hello world!!!$/a
+second line
+.
+a
+to be undone
+.
+u
+w out.o

@@ -1,0 +1,16 @@
+H
+7r test.bin
+u
+u
+.r
+# empty read at current address should not modify the current address
+.r zero
+f test.bin
+-7r
+0r !echo hello world
+1
+r !! %
+# to be undone
+r test.txt
+u
+w out.o

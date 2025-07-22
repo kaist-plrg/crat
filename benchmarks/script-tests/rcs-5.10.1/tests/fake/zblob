@@ -1,0 +1,25 @@
+head	1.1;
+access;
+symbols;
+locks; strict;
+comment	@# @;
+expand	@b@;
+
+
+1.1
+date	2011.01.31.10.59.43;	author ttn;	state Exp;
+branches;
+next	;
+
+
+desc
+@
+@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@@

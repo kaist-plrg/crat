@@ -1,0 +1,147 @@
+# t390 --- ident
+#
+# Copyright (C) 2010-2022 Thien-Thi Nguyen
+#
+# This program is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. $srcdir/common
+. $srcdir/common-v
+split_std_out_err no
+
+expected=$wd/expected
+actual=$wd/actual
+ierr=$wd/i.err
+doubt=$wd/diff.out
+
+##
+# Check ident.
+##
+
+$hey echo '                                        -*- org -*-'
+
+try ()
+{
+    # $1 -- FILENAME in fake/b.d/FILENAME
+    # $2 -- expected output
+    # $3 -- (optional) error output
+    orig=`bundled_commav b.d/$1`
+    echo "$2" | sed '1d;s/^|//;s/|$//' > $expected
+
+    $hey echo "* $orig"
+    must 'cp -f $orig $w'
+    ident $w 1> $actual 2> $ierr
+    diff -u $expected $actual > $doubt
+    noiselessness_rules $doubt "$orig"
+    if test "$3" ; then
+        echo "$3" | sed '1d;s/^|//;s/|$//' > $expected
+        diff -u $expected $ierr > $doubt
+        noiselessness_rules $doubt "(stderr) $orig"
+    else
+        noiselessness_rules $ierr "(stderr) $orig"
+    fi
+}
+
+##
+# * Without any keywords.
+##
+
+try 11.cou '
+|t390.d/x:|' '
+|ident warning: no id keywords in t390.d/x|'
+
+##
+# * With keywords.
+##
+
+try 15.col '
+|t390.d/x:|
+|     $Author: ttn $|
+|     $Date: 2010/03/30 09:46:50 $|
+|     $Header: /home/ttn/build/GNU/rcs/tests/fake/b,v 1.5 2010/03/30 09:46:50 ttn Exp ttn $|
+|     $Id: b,v 1.5 2010/03/30 09:46:50 ttn Exp ttn $|
+|     $Locker: ttn $|
+|     $Name:  $|
+|     $RCSfile: b,v $|
+|     $Revision: 1.5 $|
+|     $Source: /home/ttn/build/GNU/rcs/tests/fake/b,v $|
+|     $State: Exp $|
+|     $Log: b,v $|'
+
+try 15.cou '
+|t390.d/x:|
+|     $Author: ttn $|
+|     $Date: 2010/03/30 09:46:50 $|
+|     $Header: /home/ttn/build/GNU/rcs/tests/fake/b,v 1.5 2010/03/30 09:46:50 ttn Exp $|
+|     $Id: b,v 1.5 2010/03/30 09:46:50 ttn Exp $|
+|     $Locker:  $|
+|     $Name:  $|
+|     $RCSfile: b,v $|
+|     $Revision: 1.5 $|
+|     $Source: /home/ttn/build/GNU/rcs/tests/fake/b,v $|
+|     $State: Exp $|
+|     $Log: b,v $|'
+
+try WOW.cou '
+|t390.d/x:|
+|     $Author: ttn $|
+|     $Date: 2010/03/18 06:21:03 $|
+|     $Header: /home/ttn/build/GNU/rcs/tests/fake/b,v 1.1.1.5 2010/03/18 06:21:03 ttn Exp $|
+|     $Id: b,v 1.1.1.5 2010/03/18 06:21:03 ttn Exp $|
+|     $Locker:  $|
+|     $Log: b,v $|
+|     $Name: WOW $|
+|     $RCSfile: b,v $|
+|     $Revision: 1.1.1.5 $|
+|     $Source: /home/ttn/build/GNU/rcs/tests/fake/b,v $|
+|     $State: Exp $|'
+
+##
+# * Misc. command-line handling.
+##
+
+$hey echo '* misc. command-line handling'
+
+iout=$wd/i.out
+ierr=$wd/i.err
+
+cmd='ident -q </dev/null'
+$hey echo "*** $cmd"
+eval $cmd 1>$iout 2>$ierr
+noiselessness_rules $iout "$cmd"
+noiselessness_rules $ierr "$cmd"
+
+flail ()
+{
+    # $@ -- command-line args to ident(1)
+    cmd="ident ""$@"
+    $hey echo "*** $cmd"
+    eval $cmd 1>$iout 2>$ierr \
+        && problem "‘$cmd’ did not fail"
+    noiselessness_rules $iout "$cmd"
+    silence_means_death $ierr "$cmd"
+    $hey sed 's/^/    E:/' $ierr
+}
+
+flail -Z
+flail -q no-such-file
+flail no-such-file
+
+if version_at_least 5.9.0 ; then
+    flail -V42
+    must 'ident -V'
+fi
+
+exit 0
+
+# t390 ends here

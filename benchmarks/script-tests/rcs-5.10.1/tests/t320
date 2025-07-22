@@ -1,0 +1,37 @@
+# t320 --- rlog -zLT regression
+#
+# Copyright (C) 2011-2022 Thien-Thi Nguyen
+#
+# This program is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. $srcdir/common
+split_std_out_err no
+
+##
+# Check that ‘rlog -zLT -d>YYYY-MM-DD’ where YYYY-MM-DD
+# is not 01-01 does not output MM-DD as 01-01.
+# This test derives from a 5.8 regression (and bugfix).
+##
+
+opts='-zLT -d>2010-04-04'
+must 'cp `bundled_commav b.d/19,v` $v && chmod -w $v'
+must 'rlog $opts $v 1>$wd/rlog.out 2>$wd/rlog.err'
+silence_means_death $wd/rlog.out "rlog $opts"
+noiselessness_rules $wd/rlog.err "rlog $opts"
+d=`sed '/^date: /!d;s///;s/ .*//;q' $wd/rlog.out | tee $wd/date`
+# Hmm, is ‘expr STRING : REGEX’ portable enough?
+expr "$d" : '^2010-04-1' || problem "unexpected date format: $d"
+exit 0
+
+# t320 ends here

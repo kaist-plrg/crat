@@ -1,0 +1,117 @@
+This directory contains the test suite for RCS.
+
+
+Running
+-------
+
+Use "make check [options]" to run all the tests.
+
+Including ‘KEEPD=1’ in options inhibits deletion of the test's working
+directory for those that pass.  Including ‘VERBOSE=1’ makes (some) tests
+more verbose and by side effect enables ‘KEEPD=1’.
+
+To run only some tests, e.g., 149 and 941, use:
+
+  make check TESTS='t149 t941'
+
+You can also use glob patterns:
+
+  make check TESTS='t0?? t[3-7]??'
+
+After running the tests, a summary is displayed and the exit value of
+the "make check" is 0 if all tests behaved as expected.
+
+To test another set of RCS commands, use ‘PATHPREFIX=DIR’, where DIR is
+the absolute directory name of the commands.  You might need to add one
+or more tests to ‘XFAIL_TESTS’ (hint: try "./known-failures --help").
+Normally, the component tests do not run (thus reported as "SKIP") when
+‘PATHPREFIX’ points out of the build tree because it makes no sense to
+do so, but you can override that with option ‘COMPONENTS=1’.
+
+To describe a test, use "make describe [options]", which honors options
+‘TESTS’ and ‘VERBOSE’ as described above.
+
+
+Environment
+-----------
+
+The test suite sets these environment variables; if you specify them,
+your values will be silently overriden (or extended in the case of ‘PATH’):
+
+  PATH      -- prepend value of ‘PATHPREFIX’
+  RCSINIT   -- cleared (set to no value)
+  TMPDIR    -- test's working directory (e.g., t149.d for test t149)
+
+Individual tests may set other environment variables, as well.
+You can use "make describe VERBOSE=1" for more information.
+
+
+Test Numbers
+------------
+
+Each test is named tXXX, where XXX is a decimal number belonging to one
+of the following "tiers", from "lower" to "upper":
+
+  000 - 149 -- library
+  150 - 299 -- shared functionality / rcsdiff / merge -p
+  300 - 399 -- rlog, ident
+  400 - 499 -- other "read-only" commands (co -p, rcsmerge -p)
+  500 - 599 -- commands that create an RCS file (ci -i, rcs -i, implicit)
+  600 - 799 -- all other commands
+  800 - 899 -- regressions / bugfixes
+  900 - 999 -- complex scenarios
+
+The idea is that simple tests should (numerically) precede complex ones;
+each tier should be able to "count on" the lower ones in the sense that
+the usefulness of a test failing in that tier is based on the passing of
+all tests in preceding tiers.
+
+Whenever a test fails in an upper tier, the first question is how to
+isolate the failure condition and express it as a test in a lower tier.
+
+
+Guidelines for Writing Tests
+----------------------------
+
+First line of the test should have format:
+
+  # FILENAME --- DESCRIPTION
+
+(This is to support "make describe".)  For "make describe VERBOSE=1",
+include elucidations in comments formatted like:
+
+  ##
+  # ELUCIDATION
+  # ...
+  ##
+
+Early on, source ${srcdir}/common to make some shell variables / functions
+available and set up the test's working dir.  Then call shell function
+‘split_std_out_err’, optionally with arg ‘no’.
+
+Use ‘set -e’ and/or ‘COMMAND || exit 1’.
+
+If you cd into the working dir, be sure to cd out before exiting.
+
+Exit values: 0 => PASS, 1 => FAIL, 77 => SKIP.
+
+For rlog tests, use the RCS files in fake/ and direct text manipulation
+(primarily with sed), instead of using ci.
+
+Use `COMMAND` instead of $(COMMAND) for the sake of old shells.
+
+
+Editing Convenience
+-------------------
+
+Here is some Emacs Lisp that will place the tests in Shell Script mode:
+
+  (pushnew '("rcs[^/]*/tests/t[0-9][0-9][0-9]$" . shell-script-mode)
+           auto-mode-alist
+           :test 'equal)
+
+
+Copyright (C) 2010-2022 Thien-Thi Nguyen
+
+Copying and distribution of this file, with or without modification,
+are permitted provided the copyright notice and this notice are preserved.

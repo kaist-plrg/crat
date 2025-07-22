@@ -1,0 +1,58 @@
+# t070 --- RCS file search
+#
+# Copyright (C) 2019-2022 Thien-Thi Nguyen
+#
+# This program is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. $srcdir/common
+split_std_out_err no
+
+##
+# Check that two-level RCS file search (set by option ‘-x’)
+# correctly defaults to:
+#   1 -- ./RCS/FILENAME,v
+#   2 -- ./RCS/FILENAME
+#   3 -- ./FILENAME,v
+##
+
+one=`bundled_commav one`
+
+v1=$wd/RCS/x,v
+v2=$wd/RCS/x
+v3=$v
+
+mkdir $wd/RCS
+
+try ()
+{
+    # $1 -- rcsfilename
+    rcsfilename=$1
+    cp -f $one $rcsfilename
+    must '( cd $wd && rlog x )'
+    rm -f $rcsfilename
+}
+
+try $v1
+try $v2
+try $v3
+
+##
+# Check that missing RCS file causes rlog failure.
+##
+( cd $wd && rlog x ) \
+    && say_what 'rlog sans RCS file'
+
+exit 0
+
+# t070 ends here

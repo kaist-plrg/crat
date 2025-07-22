@@ -1,0 +1,452 @@
+# t999 --- the original src/rcstest
+#
+# Copyright (C) 2010-2022 Thien-Thi Nguyen
+# Copyright (C) 1990, 1991, 1992, 1993, 1994, 1995 Paul Eggert
+#
+# This program is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+##
+# Test RCS by creating files RCS/a.* and RCS/a.c (in $wd).
+# If all goes well, output nothing.
+# Otherwise, send a message to standard output.
+#
+# Exit status is 0 if OK, 1 if an RCS bug is found, and 2
+# if scaffolding fails (for problems in the test itself).
+# When VERBOSE=1, output more debugging info.
+#
+# If diff outputs "No differences encountered" when comparing
+# identical files, then this test may also output these noise
+# lines; ignore them.
+##
+
+. $srcdir/common
+
+failed ()
+{
+    problem "$@" failed
+}
+
+split_std_out_err
+cd $wd
+# Avoid tr(1) if possible; it's not portable, and it can't handle
+# null bytes.  Our substitute exclusive-ORs with '\n'; this ensures
+# null bytes on output, which is even better than `tr', since some
+# diffs think a file is binary only if it contains null bytes.
+xorlf='../btdt xorlf'
+TMPDIR=`pwd` ; export TMPDIR
+
+: ${DIFF=diff}
+
+RCSINIT=-x
+export RCSINIT
+
+SLASH=/
+RCSfile=RCS${SLASH}a.c
+RCS_alt=RCS${SLASH}a.d
+lockfile=RCS${SLASH}a._
+
+if test x"$VERBOSE" = x1
+then q= ; set -x
+else q=-q
+fi
+
+mkdir RCS
+
+rm -f a.* $RCSfile $RCS_alt $lockfile &&
+echo 1.1 >a.11 &&
+echo 1.1.1.1 >a.3x1 &&
+echo 1.2 >a.12 || { echo "#initialization failed"; exit 2; }
+
+case "`$DIFF -c a.11 a.3x1`" in
+*!\ 1.1.1.1)
+	diff="$DIFF -c";;
+*)
+	echo "#warning: $DIFF -c does not work, so diagnostics may be cryptic"
+	diff=$DIFF
+esac
+
+rcs -i -L -ta.11 $q a.c &&
+test -r $RCSfile || problem 'rcs -i -L failed; perhaps improper install'
+
+rlog a.c >/dev/null || problem 'rlog failed on empty RCS file'
+rm -f $RCSfile || exit 2
+
+mm1='This is a log message that
+spans multiple lines but does NOT
+end in newline.'
+mm2="
+
+$mm1
+
+Actually, for THIS log message, that is not entirely true;
+we prefix and postfix several spurious newlines.
+
+
+"
+
+cp a.11 a.c &&
+ci -ta.11 -m"$mm1" $q a.c &&
+test -r $RCSfile &&
+rcs -L $q a.c || failed 'ci+rcs -L'
+test ! -f a.c || problem 'ci did not remove working file'
+for l in '' '-l'
+do
+	co $l $q a.c &&
+	test -f a.c || problem co $l did not create working file
+	$diff a.11 a.c || problem ci followed by co $l is not a no-op
+done
+
+cp a.12 a.c &&
+ci -m"$mm2" $q a.c &&
+co $q a.c &&
+$diff a.12 a.c || failed 'ci+co'
+
+rm -f a.c &&
+co -r1.1 $q a.c &&
+$diff a.11 a.c || problem 'cannot retrieve first revision'
+
+rm -f a.c &&
+cp a.3x1 a.c &&
+ci -r1.1.1 -mm $q a.c &&
+co -r1.1.1.1 $q a.c &&
+$diff a.3x1 a.c || failed 'branches'
+
+rm -f a.c &&
+co -l $q a.c &&
+ci -f -mm $q a.c &&
+co -r1.3 $q a.c &&
+$diff a.12 a.c || failed '(co -l; ci -f)'
+
+rm -f a.c &&
+co -l $q a.c &&
+echo 1.4 >a.c &&
+ci -l -mm $q a.c &&
+echo error >a.c &&
+ci -mm $q a.c || failed 'ci -l'
+
+rm -f a.c &&
+co -l $q a.c &&
+echo 1.5 >a.c &&
+ci -u -mm $q a.c &&
+test -r a.c || problem 'ci -u did not create a working file'
+rm -f a.c &&
+echo error >a.c || exit 2
+ci -mm $q a.c 2>/dev/null && problem 'ci -u did not unlock the file'
+
+rm -f a.c &&
+rcs -l $q a.c &&
+co -u $q a.c || failed 'rcs -l + co -u'
+rm -f a.c &&
+echo error >a.c || exit 2
+ci -mm $q a.c 2>/dev/null && problem 'co -u did not unlock the file'
+
+rm -f a.c &&
+cp a.11 a.c &&
+co -f $q a.c || failed 'co -f'
+$diff a.11 a.c >/dev/null && problem 'co -f had no effect'
+
+co -p1.1 $q a.c >a.t &&
+$diff a.11 a.t || failed 'co -p'
+
+for n in n N
+do
+	rm -f a.c &&
+	co -l $q a.c &&
+	echo $n >a.$n &&
+	cp a.$n a.c &&
+	ci -${n}n -mm $q a.c &&
+	co -rn $q a.c &&
+	$diff a.$n a.c || failed "ci -$n"
+done
+
+# Try POSIX, then BSD, then env vars.
+me=`id -un 2>/dev/null`
+if [ -z "$me" ] ; then
+    me=`whoami 2>/dev/null`
+    if [ -z "$me" ] ; then
+        me=$LOGNAME
+        if [ -z "$me" ] ; then
+            me=$USER
+            test "$me" || { echo >&2 "$0: cannot deduce user name" ; exit 2 ; }
+        fi
+    fi
+fi
+
+# Get the date of the previous revision in UTC.
+date=`rlog -r a.c | sed -n '/^date: /{ s///; s/;.*//; p; q; }'` || exit
+case $date in
+[0-9][0-9][0-9]*[0-9]/[0-1][0-9]/[0-3][0-9]\ [0-2][0-9]:[0-5][0-9]:[0-6][0-9]);;
+*) problem "bad rlog date output: $date"
+esac
+PWD=`pwd` && export PWD &&
+rm -f a.c &&
+co -l $q a.c &&
+sed 's/@/$/g' >a.kv <<EOF
+@Author: w @
+@Date: $date @
+@Header: $PWD$SLASH$RCSfile 2.1 $date w seriously-spurious @
+@Id: a.c 2.1 $date w seriously-spurious @
+@Locker:  @
+ * @Log: a.c @
+ * Revision 2.1  $date  w
+ * m
+ *
+@Name: Oz @
+@RCSfile: a.c @
+@Revision: 2.1 @
+@Source: $PWD$SLASH$RCSfile @
+@State: seriously-spurious @
+EOF
+test $? = 0 &&
+sed 's/:.*\$/$/' a.kv >a.k &&
+sed -e 's/w seriously-spurious [$]/w seriously-spurious '"$me"' $/' -e 's/[$]Locker: /&'"$me/" a.kv >a.kvl &&
+sed s/Oz//g a.kv >a.e &&
+sed s/Oz/N/g a.kv >a.N &&
+sed -e '/\$/!d' -e 's/\$$/: old $/' a.k >a.o &&
+sed -e 's/\$[^ ]*: //' -e 's/ \$//' a.kv >a.v &&
+cp a.o a.c &&
+ci -d"$date" -nOz -sseriously-spurious -ww -u2.1 -mm $q a.c &&
+$diff a.kv a.c || failed 'keyword expansion'
+co -pOz -ko $q a.c >a.oo &&
+$diff a.o a.oo || failed 'co -p -ko'
+cp a.kv a.o && cp a.o a.b || exit 2
+rcs -oOz $q a.c &&
+rcs -l $q a.c &&
+ci -k -u $q a.c &&
+$diff a.kv a.c || failed 'ci -k'
+sed -n 's/^[^$]*\$/$/p' a.kv >a.i &&
+ident a.c >a.i1 &&
+sed -e 1d -e 's/^[	 ]*//' a.i1 >a.i2 &&
+$diff a.i a.i2 || failed 'ident'
+
+rcs -i $q a.c 2>/dev/null && problem 'rcs -i permitted existing file'
+
+rm -f a.c &&
+co -l $q a.c &&
+echo 2.2 >a.c &&
+ci -mm $q a.c &&
+echo 1.1.1.2 >a.c &&
+rcs -l1.1.1 $q a.c &&
+ci -r1.1.1.2 -mm $q a.c &&
+rcs -b1.1.1 $q a.c &&
+test " `co -p $q a.c`" = ' 1.1.1.2' || failed 'rcs -b1.1.1'
+rcs -b $q a.c &&
+test " `co -p $q a.c`" = ' 2.2' || failed 'rcs -b'
+
+echo 2.3 >a.c || exit 2
+rcs -U $q a.c || failed 'rcs -U'
+ci -mm $q a.c || problem 'rcs -U did not unset strict locking'
+rcs -L $q a.c || failed 'rcs -L'
+echo error >a.c || exit 2
+ci -mm $q a.c 2>/dev/null && failed 'ci retest'
+
+rm -f a.c &&
+log0=`rlog -h a.c` &&
+co -l $q a.c &&
+ci -mm $q a.c &&
+log1=`rlog -h a.c` &&
+test " $log0" = " $log1" || problem 'unchanged ci did not revert'
+
+rm -f a.c &&
+rcs -nN:1.1 $q a.c &&
+co -rN $q a.c &&
+$diff a.11 a.c || failed 'rcs -n'
+
+rm -f a.c &&
+rcs -NN:2.1 $q a.c &&
+co -rN $q a.c &&
+$diff a.N a.c || failed 'rcs -N'
+
+rm -f a.c &&
+co -l $q a.c &&
+echo ':::$''Log$' >a.c &&
+ci -u -mm $q a.c &&
+test " `sed '$!d' a.c`" = ' :::' || failed 'comment leader'
+
+rm -f a.c &&
+rcs -o2.2: $q a.c &&
+co $q a.c &&
+$diff a.e a.c || failed 'rcs -o'
+
+rcsdiff -r1.1 -rOz $q a.c >a.0
+case $? in
+1) ;;
+*) problem 'rcsdiff bad status'
+esac
+$DIFF a.11 a.kv >a.1
+$diff a.0 a.1 || failed 'rcsdiff'
+
+rcs -l2.1 $q a.c || failed 'rcs -l2.1'
+for i in b k kv kvl o v
+do
+	rm -f a.c &&
+	cp a.$i a.c &&
+	rcsdiff -k$i -rOz $q a.c || failed "rcsdiff -k$i"
+done
+co -p1.1 -ko $q a.c >a.t &&
+$diff a.11 a.t || failed 'co -p1.1 -ko'
+rcs -u2.1 $q a.c || failed 'rcs -u2.1'
+
+rm -f a.c &&
+rcsclean $q a.c &&
+rcsclean -u $q a.c || problem 'rcsclean botched a nonexistent file'
+
+rm -f a.c &&
+co $q a.c &&
+rcsclean -n $q a.c &&
+rcsclean -n -u $q a.c &&
+test -f a.c || problem 'rcsclean -n removed a file'
+
+rm -f a.c &&
+co $q a.c &&
+rcsclean $q a.c &&
+test ! -f a.c || problem 'rcsclean missed an unlocked file'
+
+rm -f a.c &&
+co -l $q a.c &&
+rcsclean $q a.c &&
+test -f a.c || problem 'rcsclean removed a locked file'
+rcsclean -u $q a.c &&
+test ! -f a.c || problem 'rcsclean -u missed an unchanged locked file'
+
+rm -f a.c &&
+co -l $q a.c &&
+echo change >>a.c &&
+rcsclean $q a.c &&
+rcsclean $q -u a.c &&
+test -f a.c || problem 'rcsclean removed a changed file'
+
+rm -f a.c &&
+co -l $q a.c &&
+cat >a.c <<'EOF'
+2.2
+a
+b
+c
+d
+EOF
+test $? = 0 &&
+ci -l -mm $q a.c &&
+co -p2.2 $q a.c | sed -e s/2.2/2.3/ -e s/b/b1/ >a.c &&
+ci -l -mm $q a.c &&
+co -p2.2 $q a.c | sed -e s/2.2/new/ -e s/d/d1/ >a.c || exit 2
+cat >a.0 <<'EOF'
+2.3
+a
+b1
+c
+d1
+EOF
+cat >a.1 <<'EOF'
+<<<<<<< a.c
+new
+=======
+2.3
+>>>>>>> 2.3
+a
+b1
+c
+d1
+EOF
+rcsmerge -E -r2.2 -r2.3 $q a.c
+case $? in
+0)
+	if $diff a.0 a.c >/dev/null
+	then echo "#warning: diff3 -E does not work, " \
+		"so merge and rcsmerge ignore overlaps and suppress overlap lines."
+	else
+		$diff a.1 a.c || problem 'rcsmerge failed (status 0)'
+		echo "#warning: The diff3 lib program exit status ignores overlaps," \
+			"so rcsmerge does not warn about overlap lines that it generates."
+	fi
+	;;
+1)
+	$diff a.1 a.c || problem 'rcsmerge failed (status 1)'
+	;;
+*)
+	problem 'rcsmerge bad status'
+esac
+
+cat >a.c <<'EOF'
+#include <stdio.h>
+int main() {
+	int c;
+	while ((c=getchar()) != EOF)
+		putchar(c ^ '\n');
+	return 0;
+}
+EOF
+{
+	co -p $q a.c | $xorlf >a.24 &&
+	cp a.24 a.c &&
+	ciOut=`(ci -l -mm $q a.c 2>&1)` &&
+	case $ciOut in
+	?*) echo >&2 "$ciOut"
+	esac &&
+	co -p $q a.c | $xorlf >a.c &&
+	rcsdiff -r2.3 $q a.c >/dev/null &&
+
+	echo 2.5 >a.c &&
+	ci -l -mm $q a.c &&
+	cp a.24 a.c &&
+	rcsdiff -r2.4 $q a.c >/dev/null
+} || echo "#warning: Traditional diff is used, so RCS is limited to text files."
+
+rcs -u -o2.4: $q a.c || failed 'rcs -u -o'
+
+rcs -i -Aa.c -t- $q a.d || failed 'rcs -i -A'
+
+# The ordering of symbolic names is inverted between RCS 5.7 and 5.8.
+# That's why we sort.  Ugly but true.  Probably it would be best to
+# remove this gratuitous reordering, but that would need to be done
+# before 5.8.  Hmmm...
+rlog -r2.1 a.c >a.t &&
+grep '^checked in with -k' a.t >/dev/null &&
+sed '/^checked in with -k/d' a.t >a.u &&
+$diff - a.u <<EOF
+
+RCS file: RCS/a.c
+Working file: a.c
+head: 2.3
+branch:
+locks: strict
+access list:
+symbolic names:
+	N: 2.1
+	Oz: 2.1
+	n: 1.8
+keyword substitution: kv
+total revisions: 13;	selected revisions: 1
+description:
+1.1
+----------------------------
+revision 2.1
+date: $date;  author: w;  state: seriously-spurious;  lines: +14 -1
+=============================================================================
+EOF
+test $? = 0 || failed 'rlog'
+
+# Exercise RCSINIT processing.
+RCSINIT="-wnobody $RCSINIT"
+
+rlog a.c a.c >/dev/null
+test $? = 0 || failed 'rlog with working file repeated'
+
+test ! -f $lockfile || problem 'lock file not removed'
+
+cd ..
+
+exit 0
+
+# t999 ends here
