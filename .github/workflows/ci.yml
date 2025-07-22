@@ -20,79 +20,29 @@ jobs:
       - name: Clone repository
         uses: actions/checkout@v4
       - name: Change owner
-        run: sudo chown -R ubuntu:ubuntu .
+        run: chown -R ubuntu:ubuntu .
 
       - name: Check formatting
-        run: sudo -E -u ubuntu cargo fmt --check
-        env:
-          LANG: "en_US.UTF-8"
-          PATH: "/home/ubuntu/.cargo/bin:/home/ubuntu/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-          USER: "ubuntu"
-          LOGNAME: "ubuntu"
+        run: sudo -u ubuntu bash -lc "cargo fmt --check"
       - name: Apply lints
-        run: sudo -E -u ubuntu cargo clippy -- -D warnings
-        env:
-          LANG: "en_US.UTF-8"
-          PATH: "/home/ubuntu/.cargo/bin:/home/ubuntu/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-          USER: "ubuntu"
-          LOGNAME: "ubuntu"
+        run: sudo -u ubuntu bash -lc "cargo clippy -- -D warnings"
 
       - name: Build dependency crate
-        run: sudo -E -u ubuntu cd deps_crate && cargo build
-        env:
-          LANG: "en_US.UTF-8"
-          PATH: "/home/ubuntu/.cargo/bin:/home/ubuntu/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-          USER: "ubuntu"
-          LOGNAME: "ubuntu"
+        run: sudo -u ubuntu bash -lc "cd deps_crate && cargo build"
 
       - name: Build (Dev)
-        run: sudo -E -u ubuntu cargo build
-        env:
-          LANG: "en_US.UTF-8"
-          PATH: "/home/ubuntu/.cargo/bin:/home/ubuntu/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-          USER: "ubuntu"
-          LOGNAME: "ubuntu"
+        run: sudo -u ubuntu bash -lc "cargo build"
       - name: Test (Dev)
-        run: sudo -E -u ubuntu cargo test
-        env:
-          LANG: "en_US.UTF-8"
-          PATH: "/home/ubuntu/.cargo/bin:/home/ubuntu/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-          USER: "ubuntu"
-          LOGNAME: "ubuntu"
+        run: sudo -u ubuntu bash -lc "cargo test"
 
       - name: Build (Release)
-        run: sudo -E -u ubuntu cargo build --release
-        env:
-          LANG: "en_US.UTF-8"
-          PATH: "/home/ubuntu/.cargo/bin:/home/ubuntu/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-          USER: "ubuntu"
-          LOGNAME: "ubuntu"
+        run: sudo -u ubuntu bash -lc "cargo build --release"
       - name: Test (Release)
-        run: sudo -E -u ubuntu cargo test --release
-        env:
-          LANG: "en_US.UTF-8"
-          PATH: "/home/ubuntu/.cargo/bin:/home/ubuntu/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-          USER: "ubuntu"
-          LOGNAME: "ubuntu"
+        run: sudo -u ubuntu bash -lc "cargo test --release"
 
       - name: Benchmark (Transformation)
-        run: sudo -E -u ubuntu ./tool.py transform resolve
-        env:
-          LANG: "en_US.UTF-8"
-          PATH: "/home/ubuntu/.cargo/bin:/home/ubuntu/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-          USER: "ubuntu"
-          LOGNAME: "ubuntu"
+        run: sudo -u ubuntu bash -lc "./tool.py transform resolve"
       - name: Benchmark (Build)
-        run: sudo -E -u ubuntu ./tool.py build resolve
-        env:
-          LANG: "en_US.UTF-8"
-          PATH: "/home/ubuntu/.cargo/bin:/home/ubuntu/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-          USER: "ubuntu"
-          LOGNAME: "ubuntu"
+        run: sudo -u ubuntu bash -lc "./tool.py build resolve"
       - name: Benchmark (Build, Release)
-        run: sudo -E -u ubuntu ./tool.py build resolve --release
-        env:
-          LANG: "en_US.UTF-8"
-          PATH: "/home/ubuntu/.cargo/bin:/home/ubuntu/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-          USER: "ubuntu"
-          LOGNAME: "ubuntu"
+        run: sudo -u ubuntu bash -lc "./tool.py build resolve --release"
