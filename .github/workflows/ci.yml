@@ -26,14 +26,14 @@ jobs:
         run: sudo -u ubuntu cargo fmt --check
         env:
           LANG: "en_US.UTF-8"
-          PATH: "/home/ubuntu/.cargo/bin:/home/ubuntu/.local/bin:$PATH"
+          PATH: "/home/ubuntu/.cargo/bin:/home/ubuntu/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
           USER: "ubuntu"
           LOGNAME: "ubuntu"
       - name: Apply lints
         run: sudo -u ubuntu cargo clippy -- -D warnings
         env:
           LANG: "en_US.UTF-8"
-          PATH: "/home/ubuntu/.cargo/bin:/home/ubuntu/.local/bin:$PATH"
+          PATH: "/home/ubuntu/.cargo/bin:/home/ubuntu/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
           USER: "ubuntu"
           LOGNAME: "ubuntu"
 
@@ -41,7 +41,7 @@ jobs:
         run: sudo -u ubuntu cd deps_crate && cargo build
         env:
           LANG: "en_US.UTF-8"
-          PATH: "/home/ubuntu/.cargo/bin:/home/ubuntu/.local/bin:$PATH"
+          PATH: "/home/ubuntu/.cargo/bin:/home/ubuntu/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
           USER: "ubuntu"
           LOGNAME: "ubuntu"
 
@@ -49,14 +49,14 @@ jobs:
         run: sudo -u ubuntu cargo build
         env:
           LANG: "en_US.UTF-8"
-          PATH: "/home/ubuntu/.cargo/bin:/home/ubuntu/.local/bin:$PATH"
+          PATH: "/home/ubuntu/.cargo/bin:/home/ubuntu/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
           USER: "ubuntu"
           LOGNAME: "ubuntu"
       - name: Test (Dev)
         run: sudo -u ubuntu cargo test
         env:
           LANG: "en_US.UTF-8"
-          PATH: "/home/ubuntu/.cargo/bin:/home/ubuntu/.local/bin:$PATH"
+          PATH: "/home/ubuntu/.cargo/bin:/home/ubuntu/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
           USER: "ubuntu"
           LOGNAME: "ubuntu"
 
@@ -64,14 +64,14 @@ jobs:
         run: sudo -u ubuntu cargo build --release
         env:
           LANG: "en_US.UTF-8"
-          PATH: "/home/ubuntu/.cargo/bin:/home/ubuntu/.local/bin:$PATH"
+          PATH: "/home/ubuntu/.cargo/bin:/home/ubuntu/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
           USER: "ubuntu"
           LOGNAME: "ubuntu"
       - name: Test (Release)
         run: sudo -u ubuntu cargo test --release
         env:
           LANG: "en_US.UTF-8"
-          PATH: "/home/ubuntu/.cargo/bin:/home/ubuntu/.local/bin:$PATH"
+          PATH: "/home/ubuntu/.cargo/bin:/home/ubuntu/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
           USER: "ubuntu"
           LOGNAME: "ubuntu"
 
@@ -79,20 +79,20 @@ jobs:
         run: sudo -u ubuntu ./tool.py transform resolve
         env:
           LANG: "en_US.UTF-8"
-          PATH: "/home/ubuntu/.cargo/bin:/home/ubuntu/.local/bin:$PATH"
+          PATH: "/home/ubuntu/.cargo/bin:/home/ubuntu/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
           USER: "ubuntu"
           LOGNAME: "ubuntu"
       - name: Benchmark (Build)
         run: sudo -u ubuntu ./tool.py build resolve
         env:
           LANG: "en_US.UTF-8"
-          PATH: "/home/ubuntu/.cargo/bin:/home/ubuntu/.local/bin:$PATH"
+          PATH: "/home/ubuntu/.cargo/bin:/home/ubuntu/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
           USER: "ubuntu"
           LOGNAME: "ubuntu"
       - name: Benchmark (Build, Release)
         run: sudo -u ubuntu ./tool.py build resolve --release
         env:
           LANG: "en_US.UTF-8"
-          PATH: "/home/ubuntu/.cargo/bin:/home/ubuntu/.local/bin:$PATH"
+          PATH: "/home/ubuntu/.cargo/bin:/home/ubuntu/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
           USER: "ubuntu"
           LOGNAME: "ubuntu"
