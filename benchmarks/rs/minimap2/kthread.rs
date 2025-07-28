@@ -180,7 +180,7 @@ unsafe extern "C" fn steal_work(mut t: *mut kt_for_t) -> libc::c_long {
         i += 1;
         i;
     }
-    k = ::std::intrinsics::atomic_xadd_seqcst(
+    k = ::std::intrinsics::atomic_xadd::<_, { std::intrinsics::AtomicOrdering::SeqCst }>(
         &mut (*((*t).w).offset(min_i as isize)).i,
         (*t).n_threads as libc::c_long,
     );
@@ -190,7 +190,7 @@ unsafe extern "C" fn ktf_worker(mut data: *mut libc::c_void) -> *mut libc::c_voi
     let mut w: *mut ktf_worker_t = data as *mut ktf_worker_t;
     let mut i: libc::c_long = 0;
     loop {
-        i = ::std::intrinsics::atomic_xadd_seqcst(
+        i = ::std::intrinsics::atomic_xadd::<_, { std::intrinsics::AtomicOrdering::SeqCst }>(
             &mut (*w).i,
             (*(*w).t).n_threads as libc::c_long,
         );

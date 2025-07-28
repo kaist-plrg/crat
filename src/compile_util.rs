@@ -8,11 +8,9 @@ use std::{
 
 use etrace::ok_or;
 use rustc_errors::{
-    ColorConfig, DiagInner, FatalError, FluentBundle, Level,
+    ColorConfig, DiagInner, FatalError, Level,
     emitter::{Emitter, HumanEmitter},
-    fallback_fluent_bundle,
     registry::Registry,
-    translation::Translate,
 };
 use rustc_feature::UnstableFeatures;
 use rustc_hash::FxHashMap;
@@ -117,24 +115,12 @@ struct ErrorEmitter(HumanEmitter);
 
 impl ErrorEmitter {
     fn new(sm: Arc<SourceMap>) -> Self {
-        let bundle = fallback_fluent_bundle(rustc_driver::DEFAULT_LOCALE_RESOURCES.to_vec(), false);
         let emitter = HumanEmitter::new(
             rustc_errors::emitter::stderr_destination(ColorConfig::Auto),
-            bundle,
+            rustc_driver::default_translator(),
         )
         .sm(Some(sm));
         Self(emitter)
-    }
-}
-
-impl Translate for ErrorEmitter {
-    fn fluent_bundle(&self) -> Option<&FluentBundle> {
-        #[allow(clippy::needless_borrow)]
-        (&self.0).fluent_bundle()
-    }
-
-    fn fallback_fluent_bundle(&self) -> &FluentBundle {
-        self.0.fallback_fluent_bundle()
     }
 }
 
@@ -147,6 +133,10 @@ impl Emitter for ErrorEmitter {
         if matches!(diag.level(), Level::Fatal | Level::Error) {
             self.0.emit_diagnostic(diag, registry);
         }
+    }
+
+    fn translator(&self) -> &rustc_errors::translation::Translator {
+        self.0.translator()
     }
 }
 

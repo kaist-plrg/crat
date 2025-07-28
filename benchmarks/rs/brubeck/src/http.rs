@@ -466,7 +466,7 @@ unsafe extern "C" fn json_decref(mut json: *mut json_t) {
         && {
             let fresh0 = &mut (*json).refcount as *mut size_t;
             let fresh1 = 1 as libc::c_int as size_t;
-            ::std::intrinsics::atomic_xsub_release(fresh0, fresh1) - fresh1
+            ::std::intrinsics::atomic_xsub::<_, { std::intrinsics::AtomicOrdering::Release }>(fresh0, fresh1) - fresh1
                 == 0 as libc::c_int as libc::c_ulong
         }
     {
@@ -477,14 +477,14 @@ unsafe extern "C" fn json_decref(mut json: *mut json_t) {
 unsafe extern "C" fn brubeck_metric_get_state(
     mut metric: *const brubeck_metric,
 ) -> uint8_t {
-    return ::std::intrinsics::atomic_load_seqcst(&(*metric).private_state);
+    return ::std::intrinsics::atomic_load::<_, { std::intrinsics::AtomicOrdering::SeqCst }>(&(*metric).private_state);
 }
 #[inline]
 unsafe extern "C" fn brubeck_metric_set_state(
     mut metric: *mut brubeck_metric,
     state: uint8_t,
 ) {
-    ::std::intrinsics::atomic_store_seqcst(&mut (*metric).private_state, state);
+    ::std::intrinsics::atomic_store::<_, { std::intrinsics::AtomicOrdering::SeqCst }>(&mut (*metric).private_state, state);
 }
 #[inline]
 unsafe extern "C" fn starts_with(

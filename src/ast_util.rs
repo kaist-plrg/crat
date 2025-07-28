@@ -49,7 +49,7 @@ pub fn transform_ast<F: std::ops::FnMut(&mut Crate) -> bool>(
 
 #[inline]
 pub fn new_parse_sess() -> ParseSess {
-    ParseSess::with_silent_emitter(vec![], "".to_string(), false)
+    ParseSess::with_fatal_emitter(vec![], "".to_string())
 }
 
 #[inline]
@@ -62,11 +62,7 @@ pub fn new_parser_from_str(parse_sess: &ParseSess, s: String) -> Parser<'_> {
 pub fn parse_item(item: String) -> Item {
     let parse_sess = new_parse_sess();
     let mut parser = new_parser_from_str(&parse_sess, item);
-    parser
-        .parse_item(ForceCollect::No)
-        .unwrap()
-        .unwrap()
-        .into_inner()
+    *parser.parse_item(ForceCollect::No).unwrap().unwrap()
 }
 
 #[macro_export]
@@ -123,7 +119,7 @@ macro_rules! stmt {
 pub fn parse_expr(expr: String) -> Expr {
     let parse_sess = new_parse_sess();
     let mut parser = new_parser_from_str(&parse_sess, expr);
-    parser.parse_expr().unwrap().into_inner()
+    *parser.parse_expr().unwrap()
 }
 
 #[macro_export]
@@ -149,7 +145,7 @@ macro_rules! path {
 pub fn parse_ty(ty: String) -> Ty {
     let parse_sess = new_parse_sess();
     let mut parser = new_parser_from_str(&parse_sess, ty);
-    parser.parse_ty().unwrap().into_inner()
+    *parser.parse_ty().unwrap()
 }
 
 #[macro_export]

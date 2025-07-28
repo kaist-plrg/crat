@@ -204,6 +204,7 @@ impl ExprCategory {
     }
 }
 
+#[allow(clippy::collapsible_if)]
 impl<'a, 'tcx> Visitor<'a, 'tcx> for LayoutConstrainedPlaceVisitor<'a, 'tcx> {
     fn thir(&self) -> &'a Thir<'tcx> {
         self.thir
@@ -235,6 +236,7 @@ impl<'a, 'tcx> Visitor<'a, 'tcx> for LayoutConstrainedPlaceVisitor<'a, 'tcx> {
     }
 }
 
+#[allow(clippy::collapsible_if)]
 impl<'a, 'tcx> Visitor<'a, 'tcx> for UnsafetyVisitor<'a, 'tcx> {
     fn thir(&self) -> &'a Thir<'tcx> {
         self.thir

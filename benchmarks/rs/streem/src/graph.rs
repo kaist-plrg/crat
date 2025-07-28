@@ -377,7 +377,7 @@ unsafe extern "C" fn fin_bar(
     free((*d).data as *mut libc::c_void);
     free(d as *mut libc::c_void);
     show_cursor();
-    ::std::intrinsics::atomic_xadd_seqcst(&mut refcnt, 1 as libc::c_int);
+    ::std::intrinsics::atomic_xadd::<_, { std::intrinsics::AtomicOrdering::SeqCst }>(&mut refcnt, 1 as libc::c_int);
     if refcnt <= 0 as libc::c_int {
         strm_unsignal(
             28 as libc::c_int,
@@ -422,7 +422,7 @@ unsafe extern "C" fn exec_bgraph(
     );
     (*d).tlen = tlen;
     if refcnt == 0 as libc::c_int {
-        ::std::intrinsics::atomic_xadd_seqcst(&mut refcnt, 1 as libc::c_int);
+        ::std::intrinsics::atomic_xadd::<_, { std::intrinsics::AtomicOrdering::SeqCst }>(&mut refcnt, 1 as libc::c_int);
         strm_signal(
             28 as libc::c_int,
             Some(

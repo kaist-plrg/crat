@@ -1245,7 +1245,7 @@ unsafe extern "C" fn AtomicCompareAndSwapU32(
     mut old_val: libc::c_long,
     mut new_val: libc::c_long,
 ) -> rmtBool {
-    return if (::std::intrinsics::atomic_cxchg_seqcst_seqcst(
+    return if (::std::intrinsics::atomic_cxchg::<_, { std::intrinsics::AtomicOrdering::SeqCst }, { std::intrinsics::AtomicOrdering::SeqCst }>(
         val,
         old_val as rmtU32,
         new_val as rmtU32,
@@ -1262,7 +1262,7 @@ unsafe extern "C" fn AtomicCompareAndSwapPointer(
     mut old_ptr: *mut libc::c_long,
     mut new_ptr: *mut libc::c_long,
 ) -> rmtBool {
-    return if (::std::intrinsics::atomic_cxchg_seqcst_seqcst(ptr, old_ptr, new_ptr)).1
+    return if (::std::intrinsics::atomic_cxchg::<_, { std::intrinsics::AtomicOrdering::SeqCst }, { std::intrinsics::AtomicOrdering::SeqCst }>(ptr, old_ptr, new_ptr)).1
         as libc::c_int != 0
     {
         1 as libc::c_int as rmtBool
@@ -1274,7 +1274,7 @@ unsafe extern "C" fn AtomicAddS32(
     mut value: *mut rmtAtomicS32,
     mut add: rmtS32,
 ) -> rmtS32 {
-    return ::std::intrinsics::atomic_xadd_seqcst(value, add);
+    return ::std::intrinsics::atomic_xadd::<_, { std::intrinsics::AtomicOrdering::SeqCst }>(value, add);
 }
 unsafe extern "C" fn AtomicSubS32(mut value: *mut rmtAtomicS32, mut sub: rmtS32) {
     AtomicAddS32(value, -sub);

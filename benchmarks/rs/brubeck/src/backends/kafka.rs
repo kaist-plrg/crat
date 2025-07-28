@@ -562,7 +562,7 @@ unsafe extern "C" fn json_incref(mut json: *mut json_t) -> *mut json_t {
     if !json.is_null() && (*json).refcount != -(1 as libc::c_int) as size_t {
         let fresh0 = &mut (*json).refcount;
         let fresh1 = 1 as libc::c_int as size_t;
-        ::std::intrinsics::atomic_xadd_acquire(fresh0, fresh1) + fresh1;
+        ::std::intrinsics::atomic_xadd::<_, { std::intrinsics::AtomicOrdering::Acquire }>(fresh0, fresh1) + fresh1;
     }
     return json;
 }
@@ -572,7 +572,7 @@ unsafe extern "C" fn json_decref(mut json: *mut json_t) {
         && {
             let fresh2 = &mut (*json).refcount as *mut size_t;
             let fresh3 = 1 as libc::c_int as size_t;
-            ::std::intrinsics::atomic_xsub_release(fresh2, fresh3) - fresh3
+            ::std::intrinsics::atomic_xsub::<_, { std::intrinsics::AtomicOrdering::Release }>(fresh2, fresh3) - fresh3
                 == 0 as libc::c_int as libc::c_ulong
         }
     {

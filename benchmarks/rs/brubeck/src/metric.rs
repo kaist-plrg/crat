@@ -318,7 +318,7 @@ unsafe extern "C" fn brubeck_metric_set_state(
     mut metric: *mut brubeck_metric,
     state: uint8_t,
 ) {
-    ::std::intrinsics::atomic_store_seqcst(&mut (*metric).private_state, state);
+    ::std::intrinsics::atomic_store::<_, { std::intrinsics::AtomicOrdering::SeqCst }>(&mut (*metric).private_state, state);
 }
 #[inline]
 unsafe extern "C" fn new_metric(
@@ -785,7 +785,7 @@ pub unsafe extern "C" fn brubeck_metric_new(
     brubeck_backend_register_metric(brubeck_metric_shard(server, metric), metric);
     let fresh1 = &mut (*server).internal_stats.live.unique_keys;
     let fresh2 = 1 as libc::c_int as uint32_t;
-    ::std::intrinsics::atomic_xadd_seqcst(fresh1, fresh2) + fresh2;
+    ::std::intrinsics::atomic_xadd::<_, { std::intrinsics::AtomicOrdering::SeqCst }>(fresh1, fresh2) + fresh2;
     return metric;
 }
 pub unsafe extern "C" fn brubeck_metric_find(

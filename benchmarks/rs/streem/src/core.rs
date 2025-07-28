@@ -267,7 +267,7 @@ pub unsafe extern "C" fn strm_stream_connect(
         let ref mut fresh1 = *((*src).rest).offset(fresh0 as isize);
         *fresh1 = dst;
     }
-    ::std::intrinsics::atomic_xadd_seqcst(&mut (*dst).refcnt, 1 as libc::c_int);
+    ::std::intrinsics::atomic_xadd::<_, { std::intrinsics::AtomicOrdering::SeqCst }>(&mut (*dst).refcnt, 1 as libc::c_int);
     if (*src).mode as libc::c_uint == strm_producer as libc::c_int as libc::c_uint {
         task_init();
         strm_task_push(src, (*src).start_func, strm_nil_value());
@@ -311,7 +311,7 @@ unsafe extern "C" fn task_loop(mut data: *mut libc::c_void) -> *mut libc::c_void
             strm = strm_queue_get(prod_queue) as *mut strm_stream;
         }
         if !strm.is_null() {
-            if (::std::intrinsics::atomic_cxchg_seqcst_seqcst(
+            if (::std::intrinsics::atomic_cxchg::<_, { std::intrinsics::AtomicOrdering::SeqCst }, { std::intrinsics::AtomicOrdering::SeqCst }>(
                 &mut (*strm).excl as *mut strm_int,
                 0 as libc::c_int,
                 1 as libc::c_int,
@@ -326,7 +326,7 @@ unsafe extern "C" fn task_loop(mut data: *mut libc::c_void) -> *mut libc::c_void
                     }
                     task_exec(strm, t);
                 }
-                (::std::intrinsics::atomic_cxchg_seqcst_seqcst(
+                (::std::intrinsics::atomic_cxchg::<_, { std::intrinsics::AtomicOrdering::SeqCst }, { std::intrinsics::AtomicOrdering::SeqCst }>(
                     &mut (*strm).excl,
                     1 as libc::c_int,
                     0 as libc::c_int,
@@ -404,7 +404,7 @@ pub unsafe extern "C" fn strm_stream_new(
     (*s).refcnt = 0 as libc::c_int;
     (*s).excl = 0 as libc::c_int;
     (*s).queue = strm_queue_new();
-    ::std::intrinsics::atomic_xadd_seqcst(&mut stream_count, 1 as libc::c_int);
+    ::std::intrinsics::atomic_xadd::<_, { std::intrinsics::AtomicOrdering::SeqCst }>(&mut stream_count, 1 as libc::c_int);
     return s;
 }
 pub unsafe extern "C" fn strm_stream_close(mut strm: *mut strm_stream) {
@@ -412,11 +412,11 @@ pub unsafe extern "C" fn strm_stream_close(mut strm: *mut strm_stream) {
     if mode as libc::c_uint == strm_killed as libc::c_int as libc::c_uint {
         return;
     }
-    ::std::intrinsics::atomic_xsub_seqcst(&mut (*strm).refcnt, 1 as libc::c_int);
+    ::std::intrinsics::atomic_xsub::<_, { std::intrinsics::AtomicOrdering::SeqCst }>(&mut (*strm).refcnt, 1 as libc::c_int);
     if (*strm).refcnt > 0 as libc::c_int {
         return;
     }
-    if !(::std::intrinsics::atomic_cxchg_seqcst_seqcst(
+    if !(::std::intrinsics::atomic_cxchg::<_, { std::intrinsics::AtomicOrdering::SeqCst }, { std::intrinsics::AtomicOrdering::SeqCst }>(
         &mut (*strm).mode as *mut strm_stream_mode,
         mode,
         strm_killed,
@@ -466,5 +466,5 @@ pub unsafe extern "C" fn strm_stream_close(mut strm: *mut strm_stream) {
         }
         free((*strm).rest as *mut libc::c_void);
     }
-    ::std::intrinsics::atomic_xsub_seqcst(&mut stream_count, 1 as libc::c_int);
+    ::std::intrinsics::atomic_xsub::<_, { std::intrinsics::AtomicOrdering::SeqCst }>(&mut stream_count, 1 as libc::c_int);
 }

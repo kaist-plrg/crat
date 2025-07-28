@@ -26250,7 +26250,7 @@ pub unsafe extern "C" fn main_pid(mut pid: pid_t) -> libc::c_int {
             if in_pgrep_mode != 0 {
                 let fresh13 = &mut trace_count;
                 let fresh14 = 1 as libc::c_int as uint64_t;
-                ::std::intrinsics::atomic_xadd_seqcst(fresh13, fresh14) + fresh14;
+                ::std::intrinsics::atomic_xadd::<_, { std::intrinsics::AtomicOrdering::SeqCst }>(fresh13, fresh14) + fresh14;
             } else {
                 trace_count = (trace_count as libc::c_ulong)
                     .wrapping_add(1 as libc::c_int as libc::c_ulong) as uint64_t

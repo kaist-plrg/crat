@@ -3,7 +3,6 @@
 use rustc_ast::{
     self as ast,
     mut_visit::{self, MutVisitor as _},
-    ptr::P,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 use rustc_hir as hir;
@@ -43,7 +42,7 @@ struct AstVisitor {
 }
 
 impl mut_visit::MutVisitor for AstVisitor {
-    fn visit_item(&mut self, item: &mut P<ast::Item>) {
+    fn visit_item(&mut self, item: &mut ast::Item) {
         if let ast::ItemKind::Fn(box ast::Fn { ident, sig, .. }) = &mut item.kind
             && !self.unsafe_fns.contains(&ident.span)
             && matches!(sig.header.safety, ast::Safety::Unsafe(_))

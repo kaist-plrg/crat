@@ -574,11 +574,11 @@ unsafe extern "C" fn statsd_run_recvmmsg(
             );
             let fresh2 = &mut (*server).internal_stats.live.errors;
             let fresh3 = 1 as libc::c_int as uint32_t;
-            ::std::intrinsics::atomic_xadd_seqcst(fresh2, fresh3) + fresh3;
+            ::std::intrinsics::atomic_xadd::<_, { std::intrinsics::AtomicOrdering::SeqCst }>(fresh2, fresh3) + fresh3;
         } else {
             let fresh4 = &mut (*statsd).sampler.inflow;
             let fresh5 = res as size_t;
-            ::std::intrinsics::atomic_xadd_seqcst(fresh4, fresh5) + fresh5;
+            ::std::intrinsics::atomic_xadd::<_, { std::intrinsics::AtomicOrdering::SeqCst }>(fresh4, fresh5) + fresh5;
             i = 0 as libc::c_int as libc::c_uint;
             while i < res as libc::c_uint {
                 let mut buf: *mut libc::c_char = (*(*msgs
@@ -649,11 +649,11 @@ unsafe extern "C" fn statsd_run_recvmsg(
             );
             let fresh6 = &mut (*server).internal_stats.live.errors;
             let fresh7 = 1 as libc::c_int as uint32_t;
-            ::std::intrinsics::atomic_xadd_seqcst(fresh6, fresh7) + fresh7;
+            ::std::intrinsics::atomic_xadd::<_, { std::intrinsics::AtomicOrdering::SeqCst }>(fresh6, fresh7) + fresh7;
         } else {
             let fresh8 = &mut (*statsd).sampler.inflow;
             let fresh9 = 1 as libc::c_int as size_t;
-            ::std::intrinsics::atomic_xadd_seqcst(fresh8, fresh9) + fresh9;
+            ::std::intrinsics::atomic_xadd::<_, { std::intrinsics::AtomicOrdering::SeqCst }>(fresh8, fresh9) + fresh9;
             brubeck_statsd_packet_parse(
                 server,
                 buffer,
@@ -842,7 +842,7 @@ pub unsafe extern "C" fn brubeck_statsd_packet_parse(
         {
             let fresh11 = &mut (*server).internal_stats.live.errors;
             let fresh12 = 1 as libc::c_int as uint32_t;
-            ::std::intrinsics::atomic_xadd_seqcst(fresh11, fresh12) + fresh12;
+            ::std::intrinsics::atomic_xadd::<_, { std::intrinsics::AtomicOrdering::SeqCst }>(fresh11, fresh12) + fresh12;
             gh_log_write(
                 b"instance=%s sampler=statsd event=packet_drop\n\0" as *const u8
                     as *const libc::c_char,
@@ -851,7 +851,7 @@ pub unsafe extern "C" fn brubeck_statsd_packet_parse(
         } else {
             let fresh13 = &mut (*server).internal_stats.live.metrics;
             let fresh14 = 1 as libc::c_int as uint32_t;
-            ::std::intrinsics::atomic_xadd_seqcst(fresh13, fresh14) + fresh14;
+            ::std::intrinsics::atomic_xadd::<_, { std::intrinsics::AtomicOrdering::SeqCst }>(fresh13, fresh14) + fresh14;
             metric = brubeck_metric_find(
                 server,
                 msg.key,

@@ -295,7 +295,7 @@ unsafe extern "C" fn brubeck_metric_set_state(
     mut metric: *mut brubeck_metric,
     state: uint8_t,
 ) {
-    ::std::intrinsics::atomic_store_seqcst(&mut (*metric).private_state, state);
+    ::std::intrinsics::atomic_store::<_, { std::intrinsics::AtomicOrdering::SeqCst }>(&mut (*metric).private_state, state);
 }
 pub unsafe extern "C" fn brubeck_internal__sample(
     mut metric: *mut brubeck_metric,
@@ -323,7 +323,7 @@ pub unsafe extern "C" fn brubeck_internal__sample(
         (strlen(b".metrics\0" as *const u8 as *const libc::c_char))
             .wrapping_add(1 as libc::c_int as libc::c_ulong),
     );
-    value = ::std::intrinsics::atomic_xchg_acquire(
+    value = ::std::intrinsics::atomic_xchg::<_, { std::intrinsics::AtomicOrdering::Acquire }>(
         &mut (*stats).live.metrics,
         0 as libc::c_int as uint32_t,
     );
@@ -335,7 +335,7 @@ pub unsafe extern "C" fn brubeck_internal__sample(
         (strlen(b".errors\0" as *const u8 as *const libc::c_char))
             .wrapping_add(1 as libc::c_int as libc::c_ulong),
     );
-    value = ::std::intrinsics::atomic_xchg_acquire(
+    value = ::std::intrinsics::atomic_xchg::<_, { std::intrinsics::AtomicOrdering::Acquire }>(
         &mut (*stats).live.errors,
         0 as libc::c_int as uint32_t,
     );
@@ -349,7 +349,7 @@ pub unsafe extern "C" fn brubeck_internal__sample(
     );
     let fresh1 = &mut (*stats).live.unique_keys;
     let fresh2 = 0 as libc::c_int as uint32_t;
-    value = ::std::intrinsics::atomic_xadd_seqcst(fresh1, fresh2) + fresh2;
+    value = ::std::intrinsics::atomic_xadd::<_, { std::intrinsics::AtomicOrdering::SeqCst }>(fresh1, fresh2) + fresh2;
     (*stats).sample.unique_keys = value;
     sample.unwrap()(metric, key, value as value_t, opaque);
     brubeck_metric_set_state(metric, BRUBECK_STATE_ACTIVE as libc::c_int as uint8_t);

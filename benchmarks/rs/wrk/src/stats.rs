@@ -45,22 +45,22 @@ pub unsafe extern "C" fn stats_record(
     if n >= (*stats).limit {
         return 0 as libc::c_int;
     }
-    ::std::intrinsics::atomic_xadd_seqcst(
+    ::std::intrinsics::atomic_xadd::<_, { std::intrinsics::AtomicOrdering::SeqCst }>(
         &mut *((*stats).data).as_mut_ptr().offset(n as isize) as *mut uint64_t,
         1 as libc::c_int as uint64_t,
     );
-    ::std::intrinsics::atomic_xadd_seqcst(
+    ::std::intrinsics::atomic_xadd::<_, { std::intrinsics::AtomicOrdering::SeqCst }>(
         &mut (*stats).count,
         1 as libc::c_int as uint64_t,
     );
     let mut min: uint64_t = (*stats).min;
     let mut max: uint64_t = (*stats).max;
     while n < min {
-        min = (::std::intrinsics::atomic_cxchg_seqcst_seqcst(&mut (*stats).min, min, n))
+        min = (::std::intrinsics::atomic_cxchg::<_, { std::intrinsics::AtomicOrdering::SeqCst }, { std::intrinsics::AtomicOrdering::SeqCst }>(&mut (*stats).min, min, n))
             .0;
     }
     while n > max {
-        max = (::std::intrinsics::atomic_cxchg_seqcst_seqcst(&mut (*stats).max, max, n))
+        max = (::std::intrinsics::atomic_cxchg::<_, { std::intrinsics::AtomicOrdering::SeqCst }, { std::intrinsics::AtomicOrdering::SeqCst }>(&mut (*stats).max, max, n))
             .0;
     }
     return 1 as libc::c_int;

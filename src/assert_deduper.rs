@@ -1,5 +1,5 @@
 use etrace::some_or;
-use rustc_ast::{ptr::P, *};
+use rustc_ast::*;
 use rustc_middle::ty::TyCtxt;
 
 use crate::{ast_util, rustc_ast::mut_visit::MutVisitor as _};
@@ -22,7 +22,7 @@ struct AstVisitor {
 }
 
 impl mut_visit::MutVisitor for AstVisitor {
-    fn visit_block(&mut self, b: &mut P<Block>) {
+    fn visit_block(&mut self, b: &mut Block) {
         let mut assert = false;
         for stmt in &mut b.stmts {
             if assert {

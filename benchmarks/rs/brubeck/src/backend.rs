@@ -307,7 +307,7 @@ pub type C2RustUnnamed_3 = libc::c_uint;
 unsafe extern "C" fn brubeck_metric_get_state(
     mut metric: *const brubeck_metric,
 ) -> uint8_t {
-    return ::std::intrinsics::atomic_load_seqcst(&(*metric).private_state);
+    return ::std::intrinsics::atomic_load::<_, { std::intrinsics::AtomicOrdering::SeqCst }>(&(*metric).private_state);
 }
 #[inline]
 unsafe extern "C" fn brubeck_metric_set_state_if_equal(
@@ -315,7 +315,7 @@ unsafe extern "C" fn brubeck_metric_set_state_if_equal(
     mut expected: uint8_t,
     state: uint8_t,
 ) -> bool {
-    let fresh0 = ::std::intrinsics::atomic_cxchg_seqcst_seqcst(
+    let fresh0 = ::std::intrinsics::atomic_cxchg::<_, { std::intrinsics::AtomicOrdering::SeqCst }, { std::intrinsics::AtomicOrdering::SeqCst }>(
         &mut (*metric).private_state,
         *&mut expected,
         state,
@@ -330,7 +330,7 @@ pub unsafe extern "C" fn brubeck_backend_register_metric(
     loop {
         let mut next: *mut brubeck_metric = (*self_0).queue;
         (*metric).next = next;
-        if (::std::intrinsics::atomic_cxchg_seqcst_seqcst(
+        if (::std::intrinsics::atomic_cxchg::<_, { std::intrinsics::AtomicOrdering::SeqCst }, { std::intrinsics::AtomicOrdering::SeqCst }>(
             &mut (*self_0).queue as *mut *mut brubeck_metric,
             next,
             metric,

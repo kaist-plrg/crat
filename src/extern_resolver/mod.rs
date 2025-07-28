@@ -487,8 +487,8 @@ impl<'tcx> TypeComparator<'_, 'tcx> {
         let hir::Node::Item(item1) = self.tcx.hir_node_by_def_id(def_id1) else { panic!() };
         let hir::Node::Item(item2) = self.tcx.hir_node_by_def_id(def_id2) else { panic!() };
 
-        let ((hir::ItemKind::Struct(_, vd1, _), hir::ItemKind::Struct(_, vd2, _))
-        | (hir::ItemKind::Union(_, vd1, _), hir::ItemKind::Union(_, vd2, _))) =
+        let ((hir::ItemKind::Struct(_, _, vd1), hir::ItemKind::Struct(_, _, vd2))
+        | (hir::ItemKind::Union(_, _, vd1), hir::ItemKind::Union(_, _, vd2))) =
             (item1.kind, item2.kind)
         else {
             return false;
@@ -572,7 +572,7 @@ impl<'tcx> TypeComparator<'_, 'tcx> {
                         def_id1 == def_id2
                             && args1.iter().zip(args2.iter()).all(|(arg1, arg2)| {
                                 use rustc_type_ir::GenericArgKind::*;
-                                match (arg1.unpack(), arg2.unpack()) {
+                                match (arg1.kind(), arg2.kind()) {
                                     (Type(ty1), Type(ty2)) => self.cmp_tys(ty1, ty2),
                                     (Lifetime(_), Lifetime(_)) => true,
                                     (Const(_), Const(_)) => true,
@@ -784,7 +784,7 @@ impl<'tcx> intravisit::Visitor<'tcx> for HirVisitor<'tcx> {
     fn visit_item(&mut self, item: &'tcx hir::Item<'tcx>) -> Self::Result {
         let ident_and_vec = match item.kind {
             hir::ItemKind::Fn { ident, .. } => Some((ident, &mut self.data.fns)),
-            hir::ItemKind::Static(ident, ..) => Some((ident, &mut self.data.statics)),
+            hir::ItemKind::Static(_, ident, _, _) => Some((ident, &mut self.data.statics)),
             hir::ItemKind::Struct(ident, _, _) | hir::ItemKind::Union(ident, _, _) => {
                 Some((ident, &mut self.data.adts))
             }
