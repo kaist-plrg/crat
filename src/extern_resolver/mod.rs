@@ -49,7 +49,7 @@ impl LinkHint {
     }
 }
 
-pub fn resolve_extern(hints: &Config, tcx: TyCtxt<'_>) {
+pub fn resolve_extern(config: &Config, tcx: TyCtxt<'_>) {
     let result = resolve(tcx);
 
     let mut resolve_map = FxHashMap::default();
@@ -89,7 +89,7 @@ pub fn resolve_extern(hints: &Config, tcx: TyCtxt<'_>) {
         &result.extern_adts,
         &result.equiv_adts,
         &mut resolve_map,
-        &hints.type_hints,
+        &config.type_hints,
         tcx,
     );
     link_failed |= link_externs(
@@ -97,7 +97,7 @@ pub fn resolve_extern(hints: &Config, tcx: TyCtxt<'_>) {
         &result.extern_fns,
         &result.equiv_fns,
         &mut resolve_map,
-        &hints.function_hints,
+        &config.function_hints,
         tcx,
     );
     link_failed |= link_externs(
@@ -105,7 +105,7 @@ pub fn resolve_extern(hints: &Config, tcx: TyCtxt<'_>) {
         &result.extern_statics,
         &result.equiv_statics,
         &mut resolve_map,
-        &hints.static_hints,
+        &config.static_hints,
         tcx,
     );
 

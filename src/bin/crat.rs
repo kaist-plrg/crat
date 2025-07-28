@@ -34,6 +34,8 @@ struct Args {
     #[arg(long, help = "Path to the configuration file")]
     config: Option<PathBuf>,
 
+    #[arg(long, help = "Enable in-place transformation of the input directory")]
+    inplace: bool,
     #[arg(short, long, help = "Path to the output directory")]
     output: Option<PathBuf>,
     #[arg(help = "Path to the input directory containing c2rust-lib.rs")]
@@ -67,6 +69,8 @@ struct Config {
     verbose: bool,
     #[serde(default)]
     passes: Vec<Pass>,
+    #[serde(default)]
+    inplace: bool,
     output: Option<PathBuf>,
 }
 
@@ -82,6 +86,7 @@ fn main() {
         .unwrap_or_default();
     config.verbose |= args.verbose;
     config.passes.extend(args.pass);
+    config.inplace |= args.inplace;
 
     for args in args.resolve_function.chunks(2) {
         let [from, to] = args else { panic!() };
@@ -109,19 +114,27 @@ fn main() {
         config.bin.ignores.push(arg);
     }
 
-    let mut output = config
-        .output
-        .or(args.output)
-        .expect("The output directory must be specified in the configuration or as an argument");
-    output.push(args.input.file_name().unwrap());
-    if output.exists() {
-        assert!(output.is_dir(), "{output:?} is not a directory");
-        clear_dir(&output);
+    let dir = if let Some(mut output) = config.output.or(args.output) {
+        output.push(args.input.file_name().unwrap());
+        if output.exists() {
+            if !output.is_dir() {
+                eprintln!("{output:?} is not a directory");
+                std::process::exit(1);
+            }
+            clear_dir(&output);
+        } else if fs::create_dir(&output).is_err() {
+            eprintln!("Cannot create {output:?}");
+            std::process::exit(1);
+        }
+        copy_dir(&args.input, &output, true);
+        output
+    } else if config.inplace {
+        args.input
     } else {
-        assert!(fs::create_dir(&output).is_ok(), "Cannot create {output:?}");
-    }
-    copy_dir(&args.input, &output, true);
-    let file = output.join("c2rust-lib.rs");
+        eprintln!("Output directory is required unless in-place is enabled");
+        std::process::exit(1)
+    };
+    let file = dir.join("c2rust-lib.rs");
 
     for pass in config.passes {
         if config.verbose {
@@ -142,7 +155,7 @@ fn main() {
             }
             Pass::Bin => {
                 run_compiler_on_path(&file, |tcx| {
-                    bin_file_adder::add_bin_files(&output, &config.bin, tcx)
+                    bin_file_adder::add_bin_files(&dir, &config.bin, tcx)
                 })
                 .unwrap();
             }
