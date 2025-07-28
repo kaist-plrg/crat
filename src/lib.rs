@@ -26,6 +26,7 @@ pub mod assert_deduper;
 #[macro_use]
 pub mod ast_util;
 pub mod bin_file_adder;
+pub mod bit_set;
 pub mod compile_util;
 pub mod disjoint_set;
 pub mod equiv_classes;
