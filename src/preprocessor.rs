@@ -264,6 +264,7 @@ impl mut_visit::MutVisitor for AstVisitor<'_> {
                     let mut new_expr = "{".to_string();
                     for i in indices {
                         let i = i.0;
+                        ref_to_ptr_in_if(&mut args[i]);
                         let a = pprust::expr_to_string(&args[i]);
                         write!(new_expr, "let __arg_{i} = {a};").unwrap();
                         *args[i] = expr!("__arg_{i}");
@@ -311,6 +312,27 @@ fn is_assert_stmt(stmt: &Stmt) -> bool {
     let ExprKind::Path(_, path) = &e.kind else { return false };
     let [segment] = &path.segments[..] else { return false };
     segment.ident.name.as_str() == "__assert_fail"
+}
+
+fn ref_to_ptr_in_if(expr: &mut Expr) {
+    let ExprKind::If(_, t, Some(f)) = &mut expr.kind else { return };
+    ref_to_ptr(t);
+    match &mut f.kind {
+        ExprKind::If(_, _, _) => ref_to_ptr_in_if(f),
+        ExprKind::Block(f, _) => ref_to_ptr(f),
+        _ => panic!(),
+    }
+}
+
+fn ref_to_ptr(block: &mut Block) {
+    if let Some(s) = block.stmts.last_mut()
+        && let StmtKind::Expr(e) = &mut s.kind
+        && let ExprKind::AddrOf(BorrowKind::Ref, m, _) = &e.kind
+    {
+        let e_str = pprust::expr_to_string(e);
+        let m = if m.is_mut() { "mut" } else { "const" };
+        **e = expr!("({e_str}) as *{m} _");
+    }
 }
 
 #[allow(variant_size_differences)]
@@ -612,20 +634,18 @@ impl<'tcx> intravisit::Visitor<'tcx> for HirVisitor<'tcx> {
 #[cfg(test)]
 mod tests {
     fn run_test(code: &str, includes: &[&str], excludes: &[&str]) {
-        crate::compile_util::run_compiler_on_str(code, |tcx| {
-            let res = super::transform(tcx);
-            let [(_, s)] = &res.0[..] else { panic!() };
-            for include in includes {
-                assert!(s.contains(include), "Expected to find `{include}` in:\n{s}");
-            }
-            for exclude in excludes {
-                assert!(
-                    !s.contains(exclude),
-                    "Expected not to find `{exclude}` in:\n{s}"
-                );
-            }
-        })
-        .unwrap();
+        let res = crate::compile_util::run_compiler_on_str(code, super::transform).unwrap();
+        let [(_, s)] = &res.0[..] else { panic!() };
+        crate::compile_util::run_compiler_on_str(&s, crate::type_checker::type_check).unwrap();
+        for include in includes {
+            assert!(s.contains(include), "Expected to find `{include}` in:\n{s}");
+        }
+        for exclude in excludes {
+            assert!(
+                !s.contains(exclude),
+                "Expected not to find `{exclude}` in:\n{s}"
+            );
+        }
     }
 
     #[test]
@@ -757,6 +777,23 @@ pub unsafe extern "C" fn quuz(
             "#,
             &[" = if c != 0 { p } else { q };"],
             &["(if c != 0 { p } else { q })"],
+        );
+    }
+
+    #[test]
+    fn test_cond_arg_2() {
+        run_test(
+            r#"
+use ::libc;
+pub unsafe extern "C" fn g(mut p: *mut libc::c_int, mut q: *mut libc::c_int) {}
+pub unsafe extern "C" fn f(mut c: libc::c_int) {
+    let mut p: libc::c_int = 0;
+    let mut q: libc::c_int = 0;
+    g(if c != 0 { &mut p } else { &mut q }, if c != 0 { &mut q } else { &mut p });
+}
+            "#,
+            &[" if c != 0"],
+            &["(if c != 0", ", if c != 0"],
         );
     }
 }
