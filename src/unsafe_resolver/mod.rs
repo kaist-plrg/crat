@@ -10,7 +10,7 @@ use rustc_index::bit_set::ChunkedBitSet;
 use rustc_middle::ty::TyCtxt;
 use rustc_span::{Span, def_id::LocalDefId};
 
-use crate::{ast_util, graph_util};
+use crate::{ast_util, check_unsafety, graph_util};
 
 pub fn resolve_unsafe(tcx: TyCtxt<'_>) {
     let unsafe_fns = find_unsafe_fns(tcx)
@@ -54,6 +54,26 @@ impl mut_visit::MutVisitor for AstVisitor {
     }
 }
 
+#[derive(Default)]
+struct UnsafetyHandler {
+    callees: FxHashSet<LocalDefId>,
+    is_unsafe: bool,
+}
+
+impl check_unsafety::UnsafetyHandler for UnsafetyHandler {
+    fn handle_unsafety(&mut self, kind: check_unsafety::UnsafeOpKind, _: Span, tcx: TyCtxt<'_>) {
+        if let check_unsafety::UnsafeOpKind::CallToUnsafeFunction(Some(def_id)) = kind
+            && let Some(def_id) = def_id.as_local()
+            && let hir::Node::Item(item) = tcx.hir_node_by_def_id(def_id)
+            && matches!(item.kind, hir::ItemKind::Fn { .. })
+        {
+            self.callees.insert(def_id);
+            return;
+        }
+        self.is_unsafe = true;
+    }
+}
+
 fn find_unsafe_fns(tcx: TyCtxt<'_>) -> FxHashSet<LocalDefId> {
     let mut call_graph = FxHashMap::default();
     let mut self_unsafe_fns = FxHashSet::default();
@@ -61,9 +81,10 @@ fn find_unsafe_fns(tcx: TyCtxt<'_>) -> FxHashSet<LocalDefId> {
         let def_id = item_id.owner_id.def_id;
         let item = tcx.hir_item(item_id);
         let rustc_hir::ItemKind::Fn { sig, .. } = item.kind else { continue };
-        let (callees, is_unsafe) = check_unsafety::check_unsafety(tcx, def_id);
-        call_graph.insert(def_id, callees);
-        if is_unsafe || sig.decl.c_variadic {
+        let mut handler = UnsafetyHandler::default();
+        check_unsafety::check_unsafety(def_id, &mut handler, tcx);
+        call_graph.insert(def_id, handler.callees);
+        if handler.is_unsafe || sig.decl.c_variadic {
             self_unsafe_fns.insert(def_id);
         }
     }
@@ -91,8 +112,6 @@ fn find_unsafe_fns(tcx: TyCtxt<'_>) -> FxHashSet<LocalDefId> {
     }
     unsafe_fns
 }
-
-mod check_unsafety;
 
 #[cfg(test)]
 mod tests;

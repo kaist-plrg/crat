@@ -10,6 +10,8 @@ typed-arena = "2.0.2"
 serde = { version = "1.0.219", features = ["derive"] }
 toml = "0.8.23"
 toml_edit = "0.22.27"
+lazy_static = "1.5.0"
+tracing = "0.1.41"
 
 [package.metadata.rust-analyzer]
 rustc_private = true

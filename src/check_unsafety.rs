@@ -7,7 +7,6 @@ use std::ops::Bound;
 
 use rustc_ast::AsmMacro;
 use rustc_data_structures::stack::ensure_sufficient_stack;
-use rustc_hash::FxHashSet;
 use rustc_hir::{self as hir, BindingMode, ByRef, HirId, Mutability, def::DefKind};
 use rustc_middle::{
     middle::codegen_fn_attrs::TargetFeature,
@@ -22,7 +21,7 @@ use rustc_span::{
     sym,
 };
 
-struct UnsafetyVisitor<'a, 'tcx> {
+struct UnsafetyVisitor<'a, 'tcx, H: UnsafetyHandler> {
     tcx: TyCtxt<'tcx>,
     thir: &'a Thir<'tcx>,
     /// The `HirId` of the current scope, which would be the `HirId`
@@ -38,21 +37,16 @@ struct UnsafetyVisitor<'a, 'tcx> {
     typing_env: ty::TypingEnv<'tcx>,
     inside_adt: bool,
 
-    calls: FxHashSet<LocalDefId>,
-    is_unsafe: bool,
+    handler: &'a mut H,
 }
 
-impl<'tcx> UnsafetyVisitor<'_, 'tcx> {
-    fn requires_unsafe(&mut self, _: Span, kind: UnsafeOpKind) {
-        if let CallToUnsafeFunction(Some(def_id)) = kind
-            && let Some(def_id) = def_id.as_local()
-            && let hir::Node::Item(item) = self.tcx.hir_node_by_def_id(def_id)
-            && matches!(item.kind, hir::ItemKind::Fn { .. })
-        {
-            self.calls.insert(def_id);
-            return;
-        }
-        self.is_unsafe = true;
+pub trait UnsafetyHandler {
+    fn handle_unsafety(&mut self, kind: UnsafeOpKind, span: Span, tcx: TyCtxt<'_>);
+}
+
+impl<'tcx, H: UnsafetyHandler> UnsafetyVisitor<'_, 'tcx, H> {
+    fn requires_unsafe(&mut self, span: Span, kind: UnsafeOpKind) {
+        self.handler.handle_unsafety(kind, span, self.tcx);
     }
 
     /// Handle closures/coroutines/inline-consts, which is unsafecked with their parent body.
@@ -72,8 +66,7 @@ impl<'tcx> UnsafetyVisitor<'_, 'tcx> {
                 typing_env: self.typing_env,
                 inside_adt: false,
 
-                calls: FxHashSet::default(),
-                is_unsafe: false,
+                handler: self.handler,
             };
             // params in THIR may be unsafe, e.g. a union pattern.
             for param in &inner_thir.params {
@@ -83,9 +76,6 @@ impl<'tcx> UnsafetyVisitor<'_, 'tcx> {
             }
             // Visit the body.
             inner_visitor.visit_expr(&inner_thir[expr]);
-
-            self.calls.extend(inner_visitor.calls);
-            self.is_unsafe |= inner_visitor.is_unsafe;
         }
     }
 }
@@ -237,7 +227,7 @@ impl<'a, 'tcx> Visitor<'a, 'tcx> for LayoutConstrainedPlaceVisitor<'a, 'tcx> {
 }
 
 #[allow(clippy::collapsible_if)]
-impl<'a, 'tcx> Visitor<'a, 'tcx> for UnsafetyVisitor<'a, 'tcx> {
+impl<'a, 'tcx, H: UnsafetyHandler> Visitor<'a, 'tcx> for UnsafetyVisitor<'a, 'tcx, H> {
     fn thir(&self) -> &'a Thir<'tcx> {
         self.thir
     }
@@ -689,8 +679,8 @@ impl<'a, 'tcx> Visitor<'a, 'tcx> for UnsafetyVisitor<'a, 'tcx> {
     }
 }
 
-#[derive(Clone, PartialEq)]
-pub(super) enum UnsafeOpKind {
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum UnsafeOpKind {
     CallToUnsafeFunction(Option<DefId>),
     UseOfInlineAssembly,
     InitializingTypeWith,
@@ -716,7 +706,7 @@ pub(super) enum UnsafeOpKind {
 
 use UnsafeOpKind::*;
 
-pub(super) fn check_unsafety(tcx: TyCtxt<'_>, def: LocalDefId) -> (FxHashSet<LocalDefId>, bool) {
+pub fn check_unsafety<H: UnsafetyHandler>(def: LocalDefId, handler: &mut H, tcx: TyCtxt<'_>) {
     // Closures and inline consts are handled by their owner, if it has a body
     assert!(!tcx.is_typeck_child(def.to_def_id()));
     // Also, don't safety check custom MIR
@@ -741,9 +731,7 @@ pub(super) fn check_unsafety(tcx: TyCtxt<'_>, def: LocalDefId) -> (FxHashSet<Loc
         // FIXME(#132279): we're clearly in a body here.
         typing_env: ty::TypingEnv::non_body_analysis(tcx, def),
         inside_adt: false,
-
-        calls: FxHashSet::default(),
-        is_unsafe: false,
+        handler,
     };
     // params in THIR may be unsafe, e.g. a union pattern.
     for param in &thir.params {
@@ -753,6 +741,4 @@ pub(super) fn check_unsafety(tcx: TyCtxt<'_>, def: LocalDefId) -> (FxHashSet<Loc
     }
     // Visit the body.
     visitor.visit_expr(&thir[expr]);
-
-    (visitor.calls, visitor.is_unsafe)
 }
