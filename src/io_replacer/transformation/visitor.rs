@@ -33,7 +33,7 @@ use crate::{
     ir_util,
 };
 
-pub(super) struct TransformVisitor<'tcx, 'a> {
+pub(super) struct TransformVisitor<'tcx, 'a, 'b> {
     pub(super) tcx: TyCtxt<'tcx>,
     pub(super) type_arena: &'a TypeArena<'a>,
     pub(super) analysis_res: &'a file_analysis::AnalysisResult<'a>,
@@ -57,7 +57,7 @@ pub(super) struct TransformVisitor<'tcx, 'a> {
     pub(super) manually_drop_projections: &'a FxHashSet<Span>,
 
     /// unsupported expr span to location
-    pub(super) unsupported: FxHashMap<Span, MirLoc>,
+    pub(super) unsupported: &'b mut FxHashMap<Span, MirLoc>,
     /// unsupported return fn ids
     pub(super) unsupported_returns: &'a FxHashSet<LocalDefId>,
     /// is stdin unsupported
@@ -103,7 +103,7 @@ struct FprintfCtx<'a> {
     ic: IndicatorCheck<'a>,
 }
 
-impl<'a> TransformVisitor<'_, 'a> {
+impl<'a> TransformVisitor<'_, 'a, '_> {
     #[inline]
     fn loc_if_unsupported(&self, expr: &Expr) -> Option<MirLoc> {
         self.unsupported
@@ -380,7 +380,7 @@ impl<'a> TransformVisitor<'_, 'a> {
     }
 }
 
-impl MutVisitor for TransformVisitor<'_, '_> {
+impl MutVisitor for TransformVisitor<'_, '_, '_> {
     fn visit_crate(&mut self, c: &mut Crate) {
         mut_visit::walk_crate(self, c);
 
@@ -620,7 +620,7 @@ impl MutVisitor for TransformVisitor<'_, '_> {
     }
 
     fn visit_variant_data(&mut self, vd: &mut VariantData) {
-        walk_variant_data(self, vd);
+        mut_visit::walk_variant_data(self, vd);
 
         let VariantData::Struct { fields, .. } = vd else { return };
         for f in fields {
@@ -638,7 +638,7 @@ impl MutVisitor for TransformVisitor<'_, '_> {
     }
 
     fn visit_local(&mut self, local: &mut Local) {
-        walk_local(self, local);
+        mut_visit::walk_local(self, local);
 
         if self.unsupported.contains_key(&local.pat.span) {
             return;
@@ -1458,69 +1458,6 @@ impl MutVisitor for TransformVisitor<'_, '_> {
     }
 }
 
-fn walk_local<T: MutVisitor>(vis: &mut T, local: &mut Local) {
-    let Local {
-        id,
-        super_,
-        pat,
-        ty,
-        kind,
-        span,
-        colon_sp,
-        attrs,
-        tokens: _,
-    } = &mut *local;
-    visit_opt(super_, |sp| vis.visit_span(sp));
-    vis.visit_id(id);
-    visit_attrs(vis, attrs);
-    vis.visit_pat(pat);
-    visit_opt(ty, |ty| vis.visit_ty(ty));
-    match kind {
-        LocalKind::Decl => {}
-        LocalKind::Init(init) => {
-            vis.visit_expr(init);
-        }
-        LocalKind::InitElse(init, els) => {
-            vis.visit_expr(init);
-            vis.visit_block(els);
-        }
-    }
-    visit_opt(colon_sp, |sp| vis.visit_span(sp));
-    vis.visit_span(span);
-}
-
-#[inline]
-fn visit_opt<T, F>(opt: &mut Option<T>, mut visit_elem: F)
-where F: FnMut(&mut T) {
-    if let Some(elem) = opt {
-        visit_elem(elem);
-    }
-}
-
-#[inline]
-fn visit_attrs<T: MutVisitor>(vis: &mut T, attrs: &mut AttrVec) {
-    for attr in attrs.iter_mut() {
-        vis.visit_attribute(attr);
-    }
-}
-
-fn walk_variant_data<T: MutVisitor>(vis: &mut T, vdata: &mut VariantData) {
-    use rustc_data_structures::flat_map_in_place::FlatMapInPlace;
-    match vdata {
-        VariantData::Struct {
-            fields,
-            recovered: _,
-        } => {
-            fields.flat_map_in_place(|field| vis.flat_map_field_def(field));
-        }
-        VariantData::Tuple(fields, id) => {
-            vis.visit_id(id);
-            fields.flat_map_in_place(|field| vis.flat_map_field_def(field));
-        }
-        VariantData::Unit(id) => vis.visit_id(id),
-    }
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum OpenMode {
     Read(bool),
@@ -1621,7 +1558,7 @@ impl OpenMode {
     }
 }
 
-impl TransformVisitor<'_, '_> {
+impl TransformVisitor<'_, '_, '_> {
     fn transform_fopen(&self, path: &Expr, mode_expr: &Expr) -> Expr {
         let mode = LikelyLit::from_expr(mode_expr);
         match mode {

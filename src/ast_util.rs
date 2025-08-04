@@ -30,7 +30,11 @@ pub fn transform_ast<F: std::ops::FnMut(&mut Crate) -> bool>(
 
     let mut v = vec![];
     for file in source_map.files().iter() {
-        let FileName::Real(RealFileName::LocalPath(p)) = &file.name else { continue };
+        let p = match &file.name {
+            FileName::Real(RealFileName::LocalPath(p)) => p.clone(),
+            FileName::Custom(p) => PathBuf::from(p),
+            _ => continue,
+        };
         let src = some_or!(file.src.as_ref(), continue);
         let mut parser = rustc_parse::new_parser_from_source_str(
             &parse_sess,
@@ -41,7 +45,7 @@ pub fn transform_ast<F: std::ops::FnMut(&mut Crate) -> bool>(
         let mut krate = parser.parse_crate_mod().unwrap();
         if f(&mut krate) {
             let s = pprust::crate_to_string_for_macros(&krate);
-            v.push((p.clone(), s));
+            v.push((p, s));
         }
     }
     TransformationResult(v)

@@ -1,9 +1,8 @@
-use std::{fmt::Write as _, fs};
+use std::{fmt::Write as _, fs, path::PathBuf};
 
 use etrace::some_or;
 use rustc_abi::FIRST_VARIANT;
 use rustc_ast::mut_visit::MutVisitor;
-use rustc_ast_pretty::pprust;
 use rustc_hash::{FxHashMap, FxHashSet};
 use rustc_hir::{self as hir, HirId};
 use rustc_index::IndexVec;
@@ -11,7 +10,7 @@ use rustc_middle::{
     mir,
     ty::{List, TyCtxt},
 };
-use rustc_span::{FileName, RealFileName, Span, def_id::LocalDefId};
+use rustc_span::{Span, def_id::LocalDefId};
 use toml_edit::DocumentMut;
 use typed_arena::Arena;
 
@@ -27,8 +26,7 @@ use super::{
 use crate::{ast_util, bit_set::BitSet16, graph_util, ir_util};
 
 pub fn write_to_files(res: &TransformationResult, dir: &std::path::Path) {
-    for (f, s) in &res.files {
-        let FileName::Real(RealFileName::LocalPath(p)) = f else { panic!() };
+    for (p, s) in &res.files {
         fs::write(p, s).unwrap();
     }
 
@@ -57,7 +55,7 @@ pub fn write_to_files(res: &TransformationResult, dir: &std::path::Path) {
 
 #[derive(Debug)]
 pub struct TransformationResult {
-    pub files: Vec<(FileName, String)>,
+    pub files: Vec<(PathBuf, String)>,
     tmpfile: bool,
     stdout_error: bool,
     stderr_error: bool,
@@ -96,6 +94,14 @@ impl TransformationResult {
         m.push('}');
         m
     }
+}
+
+pub fn replace_io(dir: &std::path::Path, tcx: TyCtxt<'_>) -> TransformationResult {
+    let mut res = run(tcx);
+    let start = std::time::Instant::now();
+    write_to_files(&res, dir);
+    res.transformation_time += start.elapsed().as_millis();
+    res
 }
 
 pub fn run(tcx: TyCtxt<'_>) -> TransformationResult {
@@ -522,78 +528,62 @@ pub fn run(tcx: TyCtxt<'_>) -> TransformationResult {
         }
     }
 
-    let source_map = tcx.sess.source_map();
-    let parse_sess = ast_util::new_parse_sess();
-    let mut files = vec![];
     let mut tmpfile = false;
     let mut bounds = FxHashSet::default();
     let mut bound_num = 0;
     let mut unsupported_reasons = vec![];
 
-    for file in source_map.files().iter() {
-        if !matches!(
-            file.name,
-            FileName::Real(RealFileName::LocalPath(_)) | FileName::Custom(_)
-        ) {
-            continue;
-        }
-        let src = some_or!(file.src.as_ref(), continue);
-        let mut parser = rustc_parse::new_parser_from_source_str(
-            &parse_sess,
-            file.name.clone(),
-            src.to_string(),
-        )
-        .unwrap();
-        let mut krate = parser.parse_crate_mod().unwrap();
-        let mut visitor = TransformVisitor {
-            tcx,
-            type_arena: &type_arena,
-            analysis_res: &analysis_res,
-            hir: &hir_ctx,
+    let res = ast_util::transform_ast(
+        |krate| {
+            let mut visitor = TransformVisitor {
+                tcx,
+                type_arena: &type_arena,
+                analysis_res: &analysis_res,
+                hir: &hir_ctx,
 
-            error_returning_fns: &error_returning_fns,
-            error_taking_fns: &error_taking_fns,
-            tracked_loc_to_index: &tracked_loc_to_index,
+                error_returning_fns: &error_returning_fns,
+                error_taking_fns: &error_taking_fns,
+                tracked_loc_to_index: &tracked_loc_to_index,
 
-            hir_loc_to_loc_id: &hir_loc_to_loc_id,
+                hir_loc_to_loc_id: &hir_loc_to_loc_id,
 
-            param_to_loc: &param_to_hir_loc,
-            loc_to_pot: &hir_loc_to_pot,
-            api_ident_spans: &api_ident_spans,
-            uncopiable: &uncopiable,
-            manually_drop_projections: &manually_drop_projections,
+                param_to_loc: &param_to_hir_loc,
+                loc_to_pot: &hir_loc_to_pot,
+                api_ident_spans: &api_ident_spans,
+                uncopiable: &uncopiable,
+                manually_drop_projections: &manually_drop_projections,
 
-            unsupported,
-            unsupported_returns: &unsupported_returns,
-            is_stdin_unsupported,
-            is_stdout_unsupported,
-            is_stderr_unsupported,
+                unsupported: &mut unsupported,
+                unsupported_returns: &unsupported_returns,
+                is_stdin_unsupported,
+                is_stdout_unsupported,
+                is_stderr_unsupported,
 
-            updated: false,
-            tmpfile: false,
-            current_fns: vec![],
-            bounds: vec![],
-            bound_num: 0,
-            guards: FxHashSet::default(),
-            foreign_statics: FxHashSet::default(),
-            unsupported_reasons: vec![],
-        };
-        visitor.visit_crate(&mut krate);
-        if visitor.updated {
-            let s = pprust::crate_to_string_for_macros(&krate);
-            files.push((file.name.clone(), s));
+                updated: false,
+                tmpfile: false,
+                current_fns: vec![],
+                bounds: vec![],
+                bound_num: 0,
+                guards: FxHashSet::default(),
+                foreign_statics: FxHashSet::default(),
+                unsupported_reasons: vec![],
+            };
+            visitor.visit_crate(krate);
+
             tmpfile |= visitor.tmpfile;
             bounds.extend(visitor.bounds);
             bound_num += visitor.bound_num;
-        }
-        unsupported = visitor.unsupported;
-        unsupported_reasons.extend(visitor.unsupported_reasons);
-    }
+            unsupported_reasons.extend(visitor.unsupported_reasons);
+
+            visitor.updated
+        },
+        tcx,
+    );
 
     let transformation_time = start.elapsed().as_millis();
 
     TransformationResult {
-        files,
+        files: res.0,
         tmpfile,
         bounds,
         stdout_error: analysis_res.unsupported_stdout_errors,

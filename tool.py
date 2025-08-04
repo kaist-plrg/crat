@@ -27,7 +27,7 @@ TRANSFORM_ORDER = {
     "io-union": "io",
 }
 TRANSFORM_PASS = {
-    "resolve": "assert,extern,bin",
+    "resolve": "preprocess,extern,bin",
     "union": "union",
     "io": "io",
     "union-io": "io",
@@ -55,7 +55,10 @@ signal.signal(signal.SIGINT, handle_interrupt)
 
 def run_cargo(source_dir, dest_dir, passes, config_path=None):
     global current_dest
-    cmd = ["cargo", "run", "--release", "--", "-o", str(dest_dir), "--pass", passes]
+    cmd = ["cargo", "run", "--bin", "crat"]
+    if not os.environ.get("DEBUG"):
+        cmd.append("--release")
+    cmd += ["--", "-o", str(dest_dir), "--pass", passes]
     if config_path and config_path.exists():
         cmd.extend(["--config", str(config_path)])
     cmd.append(str(source_dir))

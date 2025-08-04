@@ -2,6 +2,7 @@
 
 use std::{
     fs,
+    fs::File,
     path::{Path, PathBuf},
 };
 
@@ -38,6 +39,8 @@ struct Args {
     inplace: bool,
     #[arg(short, long, help = "Path to the output directory")]
     output: Option<PathBuf>,
+    #[arg(short, long, help = "Path to the log file")]
+    log_file: Option<PathBuf>,
     #[arg(help = "Path to the input directory containing c2rust-lib.rs")]
     input: PathBuf,
 }
@@ -48,7 +51,7 @@ struct Args {
 enum Pass {
     Extern,
     Unsafe,
-    Assert,
+    Preprocess,
     Bin,
     Check,
     OutParam,
@@ -71,6 +74,7 @@ struct Config {
     passes: Vec<Pass>,
     #[serde(default)]
     inplace: bool,
+    log_file: Option<PathBuf>,
     output: Option<PathBuf>,
 }
 
@@ -87,6 +91,17 @@ fn main() {
     config.verbose |= args.verbose;
     config.passes.extend(args.pass);
     config.inplace |= args.inplace;
+
+    if let Some(log) = args.log_file.or(config.log_file) {
+        let log_file = File::create(log).unwrap();
+        tracing_subscriber::fmt()
+            .with_max_level(tracing::Level::INFO)
+            .without_time()
+            .with_ansi(false)
+            .with_level(false)
+            .with_writer(log_file)
+            .init();
+    }
 
     for args in args.resolve_function.chunks(2) {
         let [from, to] = args else { panic!() };
@@ -150,8 +165,8 @@ fn main() {
             Pass::Unsafe => {
                 run_compiler_on_path(&file, unsafe_resolver::resolve_unsafe).unwrap();
             }
-            Pass::Assert => {
-                run_compiler_on_path(&file, assert_deduper::dedup_assert).unwrap();
+            Pass::Preprocess => {
+                run_compiler_on_path(&file, preprocessor::preprocess).unwrap();
             }
             Pass::Bin => {
                 run_compiler_on_path(&file, |tcx| {
@@ -172,7 +187,8 @@ fn main() {
                 todo!()
             }
             Pass::Io => {
-                todo!()
+                let _res =
+                    run_compiler_on_path(&file, |tcx| io_replacer::replace_io(&dir, tcx)).unwrap();
             }
             Pass::Pointer => {
                 todo!()

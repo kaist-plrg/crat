@@ -6,7 +6,7 @@ mod mir_loc;
 pub mod transformation;
 mod util;
 
-pub use transformation::transform::run;
+pub use transformation::transform::{replace_io, run};
 
 #[cfg(test)]
 mod tests;

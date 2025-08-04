@@ -1,3 +1,4 @@
 target
 benchmarks/rs-resolved
 benchmarks/tmp
+benchmarks/**/Cargo.lock
