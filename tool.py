@@ -1,145 +1,152 @@
 #!/usr/bin/env python3
 
+import argparse
 import os
 import subprocess
 import sys
 from pathlib import Path
 import shutil
 import signal
+from typing import Callable, Optional, List, Dict
+from dataclasses import dataclass, replace
 
-BENCH_ROOT = Path("benchmarks")
-CONFIG_ROOT = BENCH_ROOT / "configs"
-BIN_TEST_DIR = BENCH_ROOT / "bin-tests"
-SCRIPT_TEST_DIR = BENCH_ROOT / "script-tests"
-RS_ORIG = BENCH_ROOT / "rs"
-TRANSFORM_DIRS = {
+
+@dataclass(frozen=True)
+class Config:
+    overwrite: bool
+    debug: bool
+    yes: bool
+    overwrite_depth: int
+
+    def decrease_depth(self) -> "Config":
+        if not self.overwrite:
+            return self
+
+        new_depth = self.overwrite_depth - 1
+        return replace(
+            self,
+            overwrite=(new_depth > 0),
+            overwrite_depth=new_depth,
+        )
+
+
+BENCH_ROOT: Path = Path("benchmarks")
+CONFIG_ROOT: Path = BENCH_ROOT / "configs"
+BIN_TEST_DIR: Path = BENCH_ROOT / "bin-tests"
+SCRIPT_TEST_DIR: Path = BENCH_ROOT / "script-tests"
+RS_ORIG: Path = BENCH_ROOT / "rs"
+TRANSFORM_DIRS: Dict[str, Path] = {
     "resolve": BENCH_ROOT / "rs-resolved",
     "union": BENCH_ROOT / "rs-union",
     "io": BENCH_ROOT / "rs-io",
-    "union-io": BENCH_ROOT / "rs-union-io",
     "io-union": BENCH_ROOT / "rs-io-union",
 }
-TRANSFORM_ORDER = {
+TRANSFORM_ORDER: Dict[str, Optional[str]] = {
     "resolve": None,
     "union": "resolve",
     "io": "resolve",
-    "union-io": "union",
     "io-union": "io",
 }
-TRANSFORM_PASS = {
+TRANSFORM_PASS: Dict[str, str] = {
     "resolve": "preprocess,extern,bin",
     "union": "union",
     "io": "io",
-    "union-io": "io",
     "io-union": "union",
 }
-TRANSFORM_CONFIG = {
+TRANSFORM_CONFIG: Dict[str, Path] = {
     "resolve": CONFIG_ROOT / "resolve",
     "union": CONFIG_ROOT / "union",
     "io": CONFIG_ROOT / "io",
-    "union-io": CONFIG_ROOT / "io",
     "io-union": CONFIG_ROOT / "union",
 }
+current_dst: Optional[Path] = None
 
-current_dest = None
 
-def handle_interrupt(signum, frame):
-    global current_dest
+def handle_interrupt(_, __):
+    global current_dst
     print("\n[Interrupt] Caught Ctrl+C")
-    if current_dest and current_dest.exists():
-        print(f"[Remove] {current_dest}")
-        shutil.rmtree(current_dest)
+    if current_dst and current_dst.exists():
+        print(f"[Remove] {current_dst}")
+        shutil.rmtree(current_dst)
     sys.exit(1)
+
 
 signal.signal(signal.SIGINT, handle_interrupt)
 
-def run_cargo(source_dir, dest_dir, passes, config_path=None):
-    global current_dest
-    cmd = ["cargo", "run", "--bin", "crat"]
-    if not os.environ.get("DEBUG"):
-        cmd.append("--release")
-    cmd += ["--", "-o", str(dest_dir), "--pass", passes]
-    if config_path and config_path.exists():
-        cmd.extend(["--config", str(config_path)])
-    cmd.append(str(source_dir))
-    print("[Running]", " ".join(cmd))
-    current_dest = dest_dir / source_dir.name
-    try:
-        subprocess.run(cmd, check=True)
-    except subprocess.CalledProcessError:
-        print(f"[Error] Transformation failed: {source_dir} -> {dest_dir}")
-        if current_dest.exists():
-            print(f"[Remove] {current_dest}")
-            shutil.rmtree(current_dest)
-        sys.exit(1)
-    finally:
-        current_dest = None
 
-def transform_one(stage, bench, force=False):
-    dest = TRANSFORM_DIRS[stage] / bench
-    if dest.exists() and not force:
-        print(f"[Skip] {dest} already exists (use --force to override)")
+def list_benchmarks() -> List[str]:
+    return sorted(p.name for p in RS_ORIG.iterdir() if p.is_dir())
+
+
+def is_benchmark(bench: str) -> bool:
+    return (RS_ORIG / bench).is_dir()
+
+
+def transform_one(stage: str, bench: str, config: Config):
+    dst = TRANSFORM_DIRS[stage] / bench
+    if dst.exists() and not config.overwrite:
+        print(
+            f"[Skip] {dst} already exists (use --overwrite to overwrite or --overwrite-depth to adjust depth)"
+        )
         return
 
     src_stage = TRANSFORM_ORDER[stage]
     src = RS_ORIG / bench if src_stage is None else TRANSFORM_DIRS[src_stage] / bench
 
-    if src_stage and not src.exists():
-        transform_one(src_stage, bench, force)
+    if src_stage and (not src.exists() or config.overwrite):
+        transform_one(src_stage, bench, config.decrease_depth())
 
     config_dir = TRANSFORM_CONFIG[stage]
     config_file = config_dir / f"{bench}.toml"
-    config = config_file if config_file.exists() else None
+    config_file = config_file if config_file.exists() else None
 
-    if not dest.parent.exists():
-        dest.parent.mkdir(parents=True)
+    if not dst.parent.exists():
+        dst.parent.mkdir(parents=True)
 
-    run_cargo(src, dest.parent, TRANSFORM_PASS[stage], config)
+    cmd = ["cargo", "run", "--bin", "crat"]
+    if not os.environ.get("DEBUG"):
+        cmd.append("--release")
+    cmd += ["--", "-o", str(dst.parent), "--pass", TRANSFORM_PASS[stage]]
+    if config_file:
+        cmd.extend(["--config", str(config_file)])
+    cmd.append(str(src))
 
-def list_benchmarks():
-    return sorted(p.name for p in RS_ORIG.iterdir() if p.is_dir())
+    global current_dst
+    current_dst = dst
+    print("[Running]", " ".join(cmd))
+    try:
+        subprocess.run(cmd, check=True)
+    except subprocess.CalledProcessError:
+        print(f"[Error] Transformation failed: {src} -> {dst}")
+        if current_dst.exists():
+            print(f"[Remove] {current_dst}")
+            shutil.rmtree(current_dst)
+        sys.exit(1)
+    finally:
+        current_dst = None
 
-def clean(stage, bench=None):
-    path = TRANSFORM_DIRS[stage]
-    if bench:
-        target = path / bench
-        if target.exists():
-            print(f"[Remove] {target}")
-            shutil.rmtree(target)
-    else:
-        if path.exists():
-            print(f"[Remove] {path}")
-            shutil.rmtree(path)
 
-def build(stage, bench=None, release=False):
-    def run_build(path):
-        env = os.environ.copy()
-        env["RUSTFLAGS"] = "-Awarnings"
-        cmd = ["cargo", "build"]
-        if release:
-            cmd.append("--release")
-        print(f"[Building] {path}")
-        try:
-            subprocess.run(cmd, cwd=path, env=env, check=True)
-        except subprocess.CalledProcessError as e:
-            print(f"[Error] Build failed: {path}")
-            sys.exit(1)
+def build_one(stage: str, bench: str, config: Config):
+    bench_dir = TRANSFORM_DIRS[stage] / bench
+    if not bench_dir.exists() or config.overwrite:
+        transform_one(stage, bench, config)
 
-    dest_root = TRANSFORM_DIRS[stage]
-    if bench:
-        dest_path = dest_root / bench
-        if not dest_path.exists():
-            transform_one(stage, bench)
-        run_build(dest_path)
-    else:
-        for bench in list_benchmarks():
-            dest_path = dest_root / bench
-            if not dest_path.exists():
-                transform_one(stage, bench)
-            run_build(dest_path)
+    env = os.environ.copy()
+    env["RUSTFLAGS"] = "-Awarnings"
+    cmd = ["cargo", "build"]
+    if not config.debug:
+        cmd.append("--release")
 
-def test_one(stage, bench, release=False):
-    build(stage, bench, release)
+    print(f"[Building] {bench_dir}")
+    try:
+        subprocess.run(cmd, cwd=bench_dir, env=env, check=True)
+    except subprocess.CalledProcessError:
+        print(f"[Error] Build failed: {bench_dir}")
+        sys.exit(1)
+
+
+def test_one(stage: str, bench: str, config: Config):
+    build_one(stage, bench, config)
 
     print(f"[Test] {bench}")
 
@@ -148,7 +155,7 @@ def test_one(stage, bench, release=False):
 
     if test_file.exists():
         bench_dir = TRANSFORM_DIRS[stage] / bench
-        bin_subdir = "release" if release else "debug"
+        bin_subdir = "debug" if config.debug else "release"
         with open(test_file) as f:
             for line in f:
                 line = line.strip()
@@ -161,8 +168,9 @@ def test_one(stage, bench, release=False):
 
                 print(f"[Exec] {bin_path}")
                 result = subprocess.run([str(bin_path)], cwd=bench_dir)
-                success = (result.returncode == 0 and not expected_failure) or \
-                          (result.returncode != 0 and expected_failure)
+                success = (result.returncode == 0 and not expected_failure) or (
+                    result.returncode != 0 and expected_failure
+                )
                 status = "ok" if success else "FAIL"
                 print(f"  => {status}")
 
@@ -174,7 +182,7 @@ def test_one(stage, bench, release=False):
         tmp_dir.mkdir(exist_ok=True)
 
         cmd = [str(script_file), str(tmp_dir), str(TRANSFORM_DIRS[stage])]
-        if release:
+        if not config.debug:
             cmd.append("--release")
 
         print(f"[Exec] {' '.join(cmd)}")
@@ -186,56 +194,122 @@ def test_one(stage, bench, release=False):
             sys.exit(1)
 
     else:
-        print(f"[Skip] no test: {bench}")
+        print(f"[Skip] No test: {bench}")
 
-def test(stage, bench=None, release=False):
-    if bench:
-        test_one(stage, bench, release)
-    else:
-        for b in list_benchmarks():
-            test_one(stage, b, release)
+
+def clean_one(stage: str, bench: str, _: Config):
+    path = TRANSFORM_DIRS[stage]
+    target = path / bench
+    if target.exists():
+        print(f"[Remove] {target}")
+        shutil.rmtree(target)
+
+
+def make_runner(
+    f: Callable[[str, str, Config], None],
+    need_confirm: bool = False,
+) -> Callable[[str, Optional[str], Config], None]:
+    def runner(stage: str, bench: Optional[str], config: Config):
+        if bench:
+            if is_benchmark(bench):
+                benchmarks = [bench]
+            else:
+                benchmarks = [
+                    name for name in list_benchmarks() if name.startswith(bench)
+                ]
+        else:
+            benchmarks = list_benchmarks()
+
+        if not benchmarks:
+            print(f"[Error] No benchmark: {bench}")
+            sys.exit(1)
+        else:
+            if need_confirm and not config.yes and len(benchmarks) > 1:
+                print(f"[Warning] {len(benchmarks)} benchmarks found:")
+                for bench in benchmarks:
+                    print(f"  - {bench}")
+                confirm = input("Continue? (y/n): ").strip().lower()
+                if confirm != "y":
+                    print("[Aborted]")
+                    return
+            for bench in benchmarks:
+                f(stage, bench, config)
+
+    return runner
+
+
+transform = make_runner(transform_one)
+build = make_runner(build_one)
+test = make_runner(test_one)
+clean = make_runner(clean_one, need_confirm=True)
+
+
+def parse_overwrite_depth(value: str) -> int:
+    if value == "max":
+        return sys.maxsize
+    try:
+        ivalue = int(value)
+        if ivalue <= 0:
+            raise ValueError()
+        return ivalue
+    except ValueError:
+        raise argparse.ArgumentTypeError(
+            f"overwrite-depth must be a positive integer or 'max', got: {value}"
+        )
+
 
 def main():
-    if len(sys.argv) < 3:
-        print("Usage: tool.py <transform|build|test|clean> <stage> [BENCHMARK] [--force|--release]")
+    parser = argparse.ArgumentParser(prog="tool.py")
+    parser.add_argument(
+        "command",
+        choices=["transform", "build", "test", "clean"],
+        help="Main operation to perform",
+    )
+    parser.add_argument(
+        "stage",
+        help="Stage to operate on (e.g., resolve, union, io, etc.)",
+    )
+    parser.add_argument(
+        "benchmark",
+        nargs="?",
+        help="Name of the benchmark (optional)",
+    )
+    parser.add_argument("--overwrite", action="store_true", help="Overwrite existing")
+    parser.add_argument(
+        "--debug", action="store_true", help="Use debug mode for build/test"
+    )
+    parser.add_argument(
+        "-y", "--yes", action="store_true", help="Automatically say yes to prompts"
+    )
+    parser.add_argument(
+        "--overwrite-depth",
+        type=parse_overwrite_depth,
+        default=1,
+        help="Overwrite depth: positive integer or 'max' (default: 1)",
+    )
+
+    args = parser.parse_args()
+
+    if args.stage not in TRANSFORM_DIRS:
+        print(f"Unknown stage: {args.stage}")
         sys.exit(1)
 
-    mode = sys.argv[1]
-    stage = sys.argv[2]
+    config = Config(
+        overwrite=args.overwrite,
+        debug=args.debug,
+        yes=args.yes,
+        overwrite_depth=args.overwrite_depth,
+    )
 
-    if stage not in TRANSFORM_DIRS:
-        print(f"Unknown stage: {stage}")
-        sys.exit(1)
+    if args.command == "transform":
+        transform(args.stage, args.benchmark, config)
+    elif args.command == "build":
+        build(args.stage, args.benchmark, config)
+    elif args.command == "test":
+        test(args.stage, args.benchmark, config)
+    elif args.command == "clean":
+        clean(args.stage, args.benchmark, config)
 
-    force = "--force" in sys.argv
-    release = "--release" in sys.argv
-    args = [arg for arg in sys.argv[3:] if arg not in ("--force", "--release")]
-
-    if mode == "transform":
-        if args:
-            transform_one(stage, args[0], force)
-        else:
-            for bench in list_benchmarks():
-                transform_one(stage, bench, force)
-    elif mode == "build":
-        if args:
-            build(stage, args[0], release)
-        else:
-            build(stage, release=release)
-    elif mode == "test":
-        if args:
-            test(stage, args[0], release)
-        else:
-            test(stage, release=release)
-    elif mode == "clean":
-        if args:
-            clean(stage, args[0])
-        else:
-            clean(stage)
-    else:
-        print(f"Unknown mode: {mode}")
-        sys.exit(1)
 
 if __name__ == "__main__":
     main()
-

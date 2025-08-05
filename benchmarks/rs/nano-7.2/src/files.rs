@@ -3365,14 +3365,17 @@ pub unsafe extern "C" fn make_backup_of(mut realname: *mut libc::c_char) -> bool
                         realname,
                         b"rb\0" as *const u8 as *const libc::c_char,
                     );
-                    if !original.is_null() {
+                    let original_is_null = original.is_null(); // ADDED
+                    // if !original.is_null() {
+                    if !original_is_null { // ADDED
                         verdict = copy_file(
                             original,
                             backup_file,
                             0 as libc::c_int != 0,
                         );
                     }
-                    if original.is_null() || verdict < 0 as libc::c_int {
+                    // if original.is_null() || verdict < 0 as libc::c_int {
+                    if original_is_null || verdict < 0 as libc::c_int { // ADDED
                         warn_and_briefly_pause(
                             dcgettext(
                                 0 as *const libc::c_char,
