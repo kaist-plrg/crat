@@ -9,6 +9,7 @@ pub(super) enum MirLoc {
     Stdin,
     Stdout,
     Stderr,
+    Extern,
     Var(LocalDefId, Local),
     Field(LocalDefId, FieldIdx),
 }
@@ -19,6 +20,7 @@ impl std::fmt::Debug for MirLoc {
             Self::Stdin => write!(f, "stdin"),
             Self::Stdout => write!(f, "stdout"),
             Self::Stderr => write!(f, "stderr"),
+            Self::Extern => write!(f, "extern"),
             Self::Var(def_id, local) => {
                 ir_util::fmt_def_id(f, *def_id)?;
                 write!(f, ":{}", local.index())

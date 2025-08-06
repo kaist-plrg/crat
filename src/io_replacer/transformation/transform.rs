@@ -189,7 +189,7 @@ pub fn run(tcx: TyCtxt<'_>) -> TransformationResult {
                 let hir::VariantData::Struct { fields, .. } = vd else { panic!() };
                 unsupported.insert(fields[field_idx.as_usize()].span, loc);
             }
-            MirLoc::Stdin | MirLoc::Stdout | MirLoc::Stderr => {}
+            MirLoc::Stdin | MirLoc::Stdout | MirLoc::Stderr | MirLoc::Extern => {}
         }
     }
     let mut unsupported_locs = FxHashSet::default();

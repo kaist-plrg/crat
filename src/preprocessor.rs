@@ -110,20 +110,23 @@
 //! ```
 
 use std::fmt::Write as _;
-use crate::io_replacer;
 
 use etrace::some_or;
 use rustc_ast::*;
 use rustc_ast_pretty::pprust;
 use rustc_hash::{FxHashMap, FxHashSet};
-use rustc_hir::def::DefKind;
 use rustc_hir as hir;
-use rustc_hir::{HirId, QPath, def::Res, intravisit};
+use rustc_hir::{
+    HirId, QPath,
+    def::{DefKind, Res},
+    intravisit,
+};
 use rustc_middle::{hir::nested_filter, ty::TyCtxt};
 use rustc_span::{Span, Symbol};
 
 use crate::{
-    ast_util, ast_util::TransformationResult, expr, rustc_ast::mut_visit::MutVisitor as _, stmt,
+    ast_util, ast_util::TransformationResult, expr, io_replacer,
+    rustc_ast::mut_visit::MutVisitor as _, stmt,
 };
 
 pub fn preprocess(tcx: TyCtxt<'_>) {

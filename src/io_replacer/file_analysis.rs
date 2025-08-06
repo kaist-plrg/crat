@@ -89,8 +89,12 @@ pub(super) fn analyze<'a>(arena: &'a Arena<ExprLoc>, tcx: TyCtxt<'_>) -> Analysi
         tracing::info!("{:?}", def_id);
     }
 
-    let mut locs: IndexVec<LocId, MirLoc> =
-        IndexVec::from_raw(vec![MirLoc::Stdin, MirLoc::Stdout, MirLoc::Stderr]);
+    let mut locs: IndexVec<LocId, MirLoc> = IndexVec::from_raw(vec![
+        MirLoc::Stdin,
+        MirLoc::Stdout,
+        MirLoc::Stderr,
+        MirLoc::Extern,
+    ]);
 
     for item_id in tcx.hir_free_items() {
         let item = tcx.hir_item(item_id);
@@ -145,6 +149,9 @@ pub(super) fn analyze<'a>(arena: &'a Arena<ExprLoc>, tcx: TyCtxt<'_>) -> Analysi
         origin_graph,
         unsupported: UnsupportedTracker::new(&arena, locs.len()),
     };
+    analyzer
+        .unsupported
+        .add(loc_ind_map[&MirLoc::Extern], UnsupportedReason::Extern);
 
     for loc in &error_analysis.no_source_locs {
         let loc_id = loc_ind_map[loc];
@@ -564,7 +571,10 @@ impl<'tcx> Analyzer<'_, 'tcx> {
                 "stdin" => MirLoc::Stdin,
                 "stdout" => MirLoc::Stdout,
                 "stderr" => MirLoc::Stderr,
-                x => panic!("{}", x),
+                x => {
+                    tracing::info!("unknown extern: {x}");
+                    MirLoc::Extern
+                }
             }
         } else {
             MirLoc::Var(def_id, RETURN_PLACE)
@@ -998,10 +1008,11 @@ pub enum UnsupportedReason {
     ApiFnPtr = 8,
     Cmp = 9,
     NonPosix = 10,
+    Extern = 11,
 }
 
 impl UnsupportedReason {
-    pub(super) const NUM: usize = 11;
+    pub(super) const NUM: usize = 12;
 }
 
 impl Idx for UnsupportedReason {
