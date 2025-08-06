@@ -265,8 +265,19 @@ pub(super) fn analyze<'a>(arena: &'a Arena<ExprLoc>, tcx: TyCtxt<'_>) -> Analysi
             || permissions.contains(Permission::Write) && origins.contains(Origin::Stdin)
             || permissions.contains(Permission::Read)
                 && (origins.contains(Origin::Stdout) || origins.contains(Origin::Stderr))
+            || permissions.contains(Permission::BufRead) && origins.contains(Origin::Pipe)
         {
             analyzer.unsupported.add(i, UnsupportedReason::Permission);
+        }
+    }
+
+    for loc in [MirLoc::Stdin, MirLoc::Stdout, MirLoc::Stderr] {
+        let loc_id = loc_ind_map[&loc];
+        let origins = origins[loc_id];
+        if origins.count() > 1 {
+            analyzer
+                .unsupported
+                .add(loc_id, UnsupportedReason::AssignToStd);
         }
     }
 
@@ -651,7 +662,6 @@ impl<'tcx> Analyzer<'_, 'tcx> {
                                 if util::contains_file_ty(*t, self.tcx) {
                                     let x = self.transfer_operand(&arg.node, ctx);
                                     self.unsupported.add(x, reason);
-                                    break;
                                 }
                             }
                         }
@@ -673,7 +683,7 @@ impl<'tcx> Analyzer<'_, 'tcx> {
                                 self.unsupported.add(x, UnsupportedReason::Variadic);
                             }
                         }
-                        "unwrap" => {
+                        "unwrap" | "offset" => {
                             let ty = Place::ty(destination, ctx.local_decls, self.tcx).ty;
                             if let Some(variance) = file_type_variance(ty, self.tcx) {
                                 let l = self.transfer_place(*destination, ctx);
@@ -702,9 +712,12 @@ impl<'tcx> Analyzer<'_, 'tcx> {
             if i < arity {
                 if let Some(variance) = file_type_variance(ty, self.tcx) {
                     let l = MirLoc::Var(callee, Local::new(i + 1));
-                    let l = self.loc_ind_map[&l];
+                    let l = self
+                        .loc_ind_map
+                        .get(&l)
+                        .unwrap_or_else(|| panic!("{callee:?}"));
                     let r = self.transfer_operand(&arg.node, ctx);
-                    self.assign(l, r, variance);
+                    self.assign(*l, r, variance);
                 }
             } else if util::contains_file_ty(ty, self.tcx) {
                 let arg = self.transfer_operand(&arg.node, ctx);
@@ -714,8 +727,11 @@ impl<'tcx> Analyzer<'_, 'tcx> {
         if let Some(variance) = file_type_variance(sig.output(), self.tcx) {
             let l = self.transfer_place(destination, ctx);
             let r = MirLoc::Var(callee, RETURN_PLACE);
-            let r = self.loc_ind_map[&r];
-            self.assign(l, r, variance);
+            let r = self
+                .loc_ind_map
+                .get(&r)
+                .unwrap_or_else(|| panic!("{callee:?}"));
+            self.assign(l, *r, variance);
         }
     }
 
@@ -1009,10 +1025,11 @@ pub enum UnsupportedReason {
     Cmp = 9,
     NonPosix = 10,
     Extern = 11,
+    AssignToStd = 12,
 }
 
 impl UnsupportedReason {
-    pub(super) const NUM: usize = 12;
+    pub(super) const NUM: usize = 13;
 }
 
 impl Idx for UnsupportedReason {

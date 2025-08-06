@@ -2559,7 +2559,8 @@ pub unsafe extern "C" fn mm_idx_reader_read(
     return mi;
 }
 pub unsafe extern "C" fn mm_idx_reader_eof(
-    mut r: *const mm_idx_reader_t,
+    // mut r: *const mm_idx_reader_t,
+    mut r: *mut mm_idx_reader_t, // ADDED
 ) -> libc::c_int {
     return if (*r).is_idx != 0 {
         (feof((*r).fp.idx) != 0 || ftell((*r).fp.idx) == (*r).idx_size) as libc::c_int

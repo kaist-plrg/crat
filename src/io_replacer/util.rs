@@ -54,3 +54,24 @@ impl<'tcx> TypeVisitor<TyCtxt<'tcx>> for FileTypeVisitor<'tcx> {
         t.super_visit_with(self)
     }
 }
+
+pub fn file_param_index<'tcx>(ty: rustc_middle::ty::Ty<'tcx>, tcx: TyCtxt<'tcx>) -> Option<usize> {
+    match ty.kind() {
+        TyKind::Adt(adt_def, targs) => {
+            if is_option_ty(adt_def.did(), tcx) {
+                let targs = targs.into_type_list(tcx);
+                file_param_index(targs[0], tcx)
+            } else {
+                None
+            }
+        }
+        TyKind::FnPtr(binder, _) => binder
+            .as_ref()
+            .skip_binder()
+            .inputs()
+            .iter()
+            .enumerate()
+            .find_map(|(i, ty)| if is_file_ptr(*ty, tcx) { Some(i) } else { None }),
+        _ => None,
+    }
+}

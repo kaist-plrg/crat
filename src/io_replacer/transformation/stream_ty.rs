@@ -587,10 +587,10 @@ pub(super) fn convert_expr(
         ) => {
             format!("&mut *({expr}) as *mut _")
         }
-        (Ptr(Dyn(to)), Box(Dyn(from))) if to == from => {
+        (Ptr(Dyn(_)), Box(Dyn(_))) => {
             format!("&mut ({expr}) as *mut _")
         }
-        (Ptr(Dyn(to)), Ref(Box(Dyn(from)))) if to == from => {
+        (Ptr(Dyn(_)), Ref(Box(Dyn(_)))) => {
             format!("&mut *({expr}) as *mut _")
         }
         (Ptr(Dyn(_)), Ptr(Dyn(_))) => {

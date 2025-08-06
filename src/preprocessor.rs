@@ -108,6 +108,21 @@
 //!     fgetc(__arg_1);
 //! };
 //! ```
+//!
+//! # Replace file function pointer type aliases
+//!
+//! Some type aliases contain function pointers types with `FILE *`, like below:
+//!
+//! ```rust,ignore
+//! type func = Option::<fn(*mut FILE)>;
+//! fn foo(x: func) {}
+//! ```
+//!
+//! We replace such type aliases with corresponding types as follows:
+//!
+//! ```rust,ignore
+//! fn foo(x: Option::<fn(*mut FILE)>) {}
+//! ```
 
 use std::fmt::Write as _;
 
@@ -119,6 +134,7 @@ use rustc_hir as hir;
 use rustc_hir::{
     HirId, QPath,
     def::{DefKind, Res},
+    def_id::LocalDefId,
     intravisit,
 };
 use rustc_middle::{hir::nested_filter, ty::TyCtxt};
@@ -126,7 +142,7 @@ use rustc_span::{Span, Symbol};
 
 use crate::{
     ast_util, ast_util::TransformationResult, expr, io_replacer,
-    rustc_ast::mut_visit::MutVisitor as _, stmt,
+    rustc_ast::mut_visit::MutVisitor as _, stmt, ty,
 };
 
 pub fn preprocess(tcx: TyCtxt<'_>) {
@@ -143,11 +159,11 @@ fn transform(tcx: TyCtxt<'_>) -> TransformationResult {
     let mut lets_to_remove = FxHashSet::default();
     let mut vars_to_replace = FxHashMap::default();
     let mut params_to_be_mut = FxHashSet::default();
-    for (rhs, lhs) in visitor.ctx.rhs_to_lhs {
-        if lhs.len() > 1 || visitor.ctx.used_vars.contains(&rhs) {
+    for (rhs, lhs) in &visitor.ctx.rhs_to_lhs {
+        if lhs.len() > 1 || visitor.ctx.used_vars.contains(rhs) {
             continue;
         }
-        let (name, param_span) = some_or!(visitor.ctx.params.get(&rhs), continue);
+        let (name, param_span) = some_or!(visitor.ctx.params.get(rhs), continue);
         let (lhs, let_span) = lhs[0];
         lets_to_remove.insert(let_span);
         params_to_be_mut.insert(*param_span);
@@ -158,8 +174,7 @@ fn transform(tcx: TyCtxt<'_>) -> TransformationResult {
     }
 
     let mut visitor = AstVisitor {
-        call_span_to_if_args: &visitor.ctx.call_span_to_if_args,
-        call_span_to_nested_args: &visitor.ctx.call_span_to_nested_args,
+        hir: &visitor.ctx,
         lets_to_remove: &lets_to_remove,
         vars_to_replace: &vars_to_replace,
         params_to_be_mut: &params_to_be_mut,
@@ -176,8 +191,7 @@ fn transform(tcx: TyCtxt<'_>) -> TransformationResult {
 }
 
 struct AstVisitor<'a> {
-    call_span_to_if_args: &'a FxHashMap<Span, Vec<ArgIdx>>,
-    call_span_to_nested_args: &'a FxHashMap<Span, Vec<ArgIdx>>,
+    hir: &'a HirCtx,
 
     lets_to_remove: &'a FxHashSet<Span>,
     vars_to_replace: &'a FxHashMap<Span, Symbol>,
@@ -187,6 +201,15 @@ struct AstVisitor<'a> {
 }
 
 impl mut_visit::MutVisitor for AstVisitor<'_> {
+    fn visit_ty(&mut self, ty: &mut Ty) {
+        mut_visit::walk_ty(self, ty);
+
+        if let Some(def_id) = self.hir.bound_file_ty_aliases.get(&ty.span) {
+            self.updated = true;
+            *ty = ty!("{}", self.hir.ty_aliases[def_id]);
+        }
+    }
+
     fn visit_block(&mut self, b: &mut Block) {
         let mut assert = false;
         for stmt in &mut b.stmts {
@@ -256,10 +279,10 @@ impl mut_visit::MutVisitor for AstVisitor<'_> {
         match &mut expr.kind {
             ExprKind::Call(_, args) => {
                 let mut indices: Vec<ArgIdx> = vec![];
-                if let Some(if_args) = self.call_span_to_if_args.get(&expr_span) {
+                if let Some(if_args) = self.hir.call_span_to_if_args.get(&expr_span) {
                     indices.extend(if_args);
                 }
-                if let Some(nested_args) = self.call_span_to_nested_args.get(&expr_span) {
+                if let Some(nested_args) = self.hir.call_span_to_nested_args.get(&expr_span) {
                     indices.extend(nested_args);
                 }
                 if !indices.is_empty() {
@@ -482,6 +505,9 @@ struct HirCtx {
     call_span_to_nested_args: FxHashMap<Span, Vec<ArgIdx>>,
     call_span_to_if_args: FxHashMap<Span, Vec<ArgIdx>>,
 
+    ty_aliases: FxHashMap<LocalDefId, String>,
+    bound_file_ty_aliases: FxHashMap<Span, LocalDefId>,
+
     /// function param hir_id to ident symbol and span
     params: FxHashMap<HirId, (Symbol, Span)>,
     /// let stmt rhs variable hir_id to lhs variable hir_id and let stmt span
@@ -519,6 +545,26 @@ impl<'tcx> intravisit::Visitor<'tcx> for HirVisitor<'tcx> {
 
     fn maybe_tcx(&mut self) -> Self::MaybeTyCtxt {
         self.tcx
+    }
+
+    fn visit_item(&mut self, item: &'tcx hir::Item<'tcx>) {
+        intravisit::walk_item(self, item);
+
+        let hir::ItemKind::TyAlias(_, _, ty) = item.kind else { return };
+        let ty = self.tcx.sess.source_map().span_to_snippet(ty.span).unwrap();
+        self.ctx.ty_aliases.insert(item.owner_id.def_id, ty);
+    }
+
+    fn visit_ty(&mut self, ty: &'tcx hir::Ty<'tcx, hir::AmbigArg>) {
+        intravisit::walk_ty(self, ty);
+
+        let hir::TyKind::Path(QPath::Resolved(_, path)) = ty.kind else { return };
+        let Res::Def(DefKind::TyAlias, def_id) = path.res else { return };
+        let def_id = some_or!(def_id.as_local(), return);
+        let mir_ty = self.tcx.type_of(def_id).skip_binder();
+        if io_replacer::util::file_param_index(mir_ty, self.tcx).is_some() {
+            self.ctx.bound_file_ty_aliases.insert(ty.span, def_id);
+        }
     }
 
     fn visit_local(&mut self, let_stmt: &'tcx hir::LetStmt<'tcx>) {
@@ -828,6 +874,69 @@ pub unsafe extern "C" fn f(mut c: libc::c_int) {
             "#,
             &[" = if c != 0 { p } else { q };"],
             &["(if c != 0 { p } else { q })"],
+        );
+    }
+
+    #[test]
+    fn test_file_ty_alias() {
+        run_test(
+            r#"
+#![feature(extern_types)]
+use ::libc;
+extern "C" {
+    pub type _IO_wide_data;
+    pub type _IO_codecvt;
+    pub type _IO_marker;
+}
+pub type size_t = libc::c_ulong;
+pub type __off_t = libc::c_long;
+pub type __off64_t = libc::c_long;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct _IO_FILE {
+    pub _flags: libc::c_int,
+    pub _IO_read_ptr: *mut libc::c_char,
+    pub _IO_read_end: *mut libc::c_char,
+    pub _IO_read_base: *mut libc::c_char,
+    pub _IO_write_base: *mut libc::c_char,
+    pub _IO_write_ptr: *mut libc::c_char,
+    pub _IO_write_end: *mut libc::c_char,
+    pub _IO_buf_base: *mut libc::c_char,
+    pub _IO_buf_end: *mut libc::c_char,
+    pub _IO_save_base: *mut libc::c_char,
+    pub _IO_backup_base: *mut libc::c_char,
+    pub _IO_save_end: *mut libc::c_char,
+    pub _markers: *mut _IO_marker,
+    pub _chain: *mut _IO_FILE,
+    pub _fileno: libc::c_int,
+    pub _flags2: libc::c_int,
+    pub _old_offset: __off_t,
+    pub _cur_column: libc::c_ushort,
+    pub _vtable_offset: libc::c_schar,
+    pub _shortbuf: [libc::c_char; 1],
+    pub _lock: *mut libc::c_void,
+    pub _offset: __off64_t,
+    pub _codecvt: *mut _IO_codecvt,
+    pub _wide_data: *mut _IO_wide_data,
+    pub _freeres_list: *mut _IO_FILE,
+    pub _freeres_buf: *mut libc::c_void,
+    pub __pad5: size_t,
+    pub _mode: libc::c_int,
+    pub _unused2: [libc::c_char; 20],
+}
+pub type _IO_lock_t = ();
+pub type FILE = _IO_FILE;
+pub type int_func = Option::<unsafe extern "C" fn(*mut FILE) -> libc::c_int>;
+pub unsafe extern "C" fn g(mut x: *mut FILE) -> libc::c_int {
+    return 0 as libc::c_int;
+}
+pub unsafe extern "C" fn f() -> libc::c_int {
+    let mut h: int_func = Some(g as unsafe extern "C" fn(*mut FILE) -> libc::c_int);
+    return h.unwrap()(0 as *mut FILE);
+}
+            "#,
+            &["h: Option"],
+            &["h: int_func"],
         );
     }
 }

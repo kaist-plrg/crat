@@ -104,11 +104,15 @@ struct FprintfCtx<'a> {
 }
 
 impl<'a> TransformVisitor<'_, 'a, '_> {
-    #[inline]
     fn loc_if_unsupported(&self, expr: &Expr) -> Option<MirLoc> {
         self.unsupported
             .get(&expr.span)
             .or_else(|| self.unsupported.get(&remove_cast(expr).span))
+            .or_else(|| {
+                let ExprKind::Unary(UnOp::Deref, rhs) = &expr.kind else { return None };
+                let ExprKind::MethodCall(box call) = &rhs.kind else { return None };
+                self.unsupported.get(&call.receiver.span)
+            })
             .copied()
     }
 
@@ -142,7 +146,9 @@ impl<'a> TransformVisitor<'_, 'a, '_> {
                 pot.ty = ty;
                 Some(pot)
             }
-            ExprKind::Paren(e) => self.bound_pot(expr.span).or_else(|| self.bound_expr_pot(e)),
+            ExprKind::Paren(e) | ExprKind::Index(e, _, _) => {
+                self.bound_pot(expr.span).or_else(|| self.bound_expr_pot(e))
+            }
             _ => self.bound_pot(expr.span),
         }
     }
@@ -318,6 +324,11 @@ impl<'a> TransformVisitor<'_, 'a, '_> {
                     }
                     panic!("{:?}", rhs.span);
                 }
+                ExprKind::Repeat(rhs, _) => {
+                    self.convert_rhs(rhs, lhs_pot);
+                    let rhs_str = pprust::expr_to_string(rhs);
+                    **rhs = expr!("const {{ {rhs_str} }}");
+                }
                 _ => panic!("{:?}", rhs.span),
             }
         }
@@ -335,6 +346,12 @@ impl<'a> TransformVisitor<'_, 'a, '_> {
         let TyKind::BareFn(fn_ty) = &mut ty.kind else { panic!() };
         let param = &mut fn_ty.decl.inputs[index];
         self.replace_ty_with_pot(&mut param.ty, pot);
+    }
+
+    fn replace_array_type(&mut self, ty: &mut Ty, pot: Pot<'_>) -> bool {
+        let TyKind::Array(ty, _) = &mut ty.kind else { return false };
+        self.replace_ty_with_pot(ty, pot);
+        true
     }
 
     fn can_propagate(
@@ -454,7 +471,7 @@ impl MutVisitor for TransformVisitor<'_, '_, '_> {
                 if let Some(index) = pot.file_param_index {
                     // When the variable type is Option<fn(..) -> ..>
                     self.replace_fn_ptr_param_type(&mut item.ty, *pot, index);
-                } else {
+                } else if !self.replace_array_type(&mut item.ty, *pot) {
                     self.replace_ty_with_pot(&mut item.ty, *pot);
                     self.convert_rhs(body, *pot);
                 }
@@ -482,7 +499,7 @@ impl MutVisitor for TransformVisitor<'_, '_, '_> {
                     {
                         self.replace_ty(&mut param.ty, ty!("Option<*mut TT{}>", i));
                         tparams.push((i, *bound));
-                    } else {
+                    } else if !self.replace_array_type(&mut param.ty, pot) {
                         self.replace_ty_with_pot(&mut param.ty, pot);
                     }
                     if let PatKind::Ident(BindingMode(_, m), _, _) = &mut param.pat.kind {
@@ -631,7 +648,7 @@ impl MutVisitor for TransformVisitor<'_, '_, '_> {
             if let Some(index) = pot.file_param_index {
                 // When the file type is Option<fn(..) -> ..>
                 self.replace_fn_ptr_param_type(&mut f.ty, pot, index);
-            } else {
+            } else if !self.replace_array_type(&mut f.ty, pot) {
                 self.replace_ty_with_pot(&mut f.ty, pot);
             }
         }
@@ -643,10 +660,25 @@ impl MutVisitor for TransformVisitor<'_, '_, '_> {
         if self.unsupported.contains_key(&local.pat.span) {
             return;
         }
+        if let LocalKind::Init(rhs) = &mut local.kind
+            && self.is_unsupported(rhs)
+        {
+            return;
+        }
 
-        let pot = some_or!(self.binding_pot(local.pat.span), return);
+        let mut pot = some_or!(self.binding_pot(local.pat.span), return);
+        if let PatKind::Ident(BindingMode(ByRef::Yes(_), _), _, _) = local.pat.kind {
+            let StreamType::Ptr(ty) = pot.ty else { panic!() };
+            pot.ty = ty;
+        }
+
         if let Some(ty) = local.ty.as_mut() {
-            self.replace_ty_with_pot(ty, pot);
+            if let Some(index) = pot.file_param_index {
+                // When the file type is Option<fn(..) -> ..>
+                self.replace_fn_ptr_param_type(ty, pot, index);
+            } else if !self.replace_array_type(ty, pot) {
+                self.replace_ty_with_pot(ty, pot);
+            }
         } else {
             if let Some(bound) = pot.ty.get_dyn_bound() {
                 self.bound_num += 1;
@@ -1389,6 +1421,9 @@ impl MutVisitor for TransformVisitor<'_, '_, '_> {
                 }
             }
             ExprKind::Assign(lhs, rhs, _) => {
+                if self.is_unsupported(lhs) || self.is_unsupported(rhs) {
+                    return;
+                }
                 let lhs_pot = some_or!(self.bound_expr_pot(lhs), return);
                 self.convert_rhs(rhs, lhs_pot);
 
@@ -1953,7 +1988,7 @@ if !c.is_ascii_whitespace() {
     if let Ok(___s) = ___s.to_str() {{
         ___s.to_string()
     }} else {{
-        ___s.to_bytes().iter().map(|&b| b as char).collect()
+        ___s.to_bytes().iter().map(|&_b| _b as char).collect()
     }}
 }}, "
                 )
@@ -2482,12 +2517,12 @@ fn expr_to_lock<S: StreamExpr>(stream: &S) -> (String, bool) {
     )
 }
 
-fn take_stream(stream: &Expr, ty: StreamType<'_>, is_non_local: bool) -> String {
-    let stream = pprust::expr_to_string(stream);
+fn take_stream(stream_expr: &Expr, ty: StreamType<'_>, is_non_local: bool) -> String {
+    let stream = pprust::expr_to_string(stream_expr);
     match ty {
         StreamType::Ref(_) | StreamType::Ptr(_) => panic!(),
         StreamType::Option(_) => {
-            if is_non_local {
+            if is_non_local || matches!(stream_expr.kind, ExprKind::Index(_, _, _)) {
                 format!("({stream}).take().unwrap()")
             } else {
                 format!("({stream}).unwrap()")

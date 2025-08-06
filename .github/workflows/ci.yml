@@ -40,9 +40,16 @@ jobs:
       - name: Test (Release)
         run: sudo -u ubuntu bash -lc "cargo test --release"
 
-      - name: Benchmark (Transformation)
+      - name: Benchmark (Transformation) - resolve
         run: sudo -u ubuntu bash -lc "./tool.py transform resolve"
-      - name: Benchmark (Build)
+      - name: Benchmark (Build) - resolve
         run: sudo -u ubuntu bash -lc "./tool.py build resolve"
-      - name: Benchmark (Test)
+      - name: Benchmark (Test) - resolve
         run: sudo -u ubuntu bash -lc "./tool.py test resolve"
+
+      - name: Benchmark (Transformation) - io
+        run: sudo -u ubuntu bash -lc "./tool.py transform io --exclude axel,zmap"
+      - name: Benchmark (Build) - io
+        run: sudo -u ubuntu bash -lc "./tool.py build io --exclude axel,zmap"
+      - name: Benchmark (Test) - io
+        run: sudo -u ubuntu bash -lc "./tool.py test io --exclude axel,zmap,snoopy,streem,the_silver_searcher,tulipindicators"

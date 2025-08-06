@@ -277,7 +277,7 @@ pub fn run(tcx: TyCtxt<'_>) -> TransformationResult {
                                 || fn_ptr_args.contains(&loc)
                                 || analysis_res.permissions[loc_id].contains(Permission::Lock)
                                 || util::is_file_ptr_ptr(ty, tcx)
-                                || file_param_index(ty, tcx).is_some()
+                                || util::file_param_index(ty, tcx).is_some()
                                 || hir_ctx.is_loc_used_in_assign(loc)
                             {
                                 non_generic_params.insert(param);
@@ -417,7 +417,7 @@ pub fn run(tcx: TyCtxt<'_>) -> TransformationResult {
                 ctx.is_generic = true;
             }
 
-            if file_param_index(ctx.ty, tcx).is_some() {
+            if util::file_param_index(ctx.ty, tcx).is_some() {
                 ctx.is_param_without_assign = true;
             }
 
@@ -432,7 +432,7 @@ pub fn run(tcx: TyCtxt<'_>) -> TransformationResult {
                 permissions,
                 origins,
                 ty,
-                file_param_index: file_param_index(ctx.ty, tcx),
+                file_param_index: util::file_param_index(ctx.ty, tcx),
             };
             let old = hir_loc_to_pot.insert(hir_loc, pot);
             if let Some(old) = old {
@@ -624,33 +624,6 @@ fn mir_local_span(
     };
     let local_decl = &body.local_decls[local];
     local_decl.source_info.span
-}
-
-fn file_param_index<'tcx>(ty: rustc_middle::ty::Ty<'tcx>, tcx: TyCtxt<'tcx>) -> Option<usize> {
-    match ty.kind() {
-        rustc_middle::ty::TyKind::Adt(adt_def, targs) => {
-            if util::is_option_ty(adt_def.did(), tcx) {
-                let targs = targs.into_type_list(tcx);
-                file_param_index(targs[0], tcx)
-            } else {
-                None
-            }
-        }
-        rustc_middle::ty::TyKind::FnPtr(binder, _) => binder
-            .as_ref()
-            .skip_binder()
-            .inputs()
-            .iter()
-            .enumerate()
-            .find_map(|(i, ty)| {
-                if util::is_file_ptr(*ty, tcx) {
-                    Some(i)
-                } else {
-                    None
-                }
-            }),
-        _ => None,
-    }
 }
 
 static LIB: &str = r#"

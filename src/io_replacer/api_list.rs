@@ -153,7 +153,7 @@ lazy_static! {
     pub static ref API_MAP: FxHashMap<&'static str, ApiInfo> = API_LIST.iter().copied().collect();
 }
 
-pub static API_LIST: [(&str, ApiInfo); 97] = [
+pub static API_LIST: [(&str, ApiInfo); 102] = [
     // stdio.h
     // Open (6)
     ("fopen", ApiInfo::new(Open(File), true)),
@@ -234,7 +234,7 @@ pub static API_LIST: [(&str, ApiInfo); 97] = [
     ("tmpnam", ApiInfo::new(FileSysOperation, true)),
     ("tempnam", ApiInfo::new(FileSysOperation, true)), // removed
     ("ctermid", ApiInfo::new(FileSysOperation, true)),
-    // GNU libc / Linux
+    // GNU libc / Linux / 3rd-party
     ("__fpending", ApiInfo::new(NonPosix, true)),
     ("__freading", ApiInfo::new(NonPosix, true)),
     ("__fwriting", ApiInfo::new(NonPosix, true)),
@@ -245,6 +245,11 @@ pub static API_LIST: [(&str, ApiInfo); 97] = [
     ("endmntent", ApiInfo::new(NonPosix, true)),
     ("setlinebuf", ApiInfo::new(NonPosix, true)),
     ("setbuffer", ApiInfo::new(NonPosix, true)),
+    ("__gmpz_out_str", ApiInfo::new(NonPosix, true)),
+    ("newterm", ApiInfo::new(NonPosix, true)),
+    ("pg_fprintf", ApiInfo::new(NonPosix, true)),
+    ("ERR_print_errors_fp", ApiInfo::new(NonPosix, true)),
+    ("fopencookie", ApiInfo::new(NonPosixOpen, true)),
     // wchar.h
     // Open (1)
     ("open_wmemstream", ApiInfo::new(Open(Buffer), false)),

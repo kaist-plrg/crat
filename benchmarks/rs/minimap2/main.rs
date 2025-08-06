@@ -54,7 +54,8 @@ extern "C" {
         n_threads: libc::c_int,
     ) -> *mut mm_idx_t;
     fn mm_idx_reader_close(r: *mut mm_idx_reader_t);
-    fn mm_idx_reader_eof(r: *const mm_idx_reader_t) -> libc::c_int;
+    // fn mm_idx_reader_eof(r: *const mm_idx_reader_t) -> libc::c_int;
+    fn mm_idx_reader_eof(r: *mut mm_idx_reader_t) -> libc::c_int; // ADDED
     fn mm_idx_stat(idx: *const mm_idx_t);
     fn mm_idx_destroy(mi: *mut mm_idx_t);
     fn mm_map_file(
