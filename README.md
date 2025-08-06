@@ -13,7 +13,7 @@ build the transformed code, and run their test suites. It can be executed with a
 command of the following form:
 
 ```bash
-`./tool.py <command> <stage> <benchmark>`
+./tool.py <command> <stage> <benchmark>
 ```
 
 The command can be one of the following:
@@ -77,6 +77,17 @@ following commands process all benchmarks except for `avl`, `proxychains`, and
 ```bash
 ./tool.py transform resolve --exclude avl,proxy
 ```
+
+When processing multiple benchmarks, `tool.py` immediately aborts if any of them
+fails to be processed. To continue processing the remaining benchmarks even upon
+failure, use the `--keep-going` option:
+
+```bash
+./tool.py transform resolve --keep-going
+```
+
+If there are failed benchmarks, `tool.py` will show the list of them at the end
+of the output.
 
 ### Transform
 

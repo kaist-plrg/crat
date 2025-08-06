@@ -16,7 +16,9 @@ class Config:
     overwrite: bool
     debug: bool
     yes: bool
+    keep_going: bool
     overwrite_depth: int
+    log: Optional[str]
 
     def decrease_depth(self) -> "Config":
         if not self.overwrite:
@@ -28,6 +30,10 @@ class Config:
             overwrite=(new_depth > 0),
             overwrite_depth=new_depth,
         )
+
+
+class TaskFailedError(Exception):
+    pass
 
 
 BENCH_ROOT: Path = Path("benchmarks")
@@ -109,6 +115,8 @@ def transform_one(stage: str, bench: str, config: Config):
     cmd += ["--", "-o", str(dst.parent), "--pass", TRANSFORM_PASS[stage]]
     if config_file:
         cmd.extend(["--config", str(config_file)])
+    if config.log:
+        cmd.extend(["-l", config.log])
     cmd.append(str(src))
 
     global current_dst
@@ -121,7 +129,10 @@ def transform_one(stage: str, bench: str, config: Config):
         if current_dst.exists():
             print(f"[Remove] {current_dst}")
             shutil.rmtree(current_dst)
-        sys.exit(1)
+        if config.keep_going:
+            raise TaskFailedError()
+        else:
+            sys.exit(1)
     finally:
         current_dst = None
 
@@ -142,7 +153,10 @@ def build_one(stage: str, bench: str, config: Config):
         subprocess.run(cmd, cwd=bench_dir, env=env, check=True)
     except subprocess.CalledProcessError:
         print(f"[Error] Build failed: {bench_dir}")
-        sys.exit(1)
+        if config.keep_going:
+            raise TaskFailedError()
+        else:
+            sys.exit(1)
 
 
 def test_one(stage: str, bench: str, config: Config):
@@ -175,7 +189,10 @@ def test_one(stage: str, bench: str, config: Config):
                 print(f"  => {status}")
 
                 if not success:
-                    sys.exit(1)
+                    if config.keep_going:
+                        raise TaskFailedError()
+                    else:
+                        sys.exit(1)
 
     elif script_file.exists():
         tmp_dir = BENCH_ROOT / "tmp"
@@ -191,7 +208,10 @@ def test_one(stage: str, bench: str, config: Config):
             print("  => ok")
         except subprocess.CalledProcessError:
             print("  => FAIL")
-            sys.exit(1)
+            if config.keep_going:
+                raise TaskFailedError()
+            else:
+                sys.exit(1)
 
     else:
         print(f"[Skip] No test: {bench}")
@@ -235,8 +255,20 @@ def make_runner(
                 if confirm != "y":
                     print("[Aborted]")
                     return
+
+            failed_benchmarks = []
+
             for bench in benchmarks:
-                f(stage, bench, config)
+                try:
+                    f(stage, bench, config)
+                except TaskFailedError:
+                    failed_benchmarks.append(bench)
+
+            if failed_benchmarks:
+                print("[Error] The following benchmarks failed:")
+                for bench in failed_benchmarks:
+                    print(f"  - {bench}")
+                sys.exit(1)
 
     return runner
 
@@ -284,11 +316,17 @@ def main():
     parser.add_argument(
         "-y", "--yes", action="store_true", help="Automatically say yes to prompts"
     )
+    parser.add_argument("--keep-going", action="store_true", help="Continue on errors")
     parser.add_argument(
         "--overwrite-depth",
         type=parse_overwrite_depth,
         default=1,
         help="Overwrite depth: positive integer or 'max' (default: 1)",
+    )
+    parser.add_argument(
+        "-l",
+        "--log",
+        help="Log file",
     )
     parser.add_argument(
         "--exclude",
@@ -306,7 +344,9 @@ def main():
         overwrite=args.overwrite,
         debug=args.debug,
         yes=args.yes,
+        keep_going=args.keep_going,
         overwrite_depth=args.overwrite_depth,
+        log=args.log,
     )
 
     excludes = []

@@ -94,10 +94,10 @@
 //! };
 //! ```
 //!
-//! Some function calls use conditional arguments, like below:
+//! Some I/O API function calls use conditional arguments, like below:
 //!
 //! ```rust,ignore
-//! foo(if cond { p } else { q });
+//! fgetc(if cond { p } else { q });
 //! ```
 //!
 //! We hoist such arguments as follows:
@@ -105,16 +105,18 @@
 //! ```rust,ignore
 //! {
 //!     let __arg_1 = if cond { p } else { q };
-//!     foo(__arg_1);
+//!     fgetc(__arg_1);
 //! };
 //! ```
 
 use std::fmt::Write as _;
+use crate::io_replacer;
 
 use etrace::some_or;
 use rustc_ast::*;
 use rustc_ast_pretty::pprust;
 use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hir::def::DefKind;
 use rustc_hir as hir;
 use rustc_hir::{HirId, QPath, def::Res, intravisit};
 use rustc_middle::{hir::nested_filter, ty::TyCtxt};
@@ -543,20 +545,25 @@ impl<'tcx> intravisit::Visitor<'tcx> for HirVisitor<'tcx> {
 
     fn visit_expr(&mut self, expr: &'tcx hir::Expr<'tcx>) {
         match expr.kind {
-            hir::ExprKind::Call(_, args) => {
-                let mut if_args = vec![];
-                for (i, arg) in args.iter().enumerate() {
-                    if !matches!(arg.kind, hir::ExprKind::If(_, _, _)) {
-                        continue;
+            hir::ExprKind::Call(callee, args) => {
+                if let hir::ExprKind::Path(QPath::Resolved(_, path)) = callee.kind
+                    && let Res::Def(DefKind::Fn, def_id) = path.res
+                    && io_replacer::api_list::is_def_id_api(def_id, self.tcx)
+                {
+                    let mut if_args = vec![];
+                    for (i, arg) in args.iter().enumerate() {
+                        if !matches!(arg.kind, hir::ExprKind::If(_, _, _)) {
+                            continue;
+                        }
+                        let typeck = self.tcx.typeck(expr.hir_id.owner.def_id);
+                        let ty = typeck.expr_ty(arg);
+                        if io_replacer::util::contains_file_ty(ty, self.tcx) {
+                            if_args.push(ArgIdx(i));
+                        }
                     }
-                    let typeck = self.tcx.typeck(expr.hir_id.owner.def_id);
-                    let ty = typeck.expr_ty(arg);
-                    if ty.is_raw_ptr() {
-                        if_args.push(ArgIdx(i));
+                    if !if_args.is_empty() {
+                        self.ctx.call_span_to_if_args.insert(expr.span, if_args);
                     }
-                }
-                if !if_args.is_empty() {
-                    self.ctx.call_span_to_if_args.insert(expr.span, if_args);
                 }
 
                 let args = args.iter().map(|arg| (arg.span, vec![])).collect();
@@ -764,36 +771,60 @@ pub unsafe extern "C" fn f(mut x: libc::c_int, mut p: *mut libc::c_int) {
     fn test_cond_arg() {
         run_test(
             r#"
-pub unsafe extern "C" fn g(mut y: *mut libc::c_int) -> *mut libc::c_int {
-    return y;
+#![feature(extern_types)]
+use ::libc;
+extern "C" {
+    pub type _IO_wide_data;
+    pub type _IO_codecvt;
+    pub type _IO_marker;
+    fn fgetc(__stream: *mut FILE) -> libc::c_int;
 }
-pub unsafe extern "C" fn quuz(
-    mut c: libc::c_int,
-    mut p: *mut libc::c_int,
-    mut q: *mut libc::c_int,
-) {
-    g(if c != 0 { p } else { q });
+pub type size_t = libc::c_ulong;
+pub type __off_t = libc::c_long;
+pub type __off64_t = libc::c_long;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct _IO_FILE {
+    pub _flags: libc::c_int,
+    pub _IO_read_ptr: *mut libc::c_char,
+    pub _IO_read_end: *mut libc::c_char,
+    pub _IO_read_base: *mut libc::c_char,
+    pub _IO_write_base: *mut libc::c_char,
+    pub _IO_write_ptr: *mut libc::c_char,
+    pub _IO_write_end: *mut libc::c_char,
+    pub _IO_buf_base: *mut libc::c_char,
+    pub _IO_buf_end: *mut libc::c_char,
+    pub _IO_save_base: *mut libc::c_char,
+    pub _IO_backup_base: *mut libc::c_char,
+    pub _IO_save_end: *mut libc::c_char,
+    pub _markers: *mut _IO_marker,
+    pub _chain: *mut _IO_FILE,
+    pub _fileno: libc::c_int,
+    pub _flags2: libc::c_int,
+    pub _old_offset: __off_t,
+    pub _cur_column: libc::c_ushort,
+    pub _vtable_offset: libc::c_schar,
+    pub _shortbuf: [libc::c_char; 1],
+    pub _lock: *mut libc::c_void,
+    pub _offset: __off64_t,
+    pub _codecvt: *mut _IO_codecvt,
+    pub _wide_data: *mut _IO_wide_data,
+    pub _freeres_list: *mut _IO_FILE,
+    pub _freeres_buf: *mut libc::c_void,
+    pub __pad5: size_t,
+    pub _mode: libc::c_int,
+    pub _unused2: [libc::c_char; 20],
+}
+pub type _IO_lock_t = ();
+pub type FILE = _IO_FILE;
+pub unsafe extern "C" fn f(mut c: libc::c_int) {
+    let mut p: *mut FILE = 0 as *mut FILE;
+    let mut q: *mut FILE = 0 as *mut FILE;
+    fgetc(if c != 0 { p } else { q });
 }
             "#,
             &[" = if c != 0 { p } else { q };"],
             &["(if c != 0 { p } else { q })"],
-        );
-    }
-
-    #[test]
-    fn test_cond_arg_2() {
-        run_test(
-            r#"
-use ::libc;
-pub unsafe extern "C" fn g(mut p: *mut libc::c_int, mut q: *mut libc::c_int) {}
-pub unsafe extern "C" fn f(mut c: libc::c_int) {
-    let mut p: libc::c_int = 0;
-    let mut q: libc::c_int = 0;
-    g(if c != 0 { &mut p } else { &mut q }, if c != 0 { &mut q } else { &mut p });
-}
-            "#,
-            &[" if c != 0"],
-            &["(if c != 0", ", if c != 0"],
         );
     }
 }
