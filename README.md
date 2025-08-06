@@ -33,9 +33,50 @@ available:
 * `union-io`: From `rs-union` to `rs-union-io` by applying `io`.
 
 The benchmark is the name of the benchmark program to be processed, which is the
-name of the directory under `benchmarks/rs`. If the given name does not match
-any of them, any benchmark whose name starts with the given name will be
-processed. If no benchmark is specified, all benchmarks will be processed.
+name of the directory under `benchmarks/rs`. For example, the following command
+processes the `avl` benchmark:
+
+```bash
+./tool.py transform resolve avl
+```
+
+If the given name does not match any of them, any benchmark whose name starts
+with the given name will be processed. For example, the following command
+processes the `proxychains` and `proxychains-ng` benchmarks:
+
+```bash
+./tool.py transform resolve proxy
+```
+
+The benchmark name is an optional argument. If no benchmark is specified, all
+benchmarks will be processed. For example, the following command processes all
+benchmarks:
+
+```bash
+./tool.py transform resolve
+```
+
+You can use the `--exclude` option to exclude benchmarks whose names start with
+a certain prefix. This is especially useful when you want to process all
+benchmarks except for a few of them. For example, the following command
+processes all benchmarks except for `proxychains` and `proxychains-ng`:
+
+```bash
+./tool.py transform resolve --exclude proxy
+```
+
+You can exclude multiple benchmarks by specifying the `--exclude` option
+multiple times or by separating the names with commas. For example, the
+following commands process all benchmarks except for `avl`, `proxychains`, and
+`proxychains-ng`:
+
+```bash
+./tool.py transform resolve --exclude avl --exclude proxy
+```
+
+```bash
+./tool.py transform resolve --exclude avl,proxy
+```
 
 ### Transform
 

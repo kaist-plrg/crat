@@ -208,8 +208,8 @@ def clean_one(stage: str, bench: str, _: Config):
 def make_runner(
     f: Callable[[str, str, Config], None],
     need_confirm: bool = False,
-) -> Callable[[str, Optional[str], Config], None]:
-    def runner(stage: str, bench: Optional[str], config: Config):
+) -> Callable[[str, Optional[str], List[str], Config], None]:
+    def runner(stage: str, bench: Optional[str], excludes: List[str], config: Config):
         if bench:
             if is_benchmark(bench):
                 benchmarks = [bench]
@@ -224,6 +224,9 @@ def make_runner(
             print(f"[Error] No benchmark: {bench}")
             sys.exit(1)
         else:
+            benchmarks = [
+                b for b in benchmarks if not any(b.startswith(ex) for ex in excludes)
+            ]
             if need_confirm and not config.yes and len(benchmarks) > 1:
                 print(f"[Warning] {len(benchmarks)} benchmarks found:")
                 for bench in benchmarks:
@@ -287,6 +290,11 @@ def main():
         default=1,
         help="Overwrite depth: positive integer or 'max' (default: 1)",
     )
+    parser.add_argument(
+        "--exclude",
+        action="append",
+        help="Excluded benchmarks. Supports comma-separated or multiple --exclude.",
+    )
 
     args = parser.parse_args()
 
@@ -301,14 +309,20 @@ def main():
         overwrite_depth=args.overwrite_depth,
     )
 
+    excludes = []
+    if args.exclude:
+        for item in args.exclude:
+            excludes.extend(item.split(","))
+
     if args.command == "transform":
-        transform(args.stage, args.benchmark, config)
+        runner = transform
     elif args.command == "build":
-        build(args.stage, args.benchmark, config)
+        runner = build
     elif args.command == "test":
-        test(args.stage, args.benchmark, config)
-    elif args.command == "clean":
-        clean(args.stage, args.benchmark, config)
+        runner = test
+    else:
+        runner = clean
+    runner(args.stage, args.benchmark, excludes, config)
 
 
 if __name__ == "__main__":
