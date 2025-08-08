@@ -1,6 +1,7 @@
 #![feature(rustc_private)]
 #![feature(box_patterns)]
 #![feature(if_let_guard)]
+#![feature(iter_intersperse)]
 
 extern crate rustc_abi;
 extern crate rustc_ast;
@@ -38,5 +39,6 @@ pub mod formatter;
 pub mod graph_util;
 pub mod io_replacer;
 pub mod ir_util;
+pub mod points_to;
 pub mod type_checker;
 pub mod unsafe_resolver;

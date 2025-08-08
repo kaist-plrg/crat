@@ -89,12 +89,12 @@ fn find_unsafe_fns(tcx: TyCtxt<'_>) -> FxHashSet<LocalDefId> {
         }
     }
 
-    let sccs = graph_util::sccs_copied(&call_graph);
+    let sccs: graph_util::Sccs<_, true> = graph_util::sccs_copied(&call_graph);
 
-    let mut is_scc_unsafe = ChunkedBitSet::new_empty(sccs.sccs.len());
+    let mut is_scc_unsafe = ChunkedBitSet::new_empty(sccs.scc_elems.len());
     for scc_id in sccs.post_order() {
         if !is_scc_unsafe.contains(scc_id) {
-            let scc = &sccs.sccs[scc_id];
+            let scc = &sccs.scc_elems[scc_id];
             if scc.intersection(&self_unsafe_fns).next().is_some() {
                 is_scc_unsafe.insert(scc_id);
             } else {
@@ -108,7 +108,7 @@ fn find_unsafe_fns(tcx: TyCtxt<'_>) -> FxHashSet<LocalDefId> {
 
     let mut unsafe_fns: FxHashSet<LocalDefId> = FxHashSet::default();
     for scc_id in is_scc_unsafe.iter() {
-        unsafe_fns.extend(&sccs.sccs[scc_id]);
+        unsafe_fns.extend(&sccs.scc_elems[scc_id]);
     }
     unsafe_fns
 }

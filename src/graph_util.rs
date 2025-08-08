@@ -2,9 +2,9 @@
 
 use std::collections::{HashMap, HashSet, VecDeque};
 
-use rustc_data_structures::graph::{scc, vec_graph::VecGraph};
+use rustc_data_structures::graph::{DirectedGraph, Successors, scc, vec_graph::VecGraph};
 use rustc_hash::{FxHashMap, FxHashSet};
-use rustc_index::{Idx, IndexVec, bit_set::MixedBitSet};
+use rustc_index::{Idx, IndexVec, bit_set::ChunkedBitSet};
 
 rustc_index::newtype_index! {
     #[orderable]
@@ -14,24 +14,24 @@ rustc_index::newtype_index! {
 }
 
 /// Strongly connected components (SCCs) of a directed graph.
-pub struct Sccs<T> {
+pub struct Sccs<T, const BR: bool> {
     /// SCC to its successors
-    graph: VecGraph<SccId, true>,
+    graph: VecGraph<SccId, BR>,
     /// SCC to its element nodes
-    pub sccs: IndexVec<SccId, FxHashSet<T>>,
+    pub scc_elems: IndexVec<SccId, FxHashSet<T>>,
     /// Node to SCC it belongs to
     pub indices: FxHashMap<T, SccId>,
 }
 
-impl<T: Eq + std::hash::Hash> Sccs<T> {
+impl<T: Eq + std::hash::Hash, const BR: bool> Sccs<T, BR> {
     #[inline]
     pub fn is_empty(&self) -> bool {
-        self.sccs.is_empty()
+        self.scc_elems.is_empty()
     }
 
     #[inline]
     pub fn len(&self) -> usize {
-        self.sccs.len()
+        self.scc_elems.len()
     }
 
     #[inline]
@@ -40,27 +40,29 @@ impl<T: Eq + std::hash::Hash> Sccs<T> {
     }
 
     #[inline]
-    pub fn predecessors(&self, scc_id: SccId) -> &[SccId] {
-        self.graph.predecessors(scc_id)
-    }
-
-    #[inline]
     pub fn post_order(
         &self,
     ) -> impl DoubleEndedIterator<Item = SccId> + ExactSizeIterator + Clone + 'static {
-        self.sccs.indices()
+        self.scc_elems.indices()
     }
 
     #[inline]
     pub fn scc(&self, t: &T) -> &FxHashSet<T> {
-        &self.sccs[self.indices[t]]
+        &self.scc_elems[self.indices[t]]
+    }
+}
+
+impl<T: Eq + std::hash::Hash> Sccs<T, true> {
+    #[inline]
+    pub fn predecessors(&self, scc_id: SccId) -> &[SccId] {
+        self.graph.predecessors(scc_id)
     }
 }
 
 /// Computes the strongly connected components (SCCs) of a directed graph whose nodes are copyable.
-pub fn sccs_copied<T: Copy + Eq + std::hash::Hash, S1, S2>(
+pub fn sccs_copied<T: Copy + Eq + std::hash::Hash, S1, S2, const BR: bool>(
     graph: &HashMap<T, HashSet<T, S1>, S2>,
-) -> Sccs<T> {
+) -> Sccs<T, BR> {
     let mut id_to_node = vec![];
     let mut node_to_id = FxHashMap::default();
     for (i, node) in graph.keys().copied().enumerate() {
@@ -79,7 +81,9 @@ pub fn sccs_copied<T: Copy + Eq + std::hash::Hash, S1, S2>(
 }
 
 /// Computes the strongly connected components (SCCs) of a directed graph.
-pub fn sccs<T: Eq + std::hash::Hash, S1, S2>(graph: &HashMap<T, HashSet<T, S1>, S2>) -> Sccs<&T> {
+pub fn sccs<T: Eq + std::hash::Hash, S1, S2, const BR: bool>(
+    graph: &HashMap<T, HashSet<T, S1>, S2>,
+) -> Sccs<&T, BR> {
     let mut id_to_node = vec![];
     let mut node_to_id = FxHashMap::default();
     for (i, node) in graph.keys().enumerate() {
@@ -97,10 +101,10 @@ pub fn sccs<T: Eq + std::hash::Hash, S1, S2>(graph: &HashMap<T, HashSet<T, S1>, 
     sccs_common(id_to_node, edges)
 }
 
-fn sccs_common<T: Copy + Eq + std::hash::Hash>(
+fn sccs_common<T: Copy + Eq + std::hash::Hash, const BR: bool>(
     id_to_node: Vec<T>,
     edges: Vec<(usize, usize)>,
-) -> Sccs<T> {
+) -> Sccs<T, BR> {
     let vec_graph: VecGraph<usize> = VecGraph::new(id_to_node.len(), edges);
 
     let sccs: scc::Sccs<usize, SccId> = scc::Sccs::new(&vec_graph);
@@ -123,7 +127,52 @@ fn sccs_common<T: Copy + Eq + std::hash::Hash>(
 
     Sccs {
         graph,
-        sccs: scc_elems,
+        scc_elems,
+        indices: scc_indices,
+    }
+}
+
+#[repr(transparent)]
+pub struct VecBitSet<'a, T: Idx>(pub &'a IndexVec<T, ChunkedBitSet<T>>);
+
+impl<T: Idx> DirectedGraph for VecBitSet<'_, T> {
+    type Node = T;
+
+    fn num_nodes(&self) -> usize {
+        self.0.len()
+    }
+}
+
+impl<T: Idx> Successors for VecBitSet<'_, T> {
+    fn successors(&self, node: Self::Node) -> impl Iterator<Item = Self::Node> {
+        self.0[node].iter()
+    }
+}
+
+pub fn sccs_from_vec_bit_set<T: Idx, const BR: bool>(
+    graph: &IndexVec<T, ChunkedBitSet<T>>,
+) -> Sccs<T, BR> {
+    let sccs: scc::Sccs<T, SccId> = scc::Sccs::new(&VecBitSet(graph));
+
+    let mut scc_edges = vec![];
+    let mut scc_elems: IndexVec<SccId, _> = IndexVec::new();
+    let mut scc_indices = FxHashMap::default();
+    for scc in sccs.all_sccs() {
+        for succ in sccs.successors(scc) {
+            scc_edges.push((scc, *succ));
+        }
+        scc_elems.push(FxHashSet::default());
+    }
+    for i in graph.indices() {
+        let scc = sccs.scc(i);
+        scc_elems[scc].insert(i);
+        scc_indices.insert(i, scc);
+    }
+    let graph = VecGraph::new(sccs.num_sccs(), scc_edges);
+
+    Sccs {
+        graph,
+        scc_elems,
         indices: scc_indices,
     }
 }
@@ -145,7 +194,7 @@ pub fn transitive_closure<T: Copy + Eq + std::hash::Hash>(
         .collect();
     let len = id_to_v.len();
 
-    let mut reachability = IndexVec::from_raw(vec![MixedBitSet::new_empty(len); len]);
+    let mut reachability = IndexVec::from_raw(vec![ChunkedBitSet::new_empty(len); len]);
     for (v, succs) in graph.iter() {
         for succ in succs {
             reachability[v_to_id[v]].insert(v_to_id[succ]);
@@ -162,7 +211,7 @@ pub fn transitive_closure<T: Copy + Eq + std::hash::Hash>(
     new_graph
 }
 
-pub fn bitset_transitive_closure<T: Idx>(graph: &mut IndexVec<T, MixedBitSet<T>>) {
+pub fn bitset_transitive_closure<T: Idx>(graph: &mut IndexVec<T, ChunkedBitSet<T>>) {
     for k in graph.indices() {
         for i in graph.indices() {
             for j in graph.indices() {
@@ -175,10 +224,10 @@ pub fn bitset_transitive_closure<T: Idx>(graph: &mut IndexVec<T, MixedBitSet<T>>
 }
 
 pub fn bitset_reachable_vertices<T: Idx>(
-    graph: &IndexVec<T, MixedBitSet<T>>,
+    graph: &IndexVec<T, ChunkedBitSet<T>>,
     v: T,
-) -> MixedBitSet<T> {
-    let mut visited = MixedBitSet::new_empty(graph.len());
+) -> ChunkedBitSet<T> {
+    let mut visited = ChunkedBitSet::new_empty(graph.len());
     let mut worklist = VecDeque::new();
     worklist.push_back(v);
     while let Some(u) = worklist.pop_front() {

@@ -220,9 +220,9 @@ pub fn run(tcx: TyCtxt<'_>) -> TransformationResult {
     for callees in hir_ctx.call_graph.values_mut() {
         callees.retain(|f| callers.contains(f));
     }
-    let sccs = graph_util::sccs_copied(&hir_ctx.call_graph);
+    let sccs: graph_util::Sccs<_, true> = graph_util::sccs_copied(&hir_ctx.call_graph);
     let mut recursive_fns = FxHashSet::default();
-    for fns in sccs.sccs.iter() {
+    for fns in sccs.scc_elems.iter() {
         if fns.len() == 1 {
             let f = fns.iter().next().unwrap();
             if hir_ctx.call_graph[f].contains(f) {

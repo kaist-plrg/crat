@@ -251,7 +251,7 @@ fn resolve(tcx: TyCtxt<'_>) -> ResolveResult {
         );
     }
 
-    let sccs = graph_util::sccs_copied(&dependencies);
+    let sccs: graph_util::Sccs<_, false> = graph_util::sccs_copied(&dependencies);
     let arena = Arena::new();
     let mut cmp = TypeComparator {
         tcx,
@@ -263,7 +263,7 @@ fn resolve(tcx: TyCtxt<'_>) -> ResolveResult {
     };
     let mut equiv_adts = FxHashMap::default();
     for scc_id in sccs.post_order() {
-        let scc = &sccs.sccs[scc_id];
+        let scc = &sccs.scc_elems[scc_id];
         for name in scc {
             if is_unnamed(name.as_str()) {
                 continue;

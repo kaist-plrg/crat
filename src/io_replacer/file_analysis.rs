@@ -11,7 +11,7 @@ use rustc_hir::{
     definitions::DefPathData,
     intravisit,
 };
-use rustc_index::{Idx, IndexVec, bit_set::MixedBitSet};
+use rustc_index::{Idx, IndexVec, bit_set::ChunkedBitSet};
 use rustc_middle::{
     hir::nested_filter,
     mir::{
@@ -190,7 +190,7 @@ pub(super) fn analyze<'a>(arena: &'a Arena<ExprLoc>, tcx: TyCtxt<'_>) -> Analysi
 
     let graph = &analyzer.permission_graph;
     let sccs: Sccs<_, usize> = Sccs::new(&VecBitSet(&graph.edges));
-    let mut components = vec![MixedBitSet::new_empty(locs.len()); sccs.num_sccs()];
+    let mut components = vec![ChunkedBitSet::new_empty(locs.len()); sccs.num_sccs()];
     for i in graph.solutions.indices() {
         let scc = sccs.scc(i);
         components[scc.index()].insert(i);
@@ -849,7 +849,7 @@ rustc_index::newtype_index! {
 struct Graph<V: Idx, T: Idx> {
     tok_num: usize,
     solutions: IndexVec<V, BitSet8<T>>,
-    edges: IndexVec<V, MixedBitSet<V>>,
+    edges: IndexVec<V, ChunkedBitSet<V>>,
 }
 
 impl<V: Idx, T: Idx> Graph<V, T> {
@@ -859,7 +859,7 @@ impl<V: Idx, T: Idx> Graph<V, T> {
         Self {
             tok_num,
             solutions: IndexVec::from_raw(vec![BitSet8::new_empty(); size]),
-            edges: IndexVec::from_raw(vec![MixedBitSet::new_empty(size); size]),
+            edges: IndexVec::from_raw(vec![ChunkedBitSet::new_empty(size); size]),
         }
     }
 
@@ -887,7 +887,7 @@ impl<V: Idx, T: Idx> Graph<V, T> {
         while deltas.iter().any(|s| !s.is_empty()) {
             let sccs: Sccs<_, usize> = Sccs::new(&VecBitSet(&edges));
 
-            let mut components = vec![MixedBitSet::new_empty(size); sccs.num_sccs()];
+            let mut components = vec![ChunkedBitSet::new_empty(size); sccs.num_sccs()];
             for i in solutions.indices() {
                 let scc = sccs.scc(i);
                 components[scc.index()].insert(i);
@@ -949,7 +949,7 @@ impl<V: Idx, T: Idx> Graph<V, T> {
                 }
 
                 // update edges
-                edges = IndexVec::from_raw(vec![MixedBitSet::new_empty(size); size]);
+                edges = IndexVec::from_raw(vec![ChunkedBitSet::new_empty(size); size]);
                 for (scc, rep) in scc_to_rep.iter().enumerate() {
                     let succs = &mut edges[*rep];
                     for succ in sccs.successors(scc) {
@@ -988,13 +988,13 @@ impl<V: Idx, T: Idx> Graph<V, T> {
 }
 
 #[inline]
-fn contains_multiple<T: Idx>(set: &MixedBitSet<T>) -> bool {
+fn contains_multiple<T: Idx>(set: &ChunkedBitSet<T>) -> bool {
     let mut iter = set.iter();
     iter.next().is_some() && iter.next().is_some()
 }
 
 #[repr(transparent)]
-struct VecBitSet<'a, T: Idx>(&'a IndexVec<T, MixedBitSet<T>>);
+struct VecBitSet<'a, T: Idx>(&'a IndexVec<T, ChunkedBitSet<T>>);
 
 impl<T: Idx> DirectedGraph for VecBitSet<'_, T> {
     type Node = T;
@@ -1052,8 +1052,8 @@ struct UnsupportedTracker<'a> {
     locs: FxHashMap<LocId, &'a DisjointSet<'a, LocId>>,
     unsupported: FxHashMap<LocId, BitSet16<UnsupportedReason>>,
 
-    stdout_locs: MixedBitSet<LocId>,
-    stderr_locs: MixedBitSet<LocId>,
+    stdout_locs: ChunkedBitSet<LocId>,
+    stderr_locs: ChunkedBitSet<LocId>,
 }
 
 impl<'a> UnsupportedTracker<'a> {
@@ -1063,8 +1063,8 @@ impl<'a> UnsupportedTracker<'a> {
             locs: FxHashMap::default(),
             unsupported: FxHashMap::default(),
 
-            stdout_locs: MixedBitSet::new_empty(len),
-            stderr_locs: MixedBitSet::new_empty(len),
+            stdout_locs: ChunkedBitSet::new_empty(len),
+            stderr_locs: ChunkedBitSet::new_empty(len),
         }
     }
 
