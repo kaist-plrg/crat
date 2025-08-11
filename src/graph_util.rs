@@ -1,6 +1,6 @@
 //! utils for graphs
 
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::VecDeque;
 
 use rustc_data_structures::graph::{DirectedGraph, Successors, scc, vec_graph::VecGraph};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -60,8 +60,8 @@ impl<T: Eq + std::hash::Hash> Sccs<T, true> {
 }
 
 /// Computes the strongly connected components (SCCs) of a directed graph whose nodes are copyable.
-pub fn sccs_copied<T: Copy + Eq + std::hash::Hash, S1, S2, const BR: bool>(
-    graph: &HashMap<T, HashSet<T, S1>, S2>,
+pub fn sccs_copied<T: Copy + Eq + std::hash::Hash, const BR: bool>(
+    graph: &FxHashMap<T, FxHashSet<T>>,
 ) -> Sccs<T, BR> {
     let mut id_to_node = vec![];
     let mut node_to_id = FxHashMap::default();
@@ -81,8 +81,8 @@ pub fn sccs_copied<T: Copy + Eq + std::hash::Hash, S1, S2, const BR: bool>(
 }
 
 /// Computes the strongly connected components (SCCs) of a directed graph.
-pub fn sccs<T: Eq + std::hash::Hash, S1, S2, const BR: bool>(
-    graph: &HashMap<T, HashSet<T, S1>, S2>,
+pub fn sccs<T: Eq + std::hash::Hash, const BR: bool>(
+    graph: &FxHashMap<T, FxHashSet<T>>,
 ) -> Sccs<&T, BR> {
     let mut id_to_node = vec![];
     let mut node_to_id = FxHashMap::default();
@@ -223,6 +223,25 @@ pub fn bitset_transitive_closure<T: Idx>(graph: &mut IndexVec<T, ChunkedBitSet<T
     }
 }
 
+pub fn reachable_vertices<T: Copy + Eq + std::hash::Hash>(
+    graph: &FxHashMap<T, FxHashSet<T>>,
+    v: T,
+) -> FxHashSet<T> {
+    let mut visited = FxHashSet::default();
+    let mut worklist = VecDeque::new();
+    worklist.push_back(v);
+    while let Some(u) = worklist.pop_front() {
+        if visited.insert(u)
+            && let Some(succs) = graph.get(&u)
+        {
+            for succ in succs {
+                worklist.push_back(*succ);
+            }
+        }
+    }
+    visited
+}
+
 pub fn bitset_reachable_vertices<T: Idx>(
     graph: &IndexVec<T, ChunkedBitSet<T>>,
     v: T,
@@ -250,6 +269,18 @@ pub fn inverse<T: Copy + Eq + std::hash::Hash>(
     for (node, succs) in map {
         for succ in succs {
             inv.get_mut(succ).unwrap().insert(*node);
+        }
+    }
+    inv
+}
+
+pub fn bitset_inverse<T: Idx>(
+    graph: &IndexVec<T, ChunkedBitSet<T>>,
+) -> IndexVec<T, ChunkedBitSet<T>> {
+    let mut inv = IndexVec::from_raw(vec![ChunkedBitSet::new_empty(graph.len()); graph.len()]);
+    for (node, succs) in graph.iter_enumerated() {
+        for succ in succs.iter() {
+            inv[succ].insert(node);
         }
     }
     inv

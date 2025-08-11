@@ -20,11 +20,54 @@ use rustc_span::{
     source_map::Spanned,
 };
 
-use super::{
-    alloc_finder,
+use super::alloc_finder;
+use crate::{
+    graph_util::{self, SccId},
     ty_shape::{self, TyShape, TyShapes},
 };
-use crate::graph_util;
+
+pub fn serialize_solutions(solutions: &Solutions) -> Vec<u8> {
+    let mut arr = vec![];
+    for v in solutions {
+        for i in v.iter() {
+            let mut i = i.index();
+            while i > 0 {
+                arr.push((i & 127) as u8);
+                i >>= 7;
+            }
+            arr.push(254);
+        }
+        arr.push(255);
+    }
+    arr.pop();
+    arr
+}
+
+pub fn deserialize_solutions(arr: &[u8]) -> Solutions {
+    let size = arr.iter().filter(|n| **n == 255).count() + 1;
+    let mut solutions: Solutions = IndexVec::from_raw(vec![ChunkedBitSet::new_empty(size)]);
+    let mut s = &mut solutions[Loc::ZERO];
+    let mut i = 0;
+    let mut len = 0;
+    for n in arr {
+        match *n {
+            255 => {
+                solutions.push(ChunkedBitSet::new_empty(size));
+                s = solutions.raw.last_mut().unwrap();
+            }
+            254 => {
+                s.insert(Loc::from_usize(i));
+                i = 0;
+                len = 0;
+            }
+            n => {
+                i |= (n as usize) << len;
+                len += 7;
+            }
+        }
+    }
+    solutions
+}
 
 #[derive(Debug)]
 pub struct BodyItem<'tcx> {
@@ -133,7 +176,7 @@ pub struct AnalysisResult {
 
     pub indirect_calls: FxHashMap<LocalDefId, FxHashMap<BasicBlock, Vec<LocalDefId>>>,
     pub call_graph_sccs: graph_util::Sccs<LocalDefId, false>,
-    pub reachables: RefCell<FxHashMap<usize, FxHashSet<usize>>>,
+    pub reachables: RefCell<FxHashMap<SccId, FxHashSet<SccId>>>,
 
     pub writes: FxHashMap<LocalDefId, FxHashMap<Location, ChunkedBitSet<Loc>>>,
     pub bitfield_writes: FxHashMap<LocalDefId, FxHashMap<Location, ChunkedBitSet<Loc>>>,
@@ -915,6 +958,45 @@ pub fn receiver_and_method(
     let Res::Def(_, struct_def_id) = path.res else { unreachable!() };
     let local_def_id = struct_def_id.expect_local();
     Some((local_def_id, method))
+}
+
+impl AnalysisResult {
+    pub fn call_writes(&self, def_id: LocalDefId) -> ChunkedBitSet<Loc> {
+        self.with_reachables(self.call_graph_sccs.indices[&def_id], |sccs| {
+            let mut writes = ChunkedBitSet::new_empty(self.ends.len());
+            for scc in sccs {
+                for f in &self.call_graph_sccs.scc_elems[*scc] {
+                    writes.union(&self.fn_writes[f]);
+                }
+            }
+            writes
+        })
+    }
+
+    #[inline]
+    fn with_reachables<R, F: FnOnce(&FxHashSet<SccId>) -> R>(&self, scc: SccId, f: F) -> R {
+        if let Some(rs) = self.reachables.borrow().get(&scc) {
+            return f(rs);
+        }
+        let mut reachables = FxHashSet::default();
+        self.reachables_from_scc(scc, &mut reachables);
+        let r = f(&reachables);
+        self.reachables.borrow_mut().insert(scc, reachables.clone());
+        r
+    }
+
+    fn reachables_from_scc(&self, scc: SccId, reachables: &mut FxHashSet<SccId>) {
+        if let Some(rs) = self.reachables.borrow().get(&scc) {
+            reachables.extend(rs);
+            return;
+        }
+        let mut this_reachables: FxHashSet<_> = [scc].into_iter().collect();
+        for succ in self.call_graph_sccs.successors(scc) {
+            self.reachables_from_scc(*succ, &mut this_reachables);
+        }
+        reachables.extend(this_reachables.iter());
+        self.reachables.borrow_mut().insert(scc, this_reachables);
+    }
 }
 
 rustc_index::newtype_index! {

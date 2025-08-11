@@ -14,6 +14,7 @@ use serde::Deserialize;
 #[derive(Parser)]
 #[command(version)]
 struct Args {
+    // Extern
     #[arg(long, num_args = 2, value_names = ["FROM", "TO"], help = "Resolve hint for extern functions (example: `from::foo to::foo`)")]
     resolve_function: Vec<String>,
     #[arg(long, num_args = 2, value_names = ["FROM", "TO"], help = "Resolve hint for extern static variables (example: `from::foo to::foo`)")]
@@ -21,12 +22,19 @@ struct Args {
     #[arg(long, num_args = 2, value_names = ["FROM", "TO"], help = "Resolve hint for extern types (example: `from::foo to::foo`)")]
     resolve_type: Vec<String>,
 
+    // Bin
     #[arg(
         long,
         value_delimiter = ',',
         help = "Main function to ignore when adding bin files"
     )]
     bin_ignore: Vec<String>,
+
+    // Union
+    #[arg(long, value_delimiter = ',', help = "Target unions to replace")]
+    target_union: Vec<String>,
+    #[arg(long, help = "File containing the result of points-to analysis")]
+    points_to_file: Option<PathBuf>,
 
     #[arg(short, long, help = "Enable verbose output")]
     verbose: bool,
@@ -67,6 +75,8 @@ struct Config {
     r#extern: extern_resolver::Config,
     #[serde(default)]
     bin: bin_file_adder::Config,
+    #[serde(default)]
+    r#union: union_replacer::tag_analysis::Config,
 
     #[serde(default)]
     verbose: bool,
@@ -129,6 +139,13 @@ fn main() {
         config.bin.ignores.push(arg);
     }
 
+    for u in args.target_union {
+        config.r#union.target_unions.insert(u);
+    }
+    if let Some(file) = args.points_to_file {
+        config.r#union.points_to_file.get_or_insert(file);
+    }
+
     let dir = if let Some(mut output) = config.output.or(args.output) {
         output.push(args.input.file_name().unwrap());
         if output.exists() {
@@ -184,7 +201,10 @@ fn main() {
                 todo!()
             }
             Pass::Union => {
-                todo!()
+                let _res = run_compiler_on_path(&file, |tcx| {
+                    union_replacer::tag_analysis::analyze(&config.r#union, config.verbose, tcx)
+                })
+                .unwrap();
             }
             Pass::Io => {
                 let _res =

@@ -1,12 +1,13 @@
 use std::path::PathBuf;
 
 use etrace::some_or;
-use rustc_ast::*;
+use rustc_ast::{ptr::P, *};
 use rustc_ast_pretty::pprust;
 use rustc_middle::ty::TyCtxt;
 use rustc_parse::parser::{AttemptLocalParseRecovery, ForceCollect, Parser};
 use rustc_session::parse::ParseSess;
 use rustc_span::{FileName, RealFileName};
+use thin_vec::ThinVec;
 
 #[derive(Debug)]
 pub struct TransformationResult(pub Vec<(PathBuf, String)>);
@@ -63,6 +64,20 @@ pub fn new_parser_from_str(parse_sess: &ParseSess, s: String) -> Parser<'_> {
 }
 
 #[inline]
+pub fn parse_crate(krate: String) -> Crate {
+    let parse_sess = new_parse_sess();
+    let mut parser = new_parser_from_str(&parse_sess, krate);
+    parser.parse_crate_mod().unwrap()
+}
+
+#[macro_export]
+macro_rules! krate {
+    ($($arg:tt)*) => {{
+        parse_crate(format!($($arg)*))
+    }};
+}
+
+#[inline]
 pub fn parse_item(item: String) -> Item {
     let parse_sess = new_parse_sess();
     let mut parser = new_parser_from_str(&parse_sess, item);
@@ -73,6 +88,19 @@ pub fn parse_item(item: String) -> Item {
 macro_rules! item {
     ($($arg:tt)*) => {{
         $crate::ast_util::parse_item(format!($($arg)*))
+    }};
+}
+
+#[inline]
+pub fn parse_items(items: String) -> ThinVec<P<Item>> {
+    let krate = parse_crate(items);
+    krate.items
+}
+
+#[macro_export]
+macro_rules! items {
+    ($($arg:tt)*) => {{
+        $crate::ast_util::parse_items(format!($($arg)*))
     }};
 }
 
@@ -142,6 +170,27 @@ pub fn parse_path(path: String) -> Path {
 macro_rules! path {
     ($($arg:tt)*) => {{
         $crate::ast_util::parse_path(format!($($arg)*))
+    }};
+}
+
+#[inline]
+pub fn parse_pat(pat: String) -> Pat {
+    let parse_sess = new_parse_sess();
+    let mut parser = new_parser_from_str(&parse_sess, pat);
+    *parser
+        .parse_pat_allow_top_guard(
+            None,
+            rustc_parse::parser::RecoverComma::No,
+            rustc_parse::parser::RecoverColon::No,
+            rustc_parse::parser::CommaRecoveryMode::LikelyTuple,
+        )
+        .unwrap()
+}
+
+#[macro_export]
+macro_rules! pat {
+    ($($arg:tt)*) => {{
+        $crate::ast_util::parse_pat(format!($($arg)*))
     }};
 }
 

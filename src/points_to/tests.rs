@@ -8,11 +8,8 @@ use rustc_middle::{
 use rustc_span::def_id::LocalDefId;
 use typed_arena::Arena;
 
-use super::{
-    andersen::{self, AnalysisResult, Loc},
-    ty_shape,
-};
-use crate::compile_util;
+use super::andersen::{self, AnalysisResult, Loc};
+use crate::{compile_util, ty_shape};
 
 // To inspect the MIR of test cases, you can:
 
