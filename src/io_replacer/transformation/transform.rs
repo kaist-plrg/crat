@@ -965,6 +965,14 @@ pub unsafe fn rs_fread<R: std::io::Read>(
     (i / size, 0, 0)
 }
 
+pub unsafe fn rs_vfscanf<R: std::io::Read>(
+    mut stream: R,
+    fmt: *const i8,
+    mut args: std::ffi::VaList,
+) -> (i32, i32, i32) {
+    todo!()
+}
+
 #[inline]
 pub unsafe extern "C" fn rs_fprintf<W: std::io::Write>(
     stream: W,
@@ -981,6 +989,7 @@ pub unsafe fn rs_vfprintf<W: std::io::Write>(
     fmt: *const i8,
     mut args: std::ffi::VaList,
 ) -> (i32, i32) {
+    use printf::*;
     let fmt = std::ffi::CStr::from_ptr(fmt as _);
     let mut state = State::Percent;
     let mut flags = vec![];
@@ -1349,6 +1358,13 @@ pub unsafe fn rs_vfprintf<W: std::io::Write>(
                     }
                 }
                 (Conversion::DoubleAuto, _) => panic!(),
+                (Conversion::DoubleHex, None | Some(LengthMod::Long)) => {
+                    let v = args.arg::<f64>();
+                    if std::fmt::Display::fmt(&Af64(v), &mut fmt).is_err() {
+                        return (-1, 1);
+                    }
+                }
+                (Conversion::DoubleHex, _) => panic!(),
                 (Conversion::Char, _) => {
                     let v = args.arg::<u32>() as u8 as char;
                     if std::fmt::Display::fmt(&v, &mut fmt).is_err() {
@@ -1379,7 +1395,7 @@ pub unsafe fn rs_vfprintf<W: std::io::Write>(
                         return (-1, 1);
                     }
                 }
-                (Conversion::DoubleError | Conversion::Num | Conversion::C | Conversion::S, _) => {
+                (Conversion::Num | Conversion::C | Conversion::S, _) => {
                     panic!()
                 }
                 (Conversion::Percent, _) => s.push('%'),
@@ -1526,48 +1542,284 @@ pub unsafe fn rs_remove(path: *const i8) -> i32 {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum State {
-    Percent,
-    Flag,
-    Width,
-    Period,
-    Precision,
-    Length,
-    H,
-    L,
-    Conversion,
-}
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum FlagChar {
-    Apostrophe,
-    Minus,
-    Plus,
-    Space,
-    Hash,
-    Zero,
-}
-impl FlagChar {
-    #[inline]
-    fn from_u8(c: u8) -> Option<Self> {
-        match c {
-            b'\'' => Some(Self::Apostrophe),
-            b'-' => Some(Self::Minus),
-            b'+' => Some(Self::Plus),
-            b' ' => Some(Self::Space),
-            b'#' => Some(Self::Hash),
-            b'0' => Some(Self::Zero),
-            _ => None,
+mod printf {
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    pub(super) enum State {
+        Percent,
+        Flag,
+        Width,
+        Period,
+        Precision,
+        Length,
+        H,
+        L,
+        Conversion,
+    }
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    pub(super) enum FlagChar {
+        Apostrophe,
+        Minus,
+        Plus,
+        Space,
+        Hash,
+        Zero,
+    }
+    impl FlagChar {
+        #[inline]
+        pub(super) fn from_u8(c: u8) -> Option<Self> {
+            match c {
+                b'\'' => Some(Self::Apostrophe),
+                b'-' => Some(Self::Minus),
+                b'+' => Some(Self::Plus),
+                b' ' => Some(Self::Space),
+                b'#' => Some(Self::Hash),
+                b'0' => Some(Self::Zero),
+                _ => None,
+            }
+        }
+    }
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    pub(super) enum Width {
+        Asterisk,
+        Decimal(usize),
+    }
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    pub(super) enum LengthMod {
+        Char,
+        Short,
+        Long,
+        LongLong,
+        IntMax,
+        Size,
+        PtrDiff,
+        LongDouble,
+    }
+    impl LengthMod {
+        #[inline]
+        pub(super) fn from_u8(c: u8) -> Option<Self> {
+            match c {
+                b'h' => Some(Self::Short),
+                b'l' => Some(Self::Long),
+                b'j' => Some(Self::IntMax),
+                b'z' => Some(Self::Size),
+                b't' => Some(Self::PtrDiff),
+                b'L' => Some(Self::LongDouble),
+                _ => None,
+            }
+        }
+    }
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    pub(super) enum Conversion {
+        Int,
+        Octal,
+        Unsigned,
+        Hexadecimal,
+        HexadecimalUpper,
+        Double,
+        DoubleExp,
+        DoubleAuto,
+        DoubleHex,
+        Char,
+        Str,
+        Pointer,
+        Num,
+        C,
+        S,
+        Percent,
+    }
+    impl Conversion {
+        #[inline]
+        pub(super) fn from_u8(c: u8) -> Option<Self> {
+            match c {
+                b'd' | b'i' => Some(Self::Int),
+                b'o' => Some(Self::Octal),
+                b'u' => Some(Self::Unsigned),
+                b'x' => Some(Self::Hexadecimal),
+                b'X' => Some(Self::HexadecimalUpper),
+                b'f' | b'F' => Some(Self::Double),
+                b'e' | b'E' => Some(Self::DoubleExp),
+                b'g' | b'G' => Some(Self::DoubleAuto),
+                b'a' | b'A' => Some(Self::DoubleHex),
+                b'c' => Some(Self::Char),
+                b's' => Some(Self::Str),
+                b'p' => Some(Self::Pointer),
+                b'n' => Some(Self::Num),
+                b'C' => Some(Self::C),
+                b'S' => Some(Self::S),
+                b'%' => Some(Self::Percent),
+                _ => None,
+            }
         }
     }
 }
+mod scanf {
+// pub(super) fn parse_specs(mut remaining: &[u8]) -> Vec<ConversionSpec> {
+//     let mut specs = vec![];
+//     loop {
+//         let res = parse_format(remaining);
+//         if let Some(rem) = res.remaining {
+//             remaining = rem;
+//             specs.push(res.conversion_spec.unwrap());
+//         } else {
+//             break specs;
+//         }
+//     }
+// }
+
+// struct ParseResult<'a> {
+//     #[allow(unused)]
+//     prefix: &'a [u8],
+//     conversion_spec: Option<ConversionSpec>,
+//     remaining: Option<&'a [u8]>,
+// }
+
+// #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+// enum State {
+//     Percent,
+//     Asterisk,
+//     Width,
+//     H,
+//     L,
+//     Conversion,
+//     Circumflex,
+//     ScanSet,
+// }
+
+// fn err(s: &[u8], i: Option<usize>) -> ! {
+//     panic!("{}", String::from_utf8_lossy(&s[i.unwrap()..]));
+// }
+
+// fn parse_format(s: &[u8]) -> ParseResult<'_> {
+//     let mut start_idx = None;
+//     let mut state = State::Percent;
+//     let mut assign = true;
+//     let mut width = None;
+//     let mut length = None;
+//     let mut conversion = None;
+//     for (i, c) in s.iter().enumerate() {
+//         if state == State::Percent {
+//             if *c == b'%' {
+//                 start_idx = Some(i);
+//                 state = State::Asterisk;
+//             }
+//         } else if matches!(state, State::Circumflex | State::ScanSet) {
+//             if *c == b'^' {
+//                 if state == State::Circumflex {
+//                     let Some((Conversion::ScanSet(ScanSet { negative, .. }), _)) = &mut conversion
+//                     else {
+//                         unreachable!()
+//                     };
+//                     *negative = true;
+//                     state = State::ScanSet;
+//                 } else {
+//                     err(s, start_idx);
+//                 }
+//             } else if *c == b']' {
+//                 if state == State::ScanSet {
+//                     let Some((_, old_i)) = &mut conversion else { unreachable!() };
+//                     *old_i = i;
+//                     break;
+//                 } else {
+//                     err(s, start_idx);
+//                 }
+//             } else {
+//                 state = State::ScanSet;
+//                 let Some((Conversion::ScanSet(ScanSet { chars, .. }), _)) = &mut conversion else {
+//                     unreachable!()
+//                 };
+//                 chars.push(*c);
+//             }
+//         } else if c.is_ascii_digit() {
+//             match state {
+//                 State::Asterisk => {
+//                     width = Some((c - b'0') as usize);
+//                     state = State::Width;
+//                 }
+//                 State::Width => {
+//                     let Some(n) = width.as_mut() else { unreachable!() };
+//                     *n = *n * 10 + (c - b'0') as usize;
+//                 }
+//                 _ => err(s, start_idx),
+//             }
+//         } else if *c == b'*' {
+//             if state == State::Asterisk {
+//                 assign = false;
+//                 state = State::Width;
+//             } else {
+//                 err(s, start_idx);
+//             }
+//         } else if let Some(len) = LengthMod::from_u8(*c) {
+//             match len {
+//                 LengthMod::Short => match state {
+//                     State::Asterisk | State::Width => {
+//                         state = State::H;
+//                     }
+//                     State::H => {
+//                         length = Some(LengthMod::Char);
+//                         state = State::Conversion;
+//                     }
+//                     _ => err(s, start_idx),
+//                 },
+//                 LengthMod::Long => match state {
+//                     State::Asterisk | State::Width => {
+//                         state = State::L;
+//                     }
+//                     State::L => {
+//                         length = Some(LengthMod::LongLong);
+//                         state = State::Conversion;
+//                     }
+//                     _ => err(s, start_idx),
+//                 },
+//                 _ => {
+//                     length = Some(len);
+//                     state = State::Conversion;
+//                 }
+//             }
+//         } else if let Some(conv) = Conversion::from_u8(*c) {
+//             match state {
+//                 State::Asterisk | State::Width | State::Conversion => {}
+//                 State::H => length = Some(LengthMod::Short),
+//                 State::L => length = Some(LengthMod::Long),
+//                 _ => err(s, start_idx),
+//             }
+//             let is_set = conv.is_set();
+//             conversion = Some((conv, i));
+//             if is_set {
+//                 state = State::Circumflex;
+//             } else {
+//                 break;
+//             }
+//         } else {
+//             err(s, start_idx);
+//         }
+//     }
+
+//     if let Some(start_idx) = start_idx {
+//         if let Some((conversion, last_idx)) = conversion {
+//             ParseResult {
+//                 prefix: &s[..start_idx],
+//                 conversion_spec: Some(ConversionSpec {
+//                     assign,
+//                     width,
+//                     length,
+//                     conversion,
+//                 }),
+//                 remaining: Some(&s[last_idx + 1..]),
+//             }
+//         } else {
+//             err(s, Some(start_idx))
+//         }
+//     } else {
+//         ParseResult {
+//             prefix: s,
+//             conversion_spec: None,
+//             remaining: None,
+//         }
+//     }
+// }
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Width {
-    Asterisk,
-    Decimal(usize),
-}
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum LengthMod {
+pub(super) enum LengthMod {
     Char,
     Short,
     Long,
@@ -1577,9 +1829,10 @@ enum LengthMod {
     PtrDiff,
     LongDouble,
 }
+
 impl LengthMod {
     #[inline]
-    fn from_u8(c: u8) -> Option<Self> {
+    pub(super) fn from_u8(c: u8) -> Option<Self> {
         match c {
             b'h' => Some(Self::Short),
             b'l' => Some(Self::Long),
@@ -1591,40 +1844,47 @@ impl LengthMod {
         }
     }
 }
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Conversion {
-    Int,
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) struct ScanSet {
+    pub(super) negative: bool,
+    pub(super) chars: Vec<u8>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) enum Conversion {
+    Int10,
+    Int0,
     Octal,
     Unsigned,
     Hexadecimal,
-    HexadecimalUpper,
     Double,
-    DoubleExp,
-    DoubleAuto,
-    DoubleError,
-    Char,
     Str,
+    ScanSet(ScanSet),
+    Seq,
     Pointer,
     Num,
     C,
     S,
     Percent,
 }
+
 impl Conversion {
     #[inline]
-    fn from_u8(c: u8) -> Option<Self> {
+    pub(super) fn from_u8(c: u8) -> Option<Self> {
         match c {
-            b'd' | b'i' => Some(Self::Int),
+            b'd' => Some(Self::Int10),
+            b'i' => Some(Self::Int0),
             b'o' => Some(Self::Octal),
             b'u' => Some(Self::Unsigned),
             b'x' => Some(Self::Hexadecimal),
-            b'X' => Some(Self::HexadecimalUpper),
-            b'f' | b'F' => Some(Self::Double),
-            b'e' | b'E' => Some(Self::DoubleExp),
-            b'g' | b'G' => Some(Self::DoubleAuto),
-            b'a' | b'A' => Some(Self::DoubleError),
-            b'c' => Some(Self::Char),
+            b'a' | b'e' | b'f' | b'g' => Some(Self::Double),
             b's' => Some(Self::Str),
+            b'[' => Some(Self::ScanSet(ScanSet {
+                negative: false,
+                chars: vec![],
+            })),
+            b'c' => Some(Self::Seq),
             b'p' => Some(Self::Pointer),
             b'n' => Some(Self::Num),
             b'C' => Some(Self::C),
@@ -1633,6 +1893,77 @@ impl Conversion {
             _ => None,
         }
     }
+
+    #[inline]
+    pub(super) fn is_set(&self) -> bool {
+        matches!(self, Self::ScanSet { .. })
+    }
+
+    pub(super) fn ty(&self, length: Option<LengthMod>) -> &'static str {
+        use LengthMod::*;
+        match self {
+            Self::Int10 | Self::Int0 => match length {
+                None => "i32",
+                Some(Char) => "i8",
+                Some(Short) => "i16",
+                Some(Long | LongLong | IntMax | Size) => "i64",
+                Some(PtrDiff) => "u64",
+                Some(LongDouble) => panic!(),
+            },
+            Self::Octal | Self::Unsigned | Self::Hexadecimal => match length {
+                None => "u32",
+                Some(Char) => "u8",
+                Some(Short) => "u16",
+                Some(Long | LongLong | IntMax | Size | PtrDiff) => "u64",
+                Some(LongDouble) => panic!(),
+            },
+            Self::Double => match length {
+                None => "f32",
+                Some(Long) => "f64",
+                Some(LongDouble) => "f128::f128",
+                _ => panic!(),
+            },
+            Self::Str | Self::ScanSet { .. } => "&str",
+            Self::Seq | Self::Pointer | Self::C | Self::S | Self::Num | Self::Percent => {
+                unimplemented!()
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) struct ConversionSpec {
+    pub(super) assign: bool,
+    pub(super) width: Option<usize>,
+    pub(super) length: Option<LengthMod>,
+    pub(super) conversion: Conversion,
+}
+
+impl ConversionSpec {
+    pub(super) fn ty(&self) -> &'static str {
+        self.conversion.ty(self.length)
+    }
+
+    pub(super) fn scan_set(&self) -> Option<&ScanSet> {
+        match &self.conversion {
+            Conversion::ScanSet(set) => Some(set),
+            _ => None,
+        }
+    }
+}
+
+// pub(super) fn escape(c: u8) -> Option<&'static str> {
+//     match c {
+//         b'\n' => Some("\\n"),
+//         b'\r' => Some("\\r"),
+//         b'\t' => Some("\\t"),
+//         b'\\' => Some("\\\\"),
+//         b'\'' => Some("\\'"),
+//         b'\"' => Some("\\\""),
+//         b'\0' => Some("\\0"),
+//         _ => None,
+//     }
+// }
 }
 pub struct Xu8(pub u8);
 impl std::fmt::LowerHex for Xu8 {
@@ -1779,6 +2110,128 @@ impl std::fmt::Display for Gf64 {
         };
         f.write_str(sign)?;
         f.write_str(&s)
+    }
+}
+pub struct Af64(pub f64);
+impl std::fmt::Display for Af64 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let v = self.0;
+        if v.is_nan() {
+            return f.write_str("nan");
+        }
+        if v.is_infinite() {
+            if v.is_sign_negative() {
+                f.write_str("-")?;
+            }
+            return f.write_str("inf");
+        }
+        let bits = v.to_bits();
+        let sign = (bits >> 63) != 0;
+        let exp_bits = ((bits >> 52) & 0x7ff) as i32;
+        let frac_bits = bits & ((1u64 << 52) - 1);
+        if sign {
+            f.write_str("-")?;
+        }
+        if exp_bits == 0 && frac_bits == 0 {
+            return f.write_str("0x0p+0");
+        }
+        let mut leading = if exp_bits == 0 { 0u8 } else { 1u8 };
+        let mut e2: i32 = if exp_bits == 0 { -1022 } else { exp_bits - 1023 };
+        let mut nibbles = [0u8; 13];
+        for i in 0..13 {
+            let shift = 52 - 4 * (i + 1);
+            nibbles[i] = ((frac_bits >> shift) & 0xF) as u8;
+        }
+        match f.precision() {
+            None => {
+                let mut len = 13;
+                while len > 0 && nibbles[len - 1] == 0 {
+                    len -= 1;
+                }
+                f.write_str("0x")?;
+                write!(f, "{}", hex_digit_char(leading) as char)?;
+                if len > 0 {
+                    f.write_str(".")?;
+                    write_hex_bytes(f, &nibbles[..len])?;
+                }
+                write!(f, "p{:+}", e2)
+            }
+            Some(p) => {
+                let keep = p.min(13);
+                if keep < 13 {
+                    round_hex_ties_to_even(&mut leading, &mut nibbles, keep);
+                    if leading >= 2 {
+                        leading = 1;
+                        e2 += 1;
+                    }
+                }
+                f.write_str("0x")?;
+                write!(f, "{}", hex_digit_char(leading) as char)?;
+                if p > 0 {
+                    f.write_str(".")?;
+                    write_hex_bytes(f, &nibbles[..keep])?;
+                    for _ in 0..(p.saturating_sub(13)) {
+                        f.write_str("0")?;
+                    }
+                } else if f.alternate() {
+                    f.write_str(".")?;
+                }
+                write!(f, "p{:+}", e2)
+            }
+        }
+    }
+}
+#[inline]
+fn hex_digit_char(d: u8) -> u8 {
+    if d < 10 { b'0' + d } else { b'a' + (d - 10) }
+}
+#[inline]
+fn write_hex_bytes(f: &mut std::fmt::Formatter<'_>, digits: &[u8]) -> std::fmt::Result {
+    let mut buf = [0u8; 13];
+    for (i, &d) in digits.iter().enumerate() {
+        buf[i] = hex_digit_char(d);
+    }
+    let s = unsafe { std::str::from_utf8_unchecked(&buf[..digits.len()]) };
+    f.write_str(s)
+}
+fn round_hex_ties_to_even(leading: &mut u8, digits: &mut [u8; 13], keep: usize) {
+    if keep >= 13 {
+        return;
+    }
+    let next = digits[keep];
+    let rest_nonzero = digits[(keep + 1)..].iter().any(|&d| d != 0);
+    let round_up = if next > 8 {
+        true
+    } else if next < 8 {
+        false
+    } else if rest_nonzero {
+        true
+    } else {
+        let last = if keep == 0 { *leading } else { digits[keep - 1] };
+        (last & 1) == 1
+    };
+    for d in &mut digits[keep..] {
+        *d = 0;
+    }
+    if round_up {
+        if keep == 0 {
+            *leading = leading.saturating_add(1);
+        } else {
+            let mut i = keep - 1;
+            loop {
+                if digits[i] < 15 {
+                    digits[i] += 1;
+                    break;
+                } else {
+                    digits[i] = 0;
+                    if i == 0 {
+                        *leading = leading.saturating_add(1);
+                        break;
+                    }
+                    i -= 1;
+                }
+            }
+        }
     }
 }
 "#;

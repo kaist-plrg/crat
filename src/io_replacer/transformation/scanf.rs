@@ -318,7 +318,12 @@ impl Conversion {
                 _ => panic!(),
             },
             Self::Str | Self::ScanSet { .. } => "&str",
-            Self::Seq | Self::Pointer | Self::C | Self::S | Self::Num | Self::Percent => {
+            Self::Seq => match length {
+                None => "char",
+                Some(Long) => unimplemented!(),
+                _ => panic!(),
+            },
+            Self::Pointer | Self::C | Self::S | Self::Num | Self::Percent => {
                 unimplemented!()
             }
         }

@@ -85,7 +85,7 @@ pub(super) fn to_rust_format(mut remaining: &[u8]) -> RustFormat {
                 }
                 Conversion::DoubleExp => fmt.push('e'),
                 Conversion::DoubleAuto => {}
-                Conversion::DoubleError => todo!(),
+                Conversion::DoubleHex => {}
                 Conversion::Pointer => fmt.push_str("#x"),
                 Conversion::Num | Conversion::C | Conversion::S => unimplemented!(),
                 Conversion::Percent => conv = "%".to_string(),
@@ -383,7 +383,7 @@ enum Conversion {
     Double,
     DoubleExp,
     DoubleAuto,
-    DoubleError,
+    DoubleHex,
     Char,
     Str,
     Pointer,
@@ -404,7 +404,7 @@ impl std::fmt::Display for Conversion {
             Self::Double => write!(f, "f"),
             Self::DoubleExp => write!(f, "e"),
             Self::DoubleAuto => write!(f, "g"),
-            Self::DoubleError => write!(f, "a"),
+            Self::DoubleHex => write!(f, "a"),
             Self::Char => write!(f, "c"),
             Self::Str => write!(f, "s"),
             Self::Pointer => write!(f, "p"),
@@ -428,7 +428,7 @@ impl Conversion {
             b'f' | b'F' => Some(Self::Double),
             b'e' | b'E' => Some(Self::DoubleExp),
             b'g' | b'G' => Some(Self::DoubleAuto),
-            b'a' | b'A' => Some(Self::DoubleError),
+            b'a' | b'A' => Some(Self::DoubleHex),
             b'c' => Some(Self::Char),
             b's' => Some(Self::Str),
             b'p' => Some(Self::Pointer),
@@ -474,7 +474,10 @@ impl Conversion {
                 None | Some(Long) => "crate::stdio::Gf64",
                 _ => panic!(),
             },
-            Self::DoubleError => panic!(),
+            Self::DoubleHex => match length {
+                None | Some(Long) => "crate::stdio::Af64",
+                _ => panic!(),
+            },
             Self::Char => "u8 as char",
             Self::Str => match length {
                 None => "&str",

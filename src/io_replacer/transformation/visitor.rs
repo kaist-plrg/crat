@@ -776,6 +776,17 @@ impl MutVisitor for TransformVisitor<'_, '_, '_> {
                             let new_expr = self.transform_pclose(&args[0], *ty, is_non_local);
                             self.replace_expr(expr, new_expr);
                         }
+                        "scanf" => {
+                            if self.is_stdin_unsupported {
+                                let reasons = self.stdin_unsuppoted_reasons();
+                                self.unsupported_reasons.push(reasons);
+                                return;
+                            }
+                            let stream = StdExpr::stdin();
+                            let ic = self.indicator_check(&args[0]);
+                            let new_expr = self.transform_fscanf(&stream, &args[0], &args[1..], ic);
+                            self.replace_expr(expr, new_expr);
+                        }
                         "fscanf" => {
                             if let Some(loc) = self.loc_if_unsupported(&args[0]) {
                                 let reasons = self.get_unsupported_reasons(loc);
@@ -1717,6 +1728,35 @@ impl TransformVisitor<'_, '_, '_> {
                     } else {
                         None
                     };
+                    if spec.ty() == "char" {
+                        assert!(spec.width.is_none());
+                        let assign = if let Some(arg) = arg {
+                            format!(
+                                "
+                                *(({arg}) as *mut i8) = c as i8;
+                                count += 1;
+                            "
+                            )
+                        } else {
+                            String::new()
+                        };
+                        write!(
+                            code,
+                            "
+match stream.fill_buf() {{
+    Ok(buf) => {{
+        let c = buf[0];
+        stream.consume(1);
+        {assign}
+    }}
+    Err(e) => {{
+        {handling}
+    }}
+}}"
+                        )
+                        .unwrap();
+                        continue;
+                    }
                     let check_width = if let Some(width) = spec.width {
                         format!("if chars.len() == {width} {{ break; }}")
                     } else {
@@ -2011,7 +2051,7 @@ if !c.is_ascii_whitespace() {
                 )
                 .unwrap(),
                 "crate::stdio::Xu8" | "crate::stdio::Xu16" | "crate::stdio::Xu32"
-                | "crate::stdio::Xu64" | "crate::stdio::Gf64" => {
+                | "crate::stdio::Xu64" | "crate::stdio::Gf64" | "crate::stdio::Af64" => {
                     write!(args, "{cast}(({arg}) as _), ").unwrap()
                 }
                 _ => write!(args, "({arg}) as {cast}, ").unwrap(),
