@@ -21,6 +21,7 @@ struct Args {
 enum Finder {
     Example,
     Unsafe,
+    Enum,
 }
 
 fn main() {
@@ -32,6 +33,9 @@ fn main() {
         }
         Finder::Unsafe => {
             run_compiler_on_path(&file, finder::unsafe_finder::find_unsafe).unwrap();
+        }
+        Finder::Enum => {
+            run_compiler_on_path(&file, finder::enum_finder::find_enum).unwrap();
         }
     }
 }
