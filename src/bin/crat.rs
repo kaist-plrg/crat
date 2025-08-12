@@ -154,7 +154,7 @@ fn main() {
                 std::process::exit(1);
             }
             clear_dir(&output);
-        } else if fs::create_dir(&output).is_err() {
+        } else if fs::create_dir_all(&output).is_err() {
             eprintln!("Cannot create {output:?}");
             std::process::exit(1);
         }

@@ -7,7 +7,6 @@
 ### Crat
 
 ```bash
-# `out_dir` should be an existing directory.
 # This will create `out_dir/avl`.
 cargo run --bin crat -- -o out_dir --pass preprocess benchmarks/rs/avl
 ```

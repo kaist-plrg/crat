@@ -5,3 +5,4 @@ benchmarks/rs-resolved
 benchmarks/rs-io
 benchmarks/rs-union
 benchmarks/rs-union-io
+out_dir/
