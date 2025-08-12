@@ -38,8 +38,10 @@ struct Args {
 
     #[arg(short, long, help = "Enable verbose output")]
     verbose: bool,
-    #[arg(long, value_delimiter = ',', help = "Passes to run")]
+    #[arg(long, value_delimiter = ',', help = "Transformation passes to run")]
     pass: Vec<Pass>,
+    #[arg(long, help = "Analysis to run")]
+    analysis: Option<Analysis>,
     #[arg(long, help = "Path to the configuration file")]
     config: Option<PathBuf>,
 
@@ -47,6 +49,8 @@ struct Args {
     inplace: bool,
     #[arg(short, long, help = "Path to the output directory")]
     output: Option<PathBuf>,
+    #[arg(short, long, help = "Path to the analysis output file")]
+    analysis_output: Option<PathBuf>,
     #[arg(short, long, help = "Path to the log file")]
     log_file: Option<PathBuf>,
     #[arg(help = "Path to the input directory containing c2rust-lib.rs")]
@@ -69,6 +73,14 @@ enum Pass {
     Pointer,
 }
 
+#[derive(Clone, Debug, ValueEnum, Deserialize)]
+#[clap(rename_all = "lower")]
+#[serde(rename_all = "lowercase")]
+enum Analysis {
+    Andersen,
+    OutParam,
+}
+
 #[derive(Debug, Default, Deserialize)]
 struct Config {
     #[serde(default)]
@@ -82,10 +94,12 @@ struct Config {
     verbose: bool,
     #[serde(default)]
     passes: Vec<Pass>,
+    analysis: Option<Analysis>,
     #[serde(default)]
     inplace: bool,
     log_file: Option<PathBuf>,
     output: Option<PathBuf>,
+    analysis_output: Option<PathBuf>,
 }
 
 fn main() {
@@ -99,8 +113,27 @@ fn main() {
         })
         .unwrap_or_default();
     config.verbose |= args.verbose;
-    config.passes.extend(args.pass);
     config.inplace |= args.inplace;
+    config.passes.extend(args.pass);
+    if args.analysis.is_some() {
+        config.analysis = args.analysis;
+    }
+    if args.output.is_some() {
+        config.output = args.output;
+    }
+    if args.analysis_output.is_some() {
+        config.analysis_output = args.analysis_output;
+    }
+
+    if config.passes.is_empty() && config.analysis.is_none() {
+        eprintln!("No passes or analysis specified");
+        std::process::exit(1);
+    }
+
+    if !config.passes.is_empty() && config.analysis.is_some() {
+        eprintln!("Cannot run analysis and passes at the same time");
+        std::process::exit(1);
+    }
 
     if let Some(log) = args.log_file.or(config.log_file) {
         let log_file = File::create(log).unwrap();
@@ -142,29 +175,47 @@ fn main() {
     for u in args.target_union {
         config.r#union.target_unions.insert(u);
     }
-    if let Some(file) = args.points_to_file {
-        config.r#union.points_to_file.get_or_insert(file);
+    if args.points_to_file.is_some() {
+        config.r#union.points_to_file = args.points_to_file;
     }
 
-    let dir = if let Some(mut output) = config.output.or(args.output) {
-        output.push(args.input.file_name().unwrap());
-        if output.exists() {
-            if !output.is_dir() {
-                eprintln!("{output:?} is not a directory");
-                std::process::exit(1);
-            }
-            clear_dir(&output);
-        } else if fs::create_dir(&output).is_err() {
-            eprintln!("Cannot create {output:?}");
+    let dir = if !config.passes.is_empty() {
+        if config.analysis_output.is_some() {
+            eprintln!("Analysis output is not supported when running passes");
             std::process::exit(1);
         }
-        copy_dir(&args.input, &output, true);
-        output
-    } else if config.inplace {
-        args.input
+        if let Some(mut output) = config.output {
+            output.push(args.input.file_name().unwrap());
+            if output.exists() {
+                if !output.is_dir() {
+                    eprintln!("{output:?} is not a directory");
+                    std::process::exit(1);
+                }
+                clear_dir(&output);
+            } else if fs::create_dir(&output).is_err() {
+                eprintln!("Cannot create {output:?}");
+                std::process::exit(1);
+            }
+            copy_dir(&args.input, &output, true);
+            output
+        } else if config.inplace {
+            args.input
+        } else {
+            eprintln!(
+                "Output directory is required when running passes unless in-place is enabled"
+            );
+            std::process::exit(1)
+        }
     } else {
-        eprintln!("Output directory is required unless in-place is enabled");
-        std::process::exit(1)
+        if config.output.is_some() {
+            eprintln!("Output directory is not supported when running analysis");
+            std::process::exit(1);
+        }
+        if config.analysis_output.is_none() {
+            eprintln!("Analysis output file is required when running analysis");
+            std::process::exit(1);
+        }
+        args.input
     };
     let file = dir.join("c2rust-lib.rs");
 
@@ -211,6 +262,27 @@ fn main() {
                     run_compiler_on_path(&file, |tcx| io_replacer::replace_io(&dir, tcx)).unwrap();
             }
             Pass::Pointer => {
+                todo!()
+            }
+        }
+    }
+
+    if let Some(analysis) = config.analysis {
+        if config.verbose {
+            println!("{analysis:?}");
+        }
+        let analysis_output = config.analysis_output.unwrap();
+        match analysis {
+            Analysis::Andersen => {
+                run_compiler_on_path(&file, |tcx| {
+                    let solutions = points_to::andersen::run_analysis(tcx);
+                    let file = std::fs::File::create(analysis_output).unwrap();
+                    let file = std::io::BufWriter::new(file);
+                    points_to::andersen::write_solutions(file, &solutions).unwrap();
+                })
+                .unwrap();
+            }
+            Analysis::OutParam => {
                 todo!()
             }
         }

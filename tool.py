@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 import shutil
 import signal
-from typing import Callable, Optional, List, Dict
+from typing import Callable, Optional, List, Dict, Tuple
 from dataclasses import dataclass, replace
 
 
@@ -31,6 +31,17 @@ class Config:
             overwrite_depth=new_depth,
         )
 
+    def decrease_depth_to(self, depth) -> "Config":
+        if not self.overwrite:
+            return self
+
+        new_depth = min(self.overwrite_depth, depth)
+        return replace(
+            self,
+            overwrite=(new_depth > 0),
+            overwrite_depth=new_depth,
+        )
+
 
 class TaskFailedError(Exception):
     pass
@@ -38,6 +49,8 @@ class TaskFailedError(Exception):
 
 BENCH_ROOT: Path = Path("benchmarks")
 CONFIG_ROOT: Path = BENCH_ROOT / "configs"
+ANALYSIS_ROOT: Path = BENCH_ROOT / "analyses"
+ANALYSIS_CONFIG_ROOT: Path = BENCH_ROOT / "analysis-configs"
 BIN_TEST_DIR: Path = BENCH_ROOT / "bin-tests"
 SCRIPT_TEST_DIR: Path = BENCH_ROOT / "script-tests"
 RS_ORIG: Path = BENCH_ROOT / "rs"
@@ -53,6 +66,12 @@ TRANSFORM_ORDER: Dict[str, Optional[str]] = {
     "io": "resolve",
     "io-union": "io",
 }
+TRANSFORM_ANALYSIS: Dict[str, Optional[Tuple[str, str]]] = {
+    "resolve": None,
+    "union": ("union", "points-to-file"),
+    "io": None,
+    "io-union": ("union", "points-to-file"),
+}
 TRANSFORM_PASS: Dict[str, str] = {
     "resolve": "preprocess,extern,bin",
     "union": "union",
@@ -64,6 +83,22 @@ TRANSFORM_CONFIG: Dict[str, Path] = {
     "union": CONFIG_ROOT / "union",
     "io": CONFIG_ROOT / "io",
     "io-union": CONFIG_ROOT / "union",
+}
+ANALYSIS_DIRS: Dict[str, Path] = {
+    "union": ANALYSIS_ROOT / "union",
+    "io-union": ANALYSIS_ROOT / "io-union",
+}
+ANALYSIS_ORDER: Dict[str, str] = {
+    "union": "resolve",
+    "io-union": "io",
+}
+ANALYSIS_PASS: Dict[str, str] = {
+    "union": "andersen",
+    "io-union": "andersen",
+}
+ANALYSIS_CONFIG: Dict[str, Path] = {
+    "union": ANALYSIS_CONFIG_ROOT / "union",
+    "io-union": ANALYSIS_CONFIG_ROOT / "io-union",
 }
 current_dst: Optional[Path] = None
 
@@ -88,6 +123,55 @@ def is_benchmark(bench: str) -> bool:
     return (RS_ORIG / bench).is_dir()
 
 
+def analyze_one(stage: str, bench: str, config: Config):
+    dst = ANALYSIS_DIRS[stage] / bench
+    if dst.exists() and not config.overwrite:
+        print(
+            f"[Skip] {dst} already exists (use --overwrite to overwrite or --overwrite-depth to adjust depth)"
+        )
+        return
+
+    src_stage = ANALYSIS_ORDER[stage]
+    src = TRANSFORM_DIRS[src_stage] / bench
+
+    if src_stage and (not src.exists() or config.overwrite):
+        transform_one(src_stage, bench, config.decrease_depth())
+
+    config_dir = ANALYSIS_CONFIG[stage]
+    config_file = config_dir / f"{bench}.toml"
+    config_file = config_file if config_file.exists() else None
+
+    if not dst.parent.exists():
+        dst.parent.mkdir(parents=True)
+
+    cmd = ["cargo", "run", "--bin", "crat"]
+    if not os.environ.get("DEBUG"):
+        cmd.append("--release")
+    cmd += ["--", "--analysis-output", str(dst), "--analysis", ANALYSIS_PASS[stage]]
+    if config_file:
+        cmd.extend(["--config", str(config_file)])
+    if config.log:
+        cmd.extend(["-l", config.log])
+    cmd.append(str(src))
+
+    global current_dst
+    current_dst = dst
+    print("[Running]", " ".join(cmd))
+    try:
+        subprocess.run(cmd, check=True)
+    except subprocess.CalledProcessError:
+        print(f"[Error] Analysis failed: {src} -> {dst}")
+        if current_dst.exists():
+            print(f"[Remove] {current_dst}")
+            shutil.rmtree(current_dst)
+        if config.keep_going:
+            raise TaskFailedError()
+        else:
+            sys.exit(1)
+    finally:
+        current_dst = None
+
+
 def transform_one(stage: str, bench: str, config: Config):
     dst = TRANSFORM_DIRS[stage] / bench
     if dst.exists() and not config.overwrite:
@@ -102,6 +186,15 @@ def transform_one(stage: str, bench: str, config: Config):
     if src_stage and (not src.exists() or config.overwrite):
         transform_one(src_stage, bench, config.decrease_depth())
 
+    analysis_stage_opt = TRANSFORM_ANALYSIS[stage]
+    analysis_file, analysis_opt = None, None
+    if analysis_stage_opt:
+        analysis_stage, analysis_opt = analysis_stage_opt
+        analysis_file = ANALYSIS_DIRS[analysis_stage] / bench
+
+        if not analysis_file.exists() or config.overwrite:
+            analyze_one(analysis_stage, bench, config.decrease_depth().decrease_depth_to(1))
+
     config_dir = TRANSFORM_CONFIG[stage]
     config_file = config_dir / f"{bench}.toml"
     config_file = config_file if config_file.exists() else None
@@ -113,6 +206,8 @@ def transform_one(stage: str, bench: str, config: Config):
     if not os.environ.get("DEBUG"):
         cmd.append("--release")
     cmd += ["--", "-o", str(dst.parent), "--pass", TRANSFORM_PASS[stage]]
+    if analysis_file and analysis_opt:
+        cmd += [f"--{analysis_opt}", str(analysis_file)]
     if config_file:
         cmd.extend(["--config", str(config_file)])
     if config.log:
@@ -273,6 +368,7 @@ def make_runner(
     return runner
 
 
+analyze = make_runner(analyze_one)
 transform = make_runner(transform_one)
 build = make_runner(build_one)
 test = make_runner(test_one)
@@ -297,7 +393,7 @@ def main():
     parser = argparse.ArgumentParser(prog="tool.py")
     parser.add_argument(
         "command",
-        choices=["transform", "build", "test", "clean"],
+        choices=["analyze", "transform", "build", "test", "clean"],
         help="Main operation to perform",
     )
     parser.add_argument(
@@ -336,9 +432,14 @@ def main():
 
     args = parser.parse_args()
 
-    if args.stage not in TRANSFORM_DIRS:
-        print(f"Unknown stage: {args.stage}")
-        sys.exit(1)
+    if args.command == "analyze":
+        if args.stage not in ANALYSIS_ORDER:
+            print(f"Unknown analysis stage: {args.stage}")
+            sys.exit(1)
+    else:
+        if args.stage not in TRANSFORM_DIRS:
+            print(f"Unknown stage: {args.stage}")
+            sys.exit(1)
 
     config = Config(
         overwrite=args.overwrite,
@@ -354,7 +455,9 @@ def main():
         for item in args.exclude:
             excludes.extend(item.split(","))
 
-    if args.command == "transform":
+    if args.command == "analyze":
+        runner = analyze
+    elif args.command == "transform":
         runner = transform
     elif args.command == "build":
         runner = build
