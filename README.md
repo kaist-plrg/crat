@@ -2,6 +2,22 @@
 
 **C**-to-**R**ust **A**utomatic **T**ranslator
 
+## Usage
+
+### Crat
+
+```bash
+# `out_dir` should be an existing directory.
+# This will create `out_dir/avl`.
+cargo run --bin crat -- -o out_dir --pass preprocess benchmarks/rs/avl
+```
+
+### Crat Finder
+
+```bash
+cargo run --bin crat-finder -- example benchmarks/rs/avl
+```
+
 ## Benchmarks
 
 Benchmark programs are under `benchmarks/rs`. Each directory corresponds to each
