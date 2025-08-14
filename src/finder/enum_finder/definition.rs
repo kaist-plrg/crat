@@ -54,7 +54,7 @@ pub(super) fn find_enum_def(tcx: TyCtxt<'_>) -> Vec<EnumDefinition> {
         })
         .collect::<Vec<_>>();
 
-    if enum_def_chain.len() == 0 {
+    if enum_def_chain.is_empty() {
         return vec![];
     }
 
@@ -137,7 +137,7 @@ pub(super) fn find_enum_def(tcx: TyCtxt<'_>) -> Vec<EnumDefinition> {
 
     enum_def_chain = enum_def_chain
         .into_iter()
-        .filter(|chain_item| chain_item.integer_const_bindings.len() > 0)
+        .filter(|chain_item| !chain_item.integer_const_bindings.is_empty())
         .collect::<Vec<_>>();
 
     enum_def_chain
