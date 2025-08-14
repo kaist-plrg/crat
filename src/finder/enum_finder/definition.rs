@@ -54,10 +54,6 @@ pub(super) fn find_enum_def(tcx: TyCtxt<'_>) -> Vec<EnumDefinition> {
         })
         .collect::<Vec<_>>();
 
-    if enum_def_chain.is_empty() {
-        return vec![];
-    }
-
     enum_def_chain.sort_by_key(|chain_item| chain_item.chain_byte);
 
     let integer_const_binding_items = free_items
