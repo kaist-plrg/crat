@@ -81,41 +81,32 @@ pub(super) fn find_enum_def(tcx: TyCtxt<'_>) -> Vec<EnumDefinition> {
                 },
                 body_id,
             ) => {
-                if tcx.type_of(*def_id) == EarlyBinder::bind(Ty::new_uint(tcx, UintTy::U32)) {
-                    let hir_body_node = tcx.hir_node(body_id.hir_id);
-                    if let Node::Expr(Expr {
-                        hir_id: _,
-                        kind:
-                            ExprKind::Lit(Spanned {
-                                node: LitKind::Int(pu128, LitIntType::Unsuffixed),
+                if tcx.type_of(*def_id) != EarlyBinder::bind(Ty::new_uint(tcx, UintTy::U32)) {
+                    return None;
+                }
+
+                if let Node::Expr(expr) = tcx.hir_node(body_id.hir_id) {
+                    let val = match &expr.kind {
+                        ExprKind::Lit(Spanned {
+                            node: LitKind::Int(pu128, LitIntType::Unsuffixed),
+                            ..
+                        }) => pu128.0 as i32,
+
+                        ExprKind::Unary(
+                            UnOp::Neg,
+                            Expr {
+                                kind:
+                                    ExprKind::Lit(Spanned {
+                                        node: LitKind::Int(pu128, LitIntType::Unsuffixed),
+                                        ..
+                                    }),
                                 ..
-                            }),
-                        ..
-                    }) = hir_body_node
-                    {
-                        Some((item, pu128.0 as i32))
-                    } else if let Node::Expr(Expr {
-                        hir_id: _,
-                        kind:
-                            ExprKind::Unary(
-                                UnOp::Neg,
-                                Expr {
-                                    hir_id: _,
-                                    kind:
-                                        ExprKind::Lit(Spanned {
-                                            node: LitKind::Int(pu128, LitIntType::Unsuffixed),
-                                            ..
-                                        }),
-                                    ..
-                                },
-                            ),
-                        ..
-                    }) = hir_body_node
-                    {
-                        Some((item, -(pu128.0 as i32)))
-                    } else {
-                        None
-                    }
+                            },
+                        ) => -(pu128.0 as i32),
+
+                        _ => return None,
+                    };
+                    Some((item, val))
                 } else {
                     None
                 }
