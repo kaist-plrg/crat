@@ -135,13 +135,9 @@ pub(super) fn find_enum_def(tcx: TyCtxt<'_>) -> Vec<EnumDefinition> {
         }
     }
 
-    enum_def_chain = enum_def_chain
-        .into_iter()
-        .filter(|chain_item| !chain_item.integer_const_bindings.is_empty())
-        .collect::<Vec<_>>();
-
     enum_def_chain
         .iter()
+        .filter(|chain_item| !chain_item.integer_const_bindings.is_empty())
         .map(|chain_item| EnumDefinition {
             def_id: chain_item.type_alias_def_id,
             span: chain_item.type_alias_span,
