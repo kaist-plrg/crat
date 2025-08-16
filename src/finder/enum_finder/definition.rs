@@ -1,8 +1,6 @@
 use rustc_ast::{LitIntType, LitKind, UnOp};
 use rustc_hir::{
-    Expr, ExprKind, Item, ItemKind, Node, Path, QPath, TyKind,
-    def::{DefKind, Res},
-    def_id::DefId,
+    def::{DefKind, Res}, def_id::LocalDefId, Expr, ExprKind, Item, ItemKind, Node, Path, QPath, TyKind
 };
 use rustc_middle::ty::{Ty, TyCtxt};
 use rustc_span::{Span, source_map::Spanned};
@@ -11,13 +9,13 @@ use rustc_type_ir::{EarlyBinder, UintTy};
 use crate::finder::enum_finder::{EnumDefinition, EnumVariant};
 
 struct EnumDefChainItem {
-    type_alias_def_id: DefId,
+    type_alias_def_id: LocalDefId,
     type_alias_span: Span,
-    integer_const_bindings: Vec<(DefId, Span, i32)>,
+    integer_const_bindings: Vec<(LocalDefId, Span, i32)>,
     chain_byte: u32,
 }
 
-pub(super) fn find_enum_def(tcx: TyCtxt<'_>) -> Vec<EnumDefinition> {
+pub(crate) fn find_enum_def(tcx: TyCtxt<'_>) -> Vec<EnumDefinition> {
     let free_item_ids = tcx.hir_free_items();
     let free_items: Vec<Item> = free_item_ids
         .map(|item_id| tcx.hir_item(item_id))
@@ -47,7 +45,7 @@ pub(super) fn find_enum_def(tcx: TyCtxt<'_>) -> Vec<EnumDefinition> {
 
     let mut enum_def_chain = type_alias_items
         .map(|item| EnumDefChainItem {
-            type_alias_def_id: item.owner_id.def_id.to_def_id(),
+            type_alias_def_id: item.owner_id.def_id,
             type_alias_span: item.span,
             integer_const_bindings: Vec::new(),
             chain_byte: item.span.hi().0 + 1,
@@ -127,7 +125,7 @@ pub(super) fn find_enum_def(tcx: TyCtxt<'_>) -> Vec<EnumDefinition> {
             enum_def_chain[last_found_index].chain_byte = item.span.hi().0 + 1;
             enum_def_chain[last_found_index]
                 .integer_const_bindings
-                .push((item.owner_id.def_id.to_def_id(), item.span, value));
+                .push((item.owner_id.def_id, item.span, value));
         }
     }
 
