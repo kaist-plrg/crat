@@ -1,11 +1,11 @@
 mod definition;
 mod usage;
 
-use rustc_hir::def_id::{LocalDefId};
+use rustc_hir::def_id::LocalDefId;
 use rustc_middle::ty::TyCtxt;
 use rustc_span::Span;
 
-use crate::finder::enum_finder::{definition::find_enum_def, usage::find_enum_usage};
+use crate::finder::enum_finder::{definition::find_enum_tys, usage::find_enum_usage};
 
 #[derive(Clone, Debug, PartialEq)]
 struct EnumVariant {
@@ -21,10 +21,25 @@ struct EnumDefinition {
     variants: Vec<EnumVariant>,
 }
 
-pub fn find_enum(tcx: TyCtxt<'_>) {
-    let enum_definitions = find_enum_def(tcx);
-    // for def in enum_definitions {
-    //     dbg!(def.span);
-    // }
-    find_enum_usage(tcx, enum_definitions);
+#[derive(Clone, Debug, PartialEq)]
+enum EnumTys {
+    Definition(EnumDefinition),
+    PointsTo(LocalDefId, Span, EnumDefinition),
+}
+
+impl EnumTys {
+    pub fn get_def_id(&self) -> LocalDefId {
+        match self {
+            EnumTys::Definition(def) => def.def_id,
+            EnumTys::PointsTo(def_id, _, _) => *def_id,
+        }
+    }
+}
+
+pub fn find_enum<'tcx>(tcx: TyCtxt<'tcx>) {
+    let enum_tys = find_enum_tys(tcx);
+    for def in enum_tys {
+        dbg!(def);
+    }
+    find_enum_usage(tcx, enum_tys);
 }

@@ -1,12 +1,14 @@
 use rustc_ast::{LitIntType, LitKind, UnOp};
 use rustc_hir::{
-    def::{DefKind, Res}, def_id::LocalDefId, Expr, ExprKind, Item, ItemKind, Node, Path, QPath, TyKind
+    Expr, ExprKind, Item, ItemKind, Node, Path, QPath, TyKind,
+    def::{DefKind, Res},
+    def_id::LocalDefId,
 };
 use rustc_middle::ty::{Ty, TyCtxt};
 use rustc_span::{Span, source_map::Spanned};
 use rustc_type_ir::{EarlyBinder, UintTy};
 
-use crate::finder::enum_finder::{EnumDefinition, EnumVariant};
+use crate::finder::enum_finder::{EnumDefinition, EnumTys, EnumVariant};
 
 struct EnumDefChainItem {
     type_alias_def_id: LocalDefId,
@@ -15,7 +17,11 @@ struct EnumDefChainItem {
     chain_byte: u32,
 }
 
-pub(crate) fn find_enum_def(tcx: TyCtxt<'_>) -> Vec<EnumDefinition> {
+pub(crate) fn find_enum_tys<'tcx>(tcx: TyCtxt<'tcx>) -> &'tcx [EnumTys] {
+    todo!()
+}
+
+fn find_enum_def(tcx: TyCtxt<'_>) -> Vec<EnumDefinition> {
     let free_item_ids = tcx.hir_free_items();
     let free_items: Vec<Item> = free_item_ids
         .map(|item_id| tcx.hir_item(item_id))
@@ -146,6 +152,35 @@ pub(crate) fn find_enum_def(tcx: TyCtxt<'_>) -> Vec<EnumDefinition> {
                 .collect(),
         })
         .collect()
+}
+
+fn find_u32_ty_alias_items(tcx: TyCtxt<'_>) -> impl Iterator<Item = Item<'_>> {
+    let free_item_ids = tcx.hir_free_items();
+    let free_items: Vec<Item> = free_item_ids
+        .map(|item_id| tcx.hir_item(item_id))
+        .cloned()
+        .collect();
+
+    free_items.into_iter().filter(move |item| match item.kind {
+        ItemKind::TyAlias(
+            _,
+            _,
+            rustc_hir::Ty {
+                hir_id: _,
+                kind:
+                    TyKind::Path(QPath::Resolved(
+                        None,
+                        Path {
+                            span: _,
+                            res: Res::Def(DefKind::TyAlias, def_id),
+                            segments: _,
+                        },
+                    )),
+                span: _,
+            },
+        ) => tcx.type_of(*def_id) == EarlyBinder::bind(Ty::new_uint(tcx, UintTy::U32)),
+        _ => false,
+    })
 }
 
 #[cfg(test)]
