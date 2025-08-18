@@ -12,7 +12,7 @@ use rustc_span::{Ident, Span};
 use crate::finder::enum_finder::{EnumTy, definition::find_free_items, usage::enum_ty::is_enum_ty};
 
 #[derive(Debug, Clone)]
-pub enum TyAnnotation<'tcx> {
+pub enum EnumTyAnnotation<'tcx> {
     Let(Ident, Span, &'tcx Ty<'tcx>),
     Struct(
         LocalDefId,
@@ -31,7 +31,7 @@ pub enum TyAnnotation<'tcx> {
 
 struct CollectEnumTyBindings<'tcx> {
     tcx: TyCtxt<'tcx>,
-    ty_annotations: Vec<TyAnnotation<'tcx>>,
+    ty_annotations: Vec<EnumTyAnnotation<'tcx>>,
     enum_tys: Vec<EnumTy>,
 }
 
@@ -48,7 +48,7 @@ impl<'tcx> Visitor<'tcx> for CollectEnumTyBindings<'tcx> {
             && is_enum_ty(ty, &self.enum_tys)
         {
             self.ty_annotations
-                .push(TyAnnotation::Let(ident, l.pat.span, ty));
+                .push(EnumTyAnnotation::Let(ident, l.pat.span, ty));
         }
         walk_local(self, l);
     }
@@ -105,7 +105,7 @@ impl<'tcx> Visitor<'tcx> for CollectEnumTyBindings<'tcx> {
                     owner_id,
                     ..
                 }) => {
-                    self.ty_annotations.push(TyAnnotation::Fn(
+                    self.ty_annotations.push(EnumTyAnnotation::Fn(
                         owner_id.def_id,
                         *ident,
                         sig.span,
@@ -126,7 +126,7 @@ impl<'tcx> Visitor<'tcx> for CollectEnumTyBindings<'tcx> {
 pub(super) fn find_enum_usage<'tcx>(
     tcx: TyCtxt<'tcx>,
     enum_tys: Vec<EnumTy>,
-) -> Vec<TyAnnotation<'tcx>> {
+) -> Vec<EnumTyAnnotation<'tcx>> {
     let local_fn_visitor = &mut CollectEnumTyBindings {
         tcx,
         ty_annotations: vec![],
@@ -155,7 +155,7 @@ pub(super) fn find_enum_usage<'tcx>(
                 if fields.is_empty() {
                     None
                 } else {
-                    Some(TyAnnotation::Struct(
+                    Some(EnumTyAnnotation::Struct(
                         item.owner_id.def_id,
                         ident,
                         item.span,
@@ -177,7 +177,9 @@ pub(super) fn find_enum_usage<'tcx>(
 mod tests {
     use crate::{
         compile_util,
-        finder::enum_finder::{definition::find_enum_tys, find_enum_usage, usage::TyAnnotation},
+        finder::enum_finder::{
+            definition::find_enum_tys, find_enum_usage, usage::EnumTyAnnotation,
+        },
     };
 
     #[test]
@@ -209,17 +211,23 @@ fn f(a1: u32, a2: u32, a3: BrotliDecoderParameter) -> BrotliDecoderParameter {
                 let enum_usages = find_enum_usage(tcx, enum_tys);
 
                 assert_eq!(enum_usages.len(), 3);
-                assert!(matches!(enum_usages[0], TyAnnotation::Struct(_, _, _, _)));
-                assert!(matches!(enum_usages[1], TyAnnotation::Fn(_, _, _, _, _)));
-                assert!(matches!(enum_usages[2], TyAnnotation::Let(_, _, _)));
+                assert!(matches!(
+                    enum_usages[0],
+                    EnumTyAnnotation::Struct(_, _, _, _)
+                ));
+                assert!(matches!(
+                    enum_usages[1],
+                    EnumTyAnnotation::Fn(_, _, _, _, _)
+                ));
+                assert!(matches!(enum_usages[2], EnumTyAnnotation::Let(_, _, _)));
 
-                if let TyAnnotation::Struct(_, _, _, fields) = &enum_usages[0] {
+                if let EnumTyAnnotation::Struct(_, _, _, fields) = &enum_usages[0] {
                     assert_eq!(fields.len(), 1);
                 } else {
                     unreachable!();
                 }
 
-                if let TyAnnotation::Fn(_, _, _, args, return_ty) = &enum_usages[1] {
+                if let EnumTyAnnotation::Fn(_, _, _, args, return_ty) = &enum_usages[1] {
                     assert_eq!(args.len(), 3);
                     assert!(args[0].is_none());
                     assert!(args[1].is_none());
