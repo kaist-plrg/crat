@@ -59,7 +59,8 @@ impl EnumTy {
 
 pub fn find_enum<'tcx>(tcx: TyCtxt<'tcx>) {
     let enum_tys = find_enum_tys(tcx);
-    let enum_usages = find_enum_usage(tcx, enum_tys);
+    dbg!(&enum_tys);
 
+    let enum_usages = find_enum_usage(tcx, enum_tys);
     dbg!(enum_usages);
 }
