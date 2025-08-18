@@ -191,6 +191,20 @@ unsafe fn f() {
 }
 
 #[test]
+fn test_scanf() {
+    run_test(
+        r#"
+unsafe fn f() -> libc::c_int {
+    let mut x: libc::c_int = 0;
+    scanf(b"%d\0" as *const u8 as *const libc::c_char, &mut x as *mut libc::c_int);
+    return x;
+}"#,
+        &["stdin", "fill_buf", "available", "consume", "parse"],
+        &["scanf"],
+    );
+}
+
+#[test]
 fn test_fscanf_numbers() {
     run_test(
         r#"
@@ -255,6 +269,24 @@ unsafe fn f(mut stream: *mut FILE) -> libc::c_int {
     return fscanf(stream, b"%*[^\n]\0" as *const u8 as *const libc::c_char);
 }"#,
         &["BufRead", "fill_buf", "available", "consume", "TT"],
+        &["FILE", "fscanf"],
+    );
+}
+
+#[test]
+fn test_fscanf_char() {
+    run_test(
+        r#"
+unsafe fn f(mut stream: *mut FILE) -> libc::c_char {
+    let mut x: libc::c_char = 0;
+    fscanf(
+        stream,
+        b"%c\0" as *const u8 as *const libc::c_char,
+        &mut x as *mut libc::c_char,
+    );
+    return x;
+}"#,
+        &["BufRead", "fill_buf", "consume", "TT"],
         &["FILE", "fscanf"],
     );
 }

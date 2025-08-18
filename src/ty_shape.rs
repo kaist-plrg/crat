@@ -57,6 +57,7 @@ fn compute_bitfields<'tcx>(tss: &mut TyShapes<'_, 'tcx>, tcx: TyCtxt<'tcx>) {
         let item = tcx.hir_item(item_id);
         match item.kind {
             ItemKind::Struct(_, _, vd) => {
+                let mut names = vec![];
                 for field in vd.fields() {
                     let HirTyKind::Array(ty, _) = field.ty.kind else {
                         continue;
@@ -69,10 +70,12 @@ fn compute_bitfields<'tcx>(tss: &mut TyShapes<'_, 'tcx>, tcx: TyCtxt<'tcx>) {
                     }
                     let name = field.ident.name.to_ident_string();
                     if !name.starts_with("c2rust_padding") {
-                        let len = vd.fields().len();
-                        bitfield_structs.insert(item_id.owner_id.def_id, (name, len));
-                        break;
+                        names.push(name);
                     }
+                }
+                if !names.is_empty() {
+                    let len = vd.fields().len();
+                    bitfield_structs.insert(item_id.owner_id.def_id, (names, len));
                 }
             }
             ItemKind::Impl(imp) if imp.of_trait.is_none() => {
@@ -119,7 +122,8 @@ fn compute_bitfields<'tcx>(tss: &mut TyShapes<'_, 'tcx>, tcx: TyCtxt<'tcx>) {
                 .intersperse("_")
                 .collect();
             let (ref bf2, len) = bitfield_structs[&ty];
-            assert_eq!(&bf1, bf2);
+            let bf2: String = bf2.iter().map(|f| f.as_str()).intersperse("_").collect();
+            assert_eq!(bf1, bf2);
             let name_to_idx = fields
                 .iter()
                 .enumerate()

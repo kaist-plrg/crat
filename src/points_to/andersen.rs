@@ -19,6 +19,7 @@ use rustc_span::{
     def_id::{DefId, LocalDefId},
     source_map::Spanned,
 };
+use typed_arena::Arena;
 
 use super::alloc_finder;
 use crate::{
@@ -26,20 +27,34 @@ use crate::{
     ty_shape::{self, TyShape, TyShapes},
 };
 
+pub fn run_analysis(tcx: TyCtxt<'_>) -> Solutions {
+    let arena = Arena::new();
+    let tss = ty_shape::get_ty_shapes(&arena, tcx);
+    let pre = pre_analyze(&tss, tcx);
+    analyze(&pre, &tss, tcx)
+}
+
+pub fn write_solutions<W: std::io::Write>(mut w: W, solutions: &Solutions) -> std::io::Result<()> {
+    for (i, bitset) in solutions.iter_enumerated() {
+        for loc in bitset.iter() {
+            let mut loc = loc.index();
+            while loc > 0 {
+                let v = (loc & 127) as u8;
+                w.write_all(&[v])?;
+                loc >>= 7;
+            }
+            w.write_all(&[254])?;
+        }
+        if i + 1 < solutions.next_index() {
+            w.write_all(&[255])?;
+        }
+    }
+    Ok(())
+}
+
 pub fn serialize_solutions(solutions: &Solutions) -> Vec<u8> {
     let mut arr = vec![];
-    for v in solutions {
-        for i in v.iter() {
-            let mut i = i.index();
-            while i > 0 {
-                arr.push((i & 127) as u8);
-                i >>= 7;
-            }
-            arr.push(254);
-        }
-        arr.push(255);
-    }
-    arr.pop();
+    write_solutions(&mut arr, solutions).unwrap();
     arr
 }
 
@@ -572,13 +587,16 @@ impl<'tcx> Analyzer<'_, '_, 'tcx> {
                             }
                         }
                     },
-                    ConstValue::ZeroSized => {
-                        let TyKind::FnDef(def_id, _) = ty.kind() else { unreachable!() };
-                        let var = ProjectedLoc::new_root(
-                            self.pre.globals.get(&def_id.as_local()?).copied()?,
-                        );
-                        Some(PrefixedLoc::new_ref(var))
-                    }
+                    ConstValue::ZeroSized => match ty.kind() {
+                        TyKind::FnDef(def_id, _) => {
+                            let var = ProjectedLoc::new_root(
+                                self.pre.globals.get(&def_id.as_local()?).copied()?,
+                            );
+                            Some(PrefixedLoc::new_ref(var))
+                        }
+                        TyKind::Array(_, _) => None,
+                        _ => unreachable!("{:?}", ty),
+                    },
                     ConstValue::Slice { .. } => None,
                     _ => unreachable!(),
                 },

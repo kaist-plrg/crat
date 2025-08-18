@@ -1,5 +1,6 @@
 target
 benchmarks/**/Cargo.lock
+benchmarks/analyses/
 benchmarks/tmp
 benchmarks/rs-resolved
 benchmarks/rs-io
