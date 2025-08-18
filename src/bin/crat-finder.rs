@@ -20,6 +20,7 @@ struct Args {
 #[clap(rename_all = "lower")]
 enum Finder {
     Example,
+    Mapper,
     Unsafe,
 }
 
@@ -29,6 +30,9 @@ fn main() {
     match args.finder {
         Finder::Example => {
             run_compiler_on_path(&file, finder::example::run).unwrap();
+        }
+        Finder::Mapper => {
+            run_compiler_on_path(&file, |tcx| finder::mapper::run(&args.input, tcx)).unwrap();
         }
         Finder::Unsafe => {
             run_compiler_on_path(&file, finder::unsafe_finder::find_unsafe).unwrap();
