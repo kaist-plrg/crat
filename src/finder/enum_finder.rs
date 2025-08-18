@@ -26,6 +26,7 @@ pub(crate) struct EnumDefinition {
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) enum EnumTy {
     Definition(EnumDefinition),
+    // For the pattern `typedef enum Name_t { ... } Name;`
     PointsTo(LocalDefId, Span, EnumDefinition),
 }
 
