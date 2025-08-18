@@ -1,5 +1,5 @@
 mod definition;
-mod usage;
+pub mod usage;
 
 use rustc_hir::def_id::LocalDefId;
 use rustc_middle::ty::TyCtxt;
@@ -38,8 +38,7 @@ impl EnumTy {
 
 pub fn find_enum<'tcx>(tcx: TyCtxt<'tcx>) {
     let enum_tys = find_enum_tys(tcx);
-    for def in &enum_tys {
-        dbg!(def);
-    }
-    find_enum_usage(tcx, enum_tys);
+    let enum_usages = find_enum_usage(tcx, enum_tys);
+
+    dbg!(enum_usages);
 }

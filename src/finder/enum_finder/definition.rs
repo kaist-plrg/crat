@@ -20,10 +20,10 @@ struct EnumDefChainItem {
 }
 
 pub(crate) fn find_enum_tys<'tcx>(tcx: TyCtxt<'tcx>) -> Vec<EnumTy> {
-    let free_items: &'tcx [Item<'tcx>] = find_free_items(tcx);
-    let type_alias_items: &'tcx [Item<'tcx>] = find_u32_ty_alias_items(tcx, free_items);
-    let enum_defs: Vec<EnumDefinition> = find_enum_def(tcx, type_alias_items, free_items);
-    let points_to_defs: Vec<EnumTy> = find_points_to(&enum_defs, free_items);
+    let free_items = find_free_items(tcx);
+    let type_alias_items = find_u32_ty_alias_items(tcx, &free_items);
+    let enum_defs = find_enum_def(tcx, &type_alias_items, &free_items);
+    let points_to_defs = find_points_to(&enum_defs, &free_items);
 
     let mut enum_tys = Vec::with_capacity(enum_defs.len() + points_to_defs.len());
     enum_tys.extend(enum_defs.into_iter().map(EnumTy::Definition));
@@ -67,8 +67,8 @@ fn find_points_to(enum_defs: &[EnumDefinition], free_items: &[Item]) -> Vec<Enum
 
 fn find_enum_def<'tcx>(
     tcx: TyCtxt<'tcx>,
-    type_alias_items: &'tcx [Item<'tcx>],
-    free_items: &'tcx [Item<'tcx>],
+    type_alias_items: &[Item<'tcx>],
+    free_items: &[Item<'tcx>],
 ) -> Vec<EnumDefinition> {
     let mut enum_def_chain = type_alias_items
         .iter()
@@ -178,17 +178,15 @@ fn find_enum_def<'tcx>(
         .collect()
 }
 
-fn find_free_items<'tcx>(tcx: TyCtxt<'tcx>) -> &'tcx [Item<'tcx>] {
-    let free_item_ids = tcx.hir_free_items();
-    let free_items = free_item_ids.map(|item_id| tcx.hir_item(item_id)).cloned();
-    tcx.arena.alloc_from_iter(free_items)
+pub(crate) fn find_free_items<'tcx>(tcx: TyCtxt<'tcx>) -> Vec<Item<'tcx>> {
+    tcx.hir_free_items()
+        .map(|item_id| tcx.hir_item(item_id))
+        .cloned()
+        .collect()
 }
 
-fn find_u32_ty_alias_items<'tcx>(
-    tcx: TyCtxt<'tcx>,
-    free_items: &'tcx [Item<'tcx>],
-) -> &'tcx [Item<'tcx>] {
-    let ty_alias_items = free_items
+fn find_u32_ty_alias_items<'tcx>(tcx: TyCtxt<'tcx>, free_items: &[Item<'tcx>]) -> Vec<Item<'tcx>> {
+    free_items
         .iter()
         .filter(move |item| match item.kind {
             ItemKind::TyAlias(
@@ -213,8 +211,8 @@ fn find_u32_ty_alias_items<'tcx>(
             }
             _ => false,
         })
-        .cloned();
-    tcx.arena.alloc_from_iter(ty_alias_items)
+        .cloned()
+        .collect()
 }
 
 #[cfg(test)]
