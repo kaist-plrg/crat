@@ -7,7 +7,7 @@ use rustc_hir::{
 use rustc_middle::{hir::nested_filter::OnlyBodies, ty::TyCtxt};
 use rustc_span::{Ident, Span};
 
-use crate::finder::enum_finder::{EnumDefinition, EnumTys, usage::enum_ty::is_enum_ty};
+use crate::finder::enum_finder::{EnumTy, usage::enum_ty::is_enum_ty};
 
 #[derive(Debug, Clone)]
 enum EnumTyBindings<'tcx> {
@@ -18,7 +18,7 @@ enum EnumTyBindings<'tcx> {
 struct CollectEnumTyBindings<'tcx> {
     tcx: TyCtxt<'tcx>,
     ty_annotations: Vec<EnumTyBindings<'tcx>>,
-    enum_tys: &'tcx [EnumTys],
+    enum_tys: Vec<EnumTy>,
 }
 
 impl<'tcx> Visitor<'tcx> for CollectEnumTyBindings<'tcx> {
@@ -64,7 +64,7 @@ impl<'tcx> Visitor<'tcx> for CollectEnumTyBindings<'tcx> {
     // fn visit_field_def(&mut self, s: &'tcx rustc_hir::FieldDef<'tcx>) -> Self::Result {}
 }
 
-pub(super) fn find_enum_usage<'tcx>(tcx: TyCtxt<'tcx>, enum_tys: &'tcx [EnumTys]) {
+pub(super) fn find_enum_usage<'tcx>(tcx: TyCtxt<'tcx>, enum_tys: Vec<EnumTy>) {
     let visitor = &mut CollectEnumTyBindings {
         tcx,
         ty_annotations: vec![],
@@ -74,7 +74,7 @@ pub(super) fn find_enum_usage<'tcx>(tcx: TyCtxt<'tcx>, enum_tys: &'tcx [EnumTys]
     tcx.hir_visit_all_item_likes_in_crate(visitor);
 
     visitor.ty_annotations.iter().for_each(|binding| {
-        dbg!(binding);
+        // dbg!(binding);
     });
 
     todo!();

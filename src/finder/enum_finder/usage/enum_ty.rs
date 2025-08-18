@@ -2,9 +2,9 @@ use rustc_hir::{
     BareFnTy, FnDecl, FnRetTy, MutTy, Path, QPath, Ty, TyKind::*, UnsafeBinderTy, def::Res,
 };
 
-use crate::finder::enum_finder::EnumTys;
+use crate::finder::enum_finder::EnumTy;
 
-pub(super) fn is_enum_ty(ty: &Ty<'_>, enum_tys: &[EnumTys]) -> bool {
+pub(super) fn is_enum_ty(ty: &Ty<'_>, enum_tys: &[EnumTy]) -> bool {
     match ty.kind {
         InferDelegation(_, _) => false,
         Slice(ty) | Array(ty, _) => is_enum_ty(ty, enum_tys),
@@ -43,7 +43,7 @@ pub(super) fn is_enum_ty(ty: &Ty<'_>, enum_tys: &[EnumTys]) -> bool {
     }
 }
 
-fn is_enum_mut_ty<'tcx>(mut_ty: &MutTy<'tcx>, enum_tys: &'tcx [EnumTys]) -> bool {
+fn is_enum_mut_ty<'tcx>(mut_ty: &MutTy<'tcx>, enum_tys: &'tcx [EnumTy]) -> bool {
     let MutTy { ty, mutbl: _ } = mut_ty;
     is_enum_ty(ty, enum_tys)
 }

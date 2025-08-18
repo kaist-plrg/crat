@@ -22,23 +22,23 @@ struct EnumDefinition {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-enum EnumTys {
+enum EnumTy {
     Definition(EnumDefinition),
     PointsTo(LocalDefId, Span, EnumDefinition),
 }
 
-impl EnumTys {
+impl EnumTy {
     pub fn get_def_id(&self) -> LocalDefId {
         match self {
-            EnumTys::Definition(def) => def.def_id,
-            EnumTys::PointsTo(def_id, _, _) => *def_id,
+            EnumTy::Definition(def) => def.def_id,
+            EnumTy::PointsTo(def_id, _, _) => *def_id,
         }
     }
 }
 
 pub fn find_enum<'tcx>(tcx: TyCtxt<'tcx>) {
     let enum_tys = find_enum_tys(tcx);
-    for def in enum_tys {
+    for def in &enum_tys {
         dbg!(def);
     }
     find_enum_usage(tcx, enum_tys);
