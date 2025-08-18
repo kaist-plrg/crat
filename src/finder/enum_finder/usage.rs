@@ -1,33 +1,15 @@
 mod enum_ty;
 
 use rustc_hir::{
-    BindingMode, ByRef, FnRetTy, ForeignItem, ForeignItemKind, Item, ItemKind, Node, PatKind, Ty,
+    BindingMode, ByRef, FnRetTy, ForeignItem, ForeignItemKind, Item, ItemKind, Node, PatKind,
     VariantData,
-    def_id::LocalDefId,
     intravisit::{Visitor, walk_fn_decl, walk_local},
 };
 use rustc_middle::{hir::nested_filter::OnlyBodies, ty::TyCtxt};
-use rustc_span::{Ident, Span};
 
-use crate::finder::enum_finder::{EnumTy, definition::find_free_items, usage::enum_ty::is_enum_ty};
-
-#[derive(Debug, Clone)]
-pub enum EnumTyAnnotation<'tcx> {
-    Let(Ident, Span, &'tcx Ty<'tcx>),
-    Struct(
-        LocalDefId,
-        Ident,
-        Span,
-        Vec<(LocalDefId, Ident, Span, &'tcx Ty<'tcx>)>,
-    ),
-    Fn(
-        LocalDefId,
-        Ident,
-        Span,
-        Vec<Option<&'tcx Ty<'tcx>>>, // Argument: `Some` only if `is_enum_ty`
-        Option<&'tcx Ty<'tcx>>,      // Return: `Some` only if `is_enum_ty`
-    ),
-}
+use crate::finder::enum_finder::{
+    EnumTy, EnumTyAnnotation, definition::find_free_items, usage::enum_ty::is_enum_ty,
+};
 
 struct CollectEnumTyBindings<'tcx> {
     tcx: TyCtxt<'tcx>,

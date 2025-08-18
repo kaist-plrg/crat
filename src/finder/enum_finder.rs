@@ -1,30 +1,50 @@
+#![allow(dead_code)]
+
 mod definition;
 pub mod usage;
 
-use rustc_hir::def_id::LocalDefId;
+use rustc_hir::{Ty, def_id::LocalDefId};
 use rustc_middle::ty::TyCtxt;
-use rustc_span::Span;
+use rustc_span::{Ident, Span};
 
 use crate::finder::enum_finder::{definition::find_enum_tys, usage::find_enum_usage};
 
 #[derive(Clone, Debug, PartialEq)]
-struct EnumVariant {
+pub(crate) struct EnumVariant {
     def_id: LocalDefId,
     span: Span,
     value: i32,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-struct EnumDefinition {
+pub(crate) struct EnumDefinition {
     def_id: LocalDefId,
     span: Span,
     variants: Vec<EnumVariant>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-enum EnumTy {
+pub(crate) enum EnumTy {
     Definition(EnumDefinition),
     PointsTo(LocalDefId, Span, EnumDefinition),
+}
+
+#[derive(Debug, Clone)]
+pub(crate) enum EnumTyAnnotation<'tcx> {
+    Let(Ident, Span, &'tcx Ty<'tcx>),
+    Struct(
+        LocalDefId,
+        Ident,
+        Span,
+        Vec<(LocalDefId, Ident, Span, &'tcx Ty<'tcx>)>,
+    ),
+    Fn(
+        LocalDefId,
+        Ident,
+        Span,
+        Vec<Option<&'tcx Ty<'tcx>>>, // Argument: `Some` only if `is_enum_ty`
+        Option<&'tcx Ty<'tcx>>,      // Return: `Some` only if `is_enum_ty`
+    ),
 }
 
 impl EnumTy {
