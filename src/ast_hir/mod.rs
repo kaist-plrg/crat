@@ -837,6 +837,7 @@ impl<'tcx> AstToHir<'tcx> {
                     Ordering::Equal => {
                         let StmtKind::Expr(expr) = &mut stmt.kind else { panic!() };
                         let hexpr = hblock.expr.unwrap();
+                        self.add_local(&mut stmt.id, hexpr.hir_id);
                         self.map_expr_to_expr(expr, hexpr);
                         i += 1;
                     }
@@ -929,14 +930,28 @@ impl<'tcx> AstToHir<'tcx> {
         path: &mut Path,
         hqpath: &hir::QPath<'tcx>,
     ) {
-        let hir::QPath::Resolved(hqself, hpath) = hqpath else { panic!() };
-        assert_eq!(qself.is_some(), hqself.is_some());
-        assert_eq!(path.segments.len(), hpath.segments.len());
-        if let (Some(qself), Some(hqself)) = (qself, hqself) {
-            self.map_ty_to_ty(&mut qself.as_mut().ty, hqself);
-        }
-        for (seg, hseg) in path.segments.iter_mut().zip(hpath.segments) {
-            self.map_path_segment_to_path_segment(seg, hseg);
+        match hqpath {
+            hir::QPath::Resolved(hqself, hpath) => {
+                assert_eq!(qself.is_some(), hqself.is_some());
+                assert_eq!(path.segments.len(), hpath.segments.len());
+                if let (Some(qself), Some(hqself)) = (qself, hqself) {
+                    self.map_ty_to_ty(&mut qself.as_mut().ty, hqself);
+                }
+                for (seg, hseg) in path.segments.iter_mut().zip(hpath.segments) {
+                    self.map_path_segment_to_path_segment(seg, hseg);
+                }
+            }
+            hir::QPath::TypeRelative(hty, hseg) => {
+                assert!(qself.is_none());
+                assert_eq!(path.segments.len(), 2);
+                let hir::TyKind::Path(hir::QPath::Resolved(None, hpath)) = hty.kind else {
+                    panic!()
+                };
+                assert_eq!(hpath.segments.len(), 1);
+                self.map_path_segment_to_path_segment(&mut path.segments[0], &hpath.segments[0]);
+                self.map_path_segment_to_path_segment(&mut path.segments[1], hseg);
+            }
+            _ => panic!(),
         }
     }
 
@@ -1001,15 +1016,20 @@ impl<'tcx> AstToHir<'tcx> {
             PatKind::Wild => {
                 assert!(matches!(hpat.kind, hir::PatKind::Wild));
             }
-            PatKind::Ident(mode, ident, pat) => {
-                let hir::PatKind::Binding(hmode, _, hident, hpat) = hpat.kind else { panic!() };
-                assert_eq!(*mode, hmode);
-                assert_eq!(*ident, hident);
-                assert_eq!(pat.is_some(), hpat.is_some());
-                if let (Some(pat), Some(hpat)) = (pat, hpat) {
-                    self.map_pat_to_pat(pat, hpat);
+            PatKind::Ident(mode, ident, pat) => match hpat.kind {
+                hir::PatKind::Binding(hmode, _, hident, hpat) => {
+                    assert_eq!(*mode, hmode);
+                    assert_eq!(*ident, hident);
+                    assert_eq!(pat.is_some(), hpat.is_some());
+                    if let (Some(pat), Some(hpat)) = (pat, hpat) {
+                        self.map_pat_to_pat(pat, hpat);
+                    }
                 }
-            }
+                hir::PatKind::Expr(_) => {
+                    assert!(pat.is_none());
+                }
+                _ => panic!(),
+            },
             PatKind::Struct(qself, path, fields, rest) => {
                 let hir::PatKind::Struct(hqpath, hfields, hrest) = hpat.kind else { panic!() };
                 self.map_path_to_qpath(qself, path, &hqpath);
@@ -1179,6 +1199,7 @@ impl<'tcx> AstToHir<'tcx> {
             ExprKind::Path(_, _) => todo!(),
             ExprKind::Unary(UnOp::Neg, expr) if let ExprKind::Lit(_) = &expr.kind => {
                 let hir::PatExprKind::Lit { negated: true, .. } = hpat_expr.kind else { panic!() };
+                self.add_local(&mut expr.id, hpat_expr.hir_id);
             }
             _ => panic!(),
         }
@@ -1259,24 +1280,66 @@ impl<'tcx> AstToHir<'tcx> {
                 self.map_path_to_qpath(qself, path, &hqpath);
             }
             TyKind::TraitObject(bounds, _) => {
-                let hir::TyKind::TraitObject(htrefs, _) = hty.kind else { panic!() };
+                let hir::TyKind::TraitObject(htrefs, hlifetime) = hty.kind else { panic!() };
                 let mut i = 0;
                 for bound in bounds {
-                    let GenericBound::Trait(tref) = bound else { continue };
-                    let htref = &htrefs[i];
-                    self.map_poly_trait_ref_to_poly_trait_ref(tref, htref);
-                    i += 1;
+                    match bound {
+                        GenericBound::Trait(tref) => {
+                            let htref = &htrefs[i];
+                            self.map_poly_trait_ref_to_poly_trait_ref(tref, htref);
+                            i += 1;
+                        }
+                        GenericBound::Outlives(lifetime) => {
+                            self.map_lifetime_to_lifetime(lifetime, &hlifetime);
+                        }
+                        _ => panic!(),
+                    }
                 }
             }
-            TyKind::ImplTrait(node_id, bounds) => {
-                let hir::TyKind::OpaqueDef(hopaque_ty) = hty.kind else { panic!() };
-                self.add_local(node_id, hopaque_ty.hir_id);
-                self.add_global(node_id, hopaque_ty.def_id);
-                assert_eq!(bounds.len(), hopaque_ty.bounds.len());
-                for (bound, hbound) in bounds.iter_mut().zip(hopaque_ty.bounds) {
-                    self.map_generic_bound_to_generic_bound(bound, hbound);
+            TyKind::ImplTrait(node_id, bounds) => match hty.kind {
+                hir::TyKind::OpaqueDef(hopaque_ty) => {
+                    self.add_local(node_id, hopaque_ty.hir_id);
+                    self.add_global(node_id, hopaque_ty.def_id);
+                    assert_eq!(bounds.len(), hopaque_ty.bounds.len());
+                    for (bound, hbound) in bounds.iter_mut().zip(hopaque_ty.bounds) {
+                        self.map_generic_bound_to_generic_bound(bound, hbound);
+                    }
                 }
-            }
+                hir::TyKind::Path(hir::QPath::Resolved(None, hpath)) => {
+                    let hir::def::Res::Def(_, def_id) = hpath.res else { panic!() };
+                    let def_id = def_id.expect_local();
+                    self.add_global(node_id, def_id);
+                    let hir::Node::GenericParam(hparam) = self.tcx.hir_node_by_def_id(def_id)
+                    else {
+                        panic!()
+                    };
+                    let owner_id = self.tcx.hir_get_parent_item(hparam.hir_id);
+                    let rustc_hir::OwnerNode::Item(item) = self.tcx.hir_owner_node(owner_id) else {
+                        panic!()
+                    };
+                    let hir::ItemKind::Fn { generics, .. } = &item.kind else { panic!() };
+                    for pred in generics.predicates {
+                        let hir::WherePredicateKind::BoundPredicate(pred) = pred.kind else {
+                            continue;
+                        };
+                        let hir::TyKind::Path(hir::QPath::Resolved(None, hpath2)) =
+                            pred.bounded_ty.kind
+                        else {
+                            continue;
+                        };
+                        if hpath.res != hpath2.res {
+                            continue;
+                        }
+                        self.add_local(node_id, pred.bounded_ty.hir_id);
+                        assert_eq!(bounds.len(), pred.bounds.len());
+                        for (bound, hbound) in bounds.iter_mut().zip(pred.bounds) {
+                            self.map_generic_bound_to_generic_bound(bound, hbound);
+                        }
+                        break;
+                    }
+                }
+                _ => {}
+            },
             TyKind::Paren(ty) => {
                 self.map_ty_to_ty(ty, hty);
             }
@@ -1306,7 +1369,7 @@ impl<'tcx> AstToHir<'tcx> {
         generics: &mut Generics,
         hgenerics: &hir::Generics<'tcx>,
     ) {
-        assert_eq!(generics.params.len(), hgenerics.params.len());
+        assert!(generics.params.len() <= hgenerics.params.len());
         for (param, hparam) in generics.params.iter_mut().zip(hgenerics.params) {
             self.map_generic_param_to_generic_param(param, hparam);
         }
@@ -1339,10 +1402,7 @@ impl<'tcx> AstToHir<'tcx> {
             }
             i += 1;
         }
-        assert_eq!(
-            generics.where_clause.predicates.len() + i,
-            hgenerics.predicates.len()
-        );
+        assert!(generics.where_clause.predicates.len() + i <= hgenerics.predicates.len());
         for (predicate, hpredicate) in generics
             .where_clause
             .predicates
@@ -1627,23 +1687,23 @@ impl<'tcx> AstToHir<'tcx> {
         }
     }
 
-    pub fn get_global_node(&self, node_id: NodeId) -> hir::Node<'tcx> {
-        let def_id = self.global_map[&node_id];
-        self.tcx.hir_node_by_def_id(def_id)
+    pub fn get_global_node(&self, node_id: NodeId) -> Option<hir::Node<'tcx>> {
+        let def_id = self.global_map.get(&node_id)?;
+        Some(self.tcx.hir_node_by_def_id(*def_id))
     }
 
-    pub fn get_local_node(&self, node_id: NodeId) -> hir::Node<'tcx> {
-        let hir_id = self.local_map[&node_id];
-        self.tcx.hir_node(hir_id)
+    pub fn get_local_node(&self, node_id: NodeId) -> Option<hir::Node<'tcx>> {
+        let hir_id = self.local_map.get(&node_id)?;
+        Some(self.tcx.hir_node(*hir_id))
     }
 }
 
 macro_rules! define_global_getters {
     ( $( $fname:ident : $variant:path => $ret:ty ),+ $(,)? ) => {
         $(
-            pub fn $fname(&self, node_id: NodeId) -> &'tcx $ret {
-                let $variant(x) = self.get_global_node(node_id) else { panic!() };
-                x
+            pub fn $fname(&self, node_id: NodeId) -> Option<&'tcx $ret> {
+                let $variant(x) = self.get_global_node(node_id)? else { return None };
+                Some(x)
             }
         )+
     };
@@ -1652,9 +1712,9 @@ macro_rules! define_global_getters {
 macro_rules! define_local_getters {
     ( $( $fname:ident : $variant:path => $ret:ty ),+ $(,)? ) => {
         $(
-            pub fn $fname(&self, node_id: NodeId) -> &'tcx $ret {
-                let $variant(x) = self.get_local_node(node_id) else { panic!() };
-                x
+            pub fn $fname(&self, node_id: NodeId) -> Option<&'tcx $ret> {
+                let $variant(x) = self.get_local_node(node_id)? else { return None };
+                Some(x)
             }
         )+
     };
