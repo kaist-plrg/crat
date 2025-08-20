@@ -75,6 +75,10 @@ struct MappingChecker<'tcx> {
 }
 
 impl<'a> Visitor<'a> for MappingChecker<'_> {
+    fn visit_mac_call(&mut self, _: &'a MacCall) {
+        // macro calls are not mapped to HIR nodes, so we skip them
+    }
+
     fn visit_foreign_item(&mut self, item: &'a ForeignItem) {
         self.ast_to_hir.get_foreign_item(item.id).unwrap();
         visit::walk_item(self, item);
@@ -953,5 +957,38 @@ fn test_assoc_item_constraint_kind_equality() {
         }
         fn f<A: T<i32, X = i32>>(a: A) {}
         ",
+    )
+}
+
+#[test]
+fn test_expr_mac_call() {
+    run_test(
+        r#"
+        fn f() {
+            let _ = unsafe { std::arch::asm!("nop") };
+            let _ = format!("");
+            let _ = panic!();
+            let _ = unreachable!();
+        }
+        "#,
+    )
+}
+
+#[test]
+fn test_stmt_mac_call() {
+    run_test(
+        r#"
+        fn f() {
+            1;
+            unsafe { std::arch::asm!("nop"); }
+            1;
+            format!("");
+            1;
+            panic!();
+            1;
+            unreachable!();
+            1;
+        }
+        "#,
     )
 }

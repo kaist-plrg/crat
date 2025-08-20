@@ -760,7 +760,7 @@ impl<'tcx> AstToHir<'tcx> {
                 self.map_ty_to_ty(ty, hty);
                 assert_eq!(idents.len(), hidents.len());
             }
-            ExprKind::MacCall(..) => todo!(),
+            ExprKind::MacCall(_) => {}
             ExprKind::Struct(box StructExpr {
                 qself,
                 path,
@@ -827,7 +827,6 @@ impl<'tcx> AstToHir<'tcx> {
         for stmt in &mut block.stmts {
             match stmt.kind {
                 StmtKind::Empty => {}
-                StmtKind::MacCall(_) => todo!(),
                 _ => match i.cmp(&hblock.stmts.len()) {
                     Ordering::Less => {
                         let hstmt = &hblock.stmts[i];
@@ -869,7 +868,7 @@ impl<'tcx> AstToHir<'tcx> {
                 self.map_expr_to_expr(expr, hexpr);
             }
             StmtKind::Empty => panic!(),
-            StmtKind::MacCall(_) => todo!(),
+            StmtKind::MacCall(_) => {}
         }
     }
 
