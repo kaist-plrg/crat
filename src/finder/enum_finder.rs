@@ -1,13 +1,13 @@
 #![allow(dead_code)]
 
-mod definition;
-pub mod usage;
+pub mod hir;
+pub mod mir;
 
 use rustc_hir::{Ty, def_id::LocalDefId};
 use rustc_middle::ty::TyCtxt;
 use rustc_span::{Ident, Span};
 
-use crate::finder::enum_finder::{definition::find_enum_tys, usage::find_enum_usage};
+use crate::finder::enum_finder::hir::{definition::find_enum_tys, usage::find_enum_usage};
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct EnumVariant {

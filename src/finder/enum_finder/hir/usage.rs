@@ -8,7 +8,8 @@ use rustc_hir::{
 use rustc_middle::{hir::nested_filter::OnlyBodies, ty::TyCtxt};
 
 use crate::finder::enum_finder::{
-    EnumTy, EnumTyAnnotation, definition::find_free_items, usage::enum_ty::is_enum_ty,
+    EnumTy, EnumTyAnnotation,
+    hir::{definition::find_free_items, usage::enum_ty::is_enum_ty},
 };
 
 struct CollectEnumTyBindings<'tcx> {
@@ -101,11 +102,9 @@ impl<'tcx> Visitor<'tcx> for CollectEnumTyBindings<'tcx> {
 
         walk_fn_decl(self, fd);
     }
-
-    // fn visit_field_def(&mut self, s: &'tcx rustc_hir::FieldDef<'tcx>) -> Self::Result {}
 }
 
-pub(super) fn find_enum_usage<'tcx>(
+pub(crate) fn find_enum_usage<'tcx>(
     tcx: TyCtxt<'tcx>,
     enum_tys: Vec<EnumTy>,
 ) -> Vec<EnumTyAnnotation<'tcx>> {
@@ -160,7 +159,8 @@ mod tests {
     use crate::{
         compile_util,
         finder::enum_finder::{
-            definition::find_enum_tys, find_enum_usage, usage::EnumTyAnnotation,
+            find_enum_usage,
+            hir::{definition::find_enum_tys, usage::EnumTyAnnotation},
         },
     };
 
