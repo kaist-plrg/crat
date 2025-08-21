@@ -36,6 +36,7 @@ pub mod check_unsafety;
 pub mod compile_util;
 pub mod disjoint_set;
 pub mod equiv_classes;
+pub mod expander;
 pub mod extern_resolver;
 pub mod finder;
 pub mod formatter;
