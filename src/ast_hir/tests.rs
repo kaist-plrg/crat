@@ -58,9 +58,22 @@ fn run_test(code: &str) {
             })
             .unwrap();
         let mut ast_to_hir = AstToHir::new(tcx);
-        ast_to_hir.map_items_to_items(items, hitems);
+        ast_to_hir.map_items_to_items(items, hitems, false);
         let mut checker = MappingChecker { ast_to_hir };
         for item in items {
+            checker.visit_item(item);
+        }
+    })
+    .unwrap();
+    compile_util::run_compiler_on_str(&code, |tcx| {
+        let borrowed = tcx.resolver_for_lowering().borrow();
+        let mut expanded_crate = borrowed.1.as_ref().clone();
+        drop(borrowed);
+        let mut ast_to_hir = AstToHir::new(tcx);
+        let module = tcx.hir_root_module();
+        ast_to_hir.map_crate_to_mod(&mut expanded_crate, module, true);
+        let mut checker = MappingChecker { ast_to_hir };
+        for item in &expanded_crate.items {
             checker.visit_item(item);
         }
     })
@@ -375,8 +388,12 @@ fn test_expr_range() {
     run_test(
         "
         fn f() {
-            1..;
-            ..1;
+            0..10;
+            0..=10;
+            ..10;
+            ..=10;
+            0..;
+            ..;
         }",
     )
 }
@@ -819,12 +836,109 @@ fn test_assoc_item_constraint_kind_equality() {
 }
 
 #[test]
+fn test_stmt_mac_call_asm() {
+    run_test(
+        r#"
+        fn f(a: i32, b: i32) -> i32 {
+            let mut sum = a;
+            unsafe {
+                std::arch::asm!(
+                    "add {sum}, {b}",
+                    sum = inout(reg) sum,
+                    b   = in(reg) b,
+                    options(pure, nomem, nostack),
+                );
+            }
+            sum
+        }"#,
+    )
+}
+
+#[test]
+fn test_expr_mac_call_format_0() {
+    run_test(
+        r#"
+        fn f(x: i32) {
+            format!("");
+        }"#,
+    )
+}
+
+#[test]
+fn test_expr_mac_call_format_0_lit() {
+    run_test(
+        r#"
+        fn f(x: i32) {
+            format!("{}", 1);
+        }"#,
+    )
+}
+
+#[test]
+fn test_expr_mac_call_format_1() {
+    run_test(
+        r#"
+        fn f(x: i32) {
+            format!("{}", x);
+        }"#,
+    )
+}
+
+#[test]
+fn test_expr_mac_call_format_1_lit() {
+    run_test(
+        r#"
+        fn f(x: i32) {
+            format!("{} {}", x + x, 1);
+        }"#,
+    )
+}
+
+#[test]
+fn test_expr_mac_call_format_2() {
+    run_test(
+        r#"
+        fn f(x: i32) {
+            format!("{} {}", x + x, x);
+        }"#,
+    )
+}
+
+#[test]
+fn test_expr_mac_call_format_2_lit() {
+    run_test(
+        r#"
+        fn f(x: i32) {
+            format!("{} {} {} {}", x + x, 1, x, 1);
+        }"#,
+    )
+}
+
+#[test]
+fn test_expr_mac_call_format_3() {
+    run_test(
+        r#"
+        fn f(x: i32) {
+            format!("{} {} {}", x + x, x, x);
+        }"#,
+    )
+}
+
+#[test]
+fn test_expr_mac_call_format_3_lit() {
+    run_test(
+        r#"
+        fn f(x: i32) {
+            format!("{} {} {} {} {} {}", x, 1, x, 1, x, 1);
+        }"#,
+    )
+}
+
+#[test]
 fn test_expr_mac_call() {
     run_test(
         r#"
         fn f() {
-            let _ = unsafe { std::arch::asm!("nop") };
-            let _ = format!("");
             let _ = panic!();
             let _ = unreachable!();
         }
@@ -837,10 +951,6 @@ fn test_stmt_mac_call() {
     run_test(
         r#"
         fn f() {
-            1;
-            unsafe { std::arch::asm!("nop"); }
-            1;
-            format!("");
             1;
             panic!();
             1;

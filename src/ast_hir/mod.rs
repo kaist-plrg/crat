@@ -39,16 +39,22 @@ impl<'tcx> AstToHir<'tcx> {
         self.local_map.insert(*node_id, hir_id);
     }
 
-    pub fn map_crate_to_mod(&mut self, krate: &mut Crate, hmod: &hir::Mod<'tcx>) {
-        self.map_items_to_items(&mut krate.items, hmod.item_ids);
+    pub fn map_crate_to_mod(&mut self, krate: &mut Crate, hmod: &hir::Mod<'tcx>, expanded: bool) {
+        self.map_items_to_items(&mut krate.items, hmod.item_ids, expanded);
     }
 
-    pub fn map_items_to_items<I: AsMut<Item>>(&mut self, items: &mut [I], hitems: &[hir::ItemId]) {
+    pub fn map_items_to_items<I: AsMut<Item>>(
+        &mut self,
+        items: &mut [I],
+        hitems: &[hir::ItemId],
+        expanded: bool,
+    ) {
         let mut i = 0;
         for hitem in hitems {
-            if self
-                .tcx
-                .is_automatically_derived(hitem.owner_id.to_def_id())
+            if !expanded
+                && self
+                    .tcx
+                    .is_automatically_derived(hitem.owner_id.to_def_id())
             {
                 continue;
             }
@@ -67,11 +73,13 @@ impl<'tcx> AstToHir<'tcx> {
                 assert_eq!(*symbol, hsymbol);
                 assert_eq!(*ident, hident);
             }
-            ItemKind::Use(tree) => {
-                let UseTreeKind::Simple(_) = tree.kind else { panic!() };
-                let hir::ItemKind::Use(path, _) = hitem.kind else { panic!() };
-                self.map_path_to_path(&mut tree.prefix, path);
-            }
+            ItemKind::Use(tree) => match tree.kind {
+                UseTreeKind::Simple(_) | UseTreeKind::Glob => {
+                    let hir::ItemKind::Use(path, _) = hitem.kind else { panic!() };
+                    self.map_path_to_path(&mut tree.prefix, path);
+                }
+                _ => panic!(),
+            },
             ItemKind::Static(box StaticItem {
                 ident,
                 ty,
@@ -129,7 +137,13 @@ impl<'tcx> AstToHir<'tcx> {
                 let hbody = self.tcx.hir_body(hbody);
                 self.map_fn_decl_block_to_body(&mut sig.decl, body.as_mut().unwrap(), hbody);
             }
-            ItemKind::Mod(_, _, _) => panic!(),
+            ItemKind::Mod(_, ident, mod_kind) => {
+                let ModKind::Loaded(items, _, _, _) = mod_kind else { panic!() };
+                let hir::ItemKind::Mod(hident, hmod) = hitem.kind else { panic!() };
+                assert_eq!(*ident, hident);
+                // We assume that submodules exist only in expanded ASTs.
+                self.map_items_to_items(items, hmod.item_ids, true);
+            }
             ItemKind::ForeignMod(ForeignMod { items, .. }) => {
                 let hir::ItemKind::ForeignMod { items: hitems, .. } = hitem.kind else { panic!() };
                 assert_eq!(items.len(), hitems.len());
@@ -712,18 +726,25 @@ impl<'tcx> AstToHir<'tcx> {
                 self.map_expr_to_expr(expr, hexpr);
                 self.map_expr_to_expr(index, hindex);
             }
-            ExprKind::Range(from, to, _) => {
-                let hir::ExprKind::Struct(_, hfields, _) = hexpr.kind else { panic!() };
-                if let Some(from) = from {
-                    let hfrom = hfields[0].expr;
-                    self.map_expr_to_expr(from, hfrom);
+            ExprKind::Range(from, to, _) => match hexpr.kind {
+                hir::ExprKind::Struct(_, hfields, _) => {
+                    if let Some(from) = from {
+                        let hfrom = hfields[0].expr;
+                        self.map_expr_to_expr(from, hfrom);
+                    }
+                    if let Some(to) = to {
+                        let i = if from.is_some() { 1 } else { 0 };
+                        let hto = hfields[i].expr;
+                        self.map_expr_to_expr(to, hto);
+                    }
                 }
-                if let Some(to) = to {
-                    let i = if from.is_some() { 1 } else { 0 };
-                    let hto = hfields[i].expr;
-                    self.map_expr_to_expr(to, hto);
+                hir::ExprKind::Call(_, hargs) => {
+                    let [hfrom, hto] = hargs else { panic!() };
+                    self.map_expr_to_expr(from.as_mut().unwrap(), hfrom);
+                    self.map_expr_to_expr(to.as_mut().unwrap(), hto);
                 }
-            }
+                _ => {}
+            },
             ExprKind::Underscore => panic!(),
             ExprKind::Path(qself, path) => {
                 let hir::ExprKind::Path(hqpath) = hexpr.kind else { panic!() };
@@ -754,7 +775,19 @@ impl<'tcx> AstToHir<'tcx> {
                     self.map_expr_to_expr(expr, hexpr);
                 }
             }
-            ExprKind::InlineAsm(..) => panic!(),
+            ExprKind::InlineAsm(box InlineAsm { operands, .. }) => {
+                let hir::ExprKind::InlineAsm(hir::InlineAsm {
+                    operands: hoperands,
+                    ..
+                }) = hexpr.kind
+                else {
+                    panic!()
+                };
+                assert_eq!(operands.len(), hoperands.len());
+                for ((opreand, _), (hoperand, _)) in operands.iter_mut().zip(*hoperands) {
+                    self.map_inline_asm_operand_to_inline_asm_operand(opreand, hoperand);
+                }
+            }
             ExprKind::OffsetOf(ty, idents) => {
                 let hir::ExprKind::OffsetOf(hty, hidents) = hexpr.kind else { panic!() };
                 self.map_ty_to_ty(ty, hty);
@@ -804,7 +837,70 @@ impl<'tcx> AstToHir<'tcx> {
                 self.map_expr_to_expr(expr, hexpr);
             }
             ExprKind::IncludedBytes(..) => todo!(),
-            ExprKind::FormatArgs(..) => todo!(),
+            ExprKind::FormatArgs(box FormatArgs { arguments, .. }) => {
+                let args = arguments.all_args_mut();
+                if !args.is_empty() {
+                    let (lit, hargs) = match hexpr.kind {
+                        hir::ExprKind::Call(_, hargs) => (hargs[0], vec![]),
+                        hir::ExprKind::Block(block, _) => {
+                            let hargs = match block.stmts {
+                                [stmt] => {
+                                    let hir::StmtKind::Let(stmt) = stmt.kind else { panic!() };
+                                    let hir::ExprKind::Array(exprs) = stmt.init.unwrap().kind
+                                    else {
+                                        panic!()
+                                    };
+                                    let [expr] = exprs else { panic!() };
+                                    let hir::ExprKind::Call(_, hargs) = expr.kind else { panic!() };
+                                    let [harg] = hargs else { panic!() };
+                                    let hir::ExprKind::AddrOf(_, _, harg) = harg.kind else {
+                                        panic!()
+                                    };
+                                    vec![harg]
+                                }
+                                [stmt, _] => {
+                                    let hir::StmtKind::Let(stmt) = stmt.kind else { panic!() };
+                                    let hir::ExprKind::Tup(hargs) = stmt.init.unwrap().kind else {
+                                        panic!()
+                                    };
+                                    hargs
+                                        .iter()
+                                        .map(|harg| {
+                                            let hir::ExprKind::AddrOf(_, _, harg) = harg.kind
+                                            else {
+                                                panic!()
+                                            };
+                                            harg
+                                        })
+                                        .collect::<Vec<_>>()
+                                }
+                                _ => panic!(),
+                            };
+                            let mut expr = block.expr.unwrap();
+                            if let hir::ExprKind::Block(block, _) = expr.kind {
+                                assert_eq!(block.stmts.len(), 0);
+                                expr = block.expr.unwrap();
+                            }
+                            let hir::ExprKind::Call(_, cargs) = expr.kind else {
+                                panic!("{:?}", block.expr.unwrap().kind)
+                            };
+                            (cargs[0], hargs)
+                        }
+                        _ => panic!(),
+                    };
+                    let hir::ExprKind::AddrOf(_, _, lit) = lit.kind else { panic!() };
+                    let mut i = 0;
+                    for arg in args {
+                        if matches!(arg.expr.kind, ExprKind::Lit(_)) {
+                            self.add_local(&mut arg.expr.id, lit.hir_id);
+                        } else {
+                            let harg = hargs[i];
+                            self.map_expr_to_expr(&mut arg.expr, harg);
+                            i += 1;
+                        }
+                    }
+                }
+            }
             ExprKind::UnsafeBinderCast(cast, expr, ty) => {
                 let hir::ExprKind::UnsafeBinderCast(hcast, hexpr, hty) = hexpr.kind else {
                     panic!()
@@ -845,6 +941,72 @@ impl<'tcx> AstToHir<'tcx> {
             }
         }
         assert!(i >= hblock.stmts.len());
+    }
+
+    fn map_inline_asm_operand_to_inline_asm_operand(
+        &mut self,
+        operand: &mut InlineAsmOperand,
+        hoperand: &hir::InlineAsmOperand<'tcx>,
+    ) {
+        match operand {
+            InlineAsmOperand::In { expr, .. } => {
+                let hir::InlineAsmOperand::In { expr: hexpr, .. } = hoperand else { panic!() };
+                self.map_expr_to_expr(expr, hexpr);
+            }
+            InlineAsmOperand::Out { expr, .. } => {
+                let hir::InlineAsmOperand::Out { expr: hexpr, .. } = hoperand else { panic!() };
+                assert_eq!(expr.is_some(), hexpr.is_some());
+                if let (Some(expr), Some(hexpr)) = (expr, hexpr) {
+                    self.map_expr_to_expr(expr, hexpr);
+                }
+            }
+            InlineAsmOperand::InOut { expr, .. } => {
+                let hir::InlineAsmOperand::InOut { expr: hexpr, .. } = hoperand else { panic!() };
+                self.map_expr_to_expr(expr, hexpr);
+            }
+            InlineAsmOperand::SplitInOut {
+                in_expr, out_expr, ..
+            } => {
+                let hir::InlineAsmOperand::SplitInOut {
+                    in_expr: hin_expr,
+                    out_expr: hout_expr,
+                    ..
+                } = hoperand
+                else {
+                    panic!()
+                };
+                self.map_expr_to_expr(in_expr, hin_expr);
+                assert_eq!(out_expr.is_some(), hout_expr.is_some());
+                if let (Some(out_expr), Some(hout_expr)) = (out_expr, hout_expr) {
+                    self.map_expr_to_expr(out_expr, hout_expr);
+                }
+            }
+            InlineAsmOperand::Const { anon_const } => {
+                let hir::InlineAsmOperand::Const {
+                    anon_const: hanon_const,
+                } = hoperand
+                else {
+                    panic!()
+                };
+                self.map_anon_const_to_const_block(anon_const, hanon_const);
+            }
+            InlineAsmOperand::Sym {
+                sym: InlineAsmSym { qself, path, .. },
+            } => match hoperand {
+                hir::InlineAsmOperand::SymStatic { path: hpath, .. } => {
+                    self.map_path_to_qpath(qself, path, hpath);
+                }
+                hir::InlineAsmOperand::SymFn { expr: hexpr } => {
+                    let hir::ExprKind::Path(hqpath) = hexpr.kind else { panic!() };
+                    self.map_path_to_qpath(qself, path, &hqpath);
+                }
+                _ => panic!(),
+            },
+            InlineAsmOperand::Label { block } => {
+                let hir::InlineAsmOperand::Label { block: hblock } = hoperand else { panic!() };
+                self.map_block_to_block(block, hblock);
+            }
+        }
     }
 
     fn map_stmt_to_stmt(&mut self, stmt: &mut Stmt, hstmt: &hir::Stmt<'tcx>) {
@@ -1054,12 +1216,18 @@ impl<'tcx> AstToHir<'tcx> {
                     self.map_pat_to_pat(pat, hpat);
                 }
             }
-            PatKind::Path(qself, path) => {
-                let hir::PatKind::Struct(hqpath, hfields, hrest) = hpat.kind else { panic!() };
-                self.map_path_to_qpath(qself, path, &hqpath);
-                assert_eq!(hfields.len(), 0);
-                assert!(!hrest);
-            }
+            PatKind::Path(qself, path) => match hpat.kind {
+                hir::PatKind::Struct(hqpath, hfields, hrest) => {
+                    assert_eq!(hfields.len(), 0);
+                    assert!(!hrest);
+                    self.map_path_to_qpath(qself, path, &hqpath);
+                }
+                hir::PatKind::Expr(hexpr) => {
+                    let hir::PatExprKind::Path(hqpath) = hexpr.kind else { panic!() };
+                    self.map_path_to_qpath(qself, path, &hqpath);
+                }
+                _ => panic!(),
+            },
             PatKind::Tuple(pats) => {
                 let hir::PatKind::Tuple(hpats, pos) = hpat.kind else { panic!() };
                 self.map_pats_to_pats_with_pos(pats, hpats, pos);

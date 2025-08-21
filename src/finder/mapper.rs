@@ -9,6 +9,9 @@ use rustc_span::{FileName, RealFileName};
 use crate::{ast_hir, ast_util, rustc_ast::visit::Visitor};
 
 pub fn run(dir: &Path, tcx: TyCtxt<'_>) {
+    let borrowed = tcx.resolver_for_lowering().borrow();
+    let mut expanded_crate = borrowed.1.as_ref().clone();
+    drop(borrowed);
     let mut path_to_mod_id = FxHashMap::default();
     tcx.hir_for_each_module(|mod_id| {
         let def_path = tcx.def_path(mod_id.to_def_id());
@@ -44,18 +47,14 @@ pub fn run(dir: &Path, tcx: TyCtxt<'_>) {
         let mod_id = path_to_mod_id[&p];
         let (module, _, _) = tcx.hir_get_module(mod_id);
         let mut ast_to_hir = ast_hir::AstToHir::new(tcx);
-        ast_to_hir.map_crate_to_mod(&mut krate, module);
+        ast_to_hir.map_crate_to_mod(&mut krate, module, false);
         let mut checker = ast_hir::MappingChecker { ast_to_hir };
         for item in &krate.items {
             checker.visit_item(item);
         }
-
-        // let s = pprust::crate_to_string_for_macros(&krate);
-        // println!("=====MODULE: {p:?}=====\n=====AST=====\n{s}\n=====HIR=====");
-        // for item_id in module.item_ids {
-        //     let item = tcx.hir_item(*item_id);
-        //     let s = rustc_hir_pretty::item_to_string(&tcx, item);
-        //     println!("{s}");
-        // }
     }
+
+    let mut ast_to_hir = ast_hir::AstToHir::new(tcx);
+    let module = tcx.hir_root_module();
+    ast_to_hir.map_crate_to_mod(&mut expanded_crate, module, true);
 }
