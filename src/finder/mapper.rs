@@ -1,13 +1,12 @@
 use std::path::{Path, PathBuf};
 
 use etrace::some_or;
-use rustc_ast_pretty::pprust;
 use rustc_hash::FxHashMap;
 use rustc_hir::definitions::DefPathData;
 use rustc_middle::ty::TyCtxt;
 use rustc_span::{FileName, RealFileName};
 
-use crate::{ast_hir, ast_util};
+use crate::{ast_hir, ast_util, rustc_ast::visit::Visitor};
 
 pub fn run(dir: &Path, tcx: TyCtxt<'_>) {
     let mut path_to_mod_id = FxHashMap::default();
@@ -42,15 +41,21 @@ pub fn run(dir: &Path, tcx: TyCtxt<'_>) {
         )
         .unwrap();
         let mut krate = parser.parse_crate_mod().unwrap();
-        let s = pprust::crate_to_string_for_macros(&krate);
         let mod_id = path_to_mod_id[&p];
         let (module, _, _) = tcx.hir_get_module(mod_id);
-        println!("=====MODULE: {p:?}=====\n=====AST=====\n{s}\n=====HIR=====");
-        for item_id in module.item_ids {
-            let item = tcx.hir_item(*item_id);
-            let s = rustc_hir_pretty::item_to_string(&tcx, item);
-            println!("{s}");
+        let mut ast_to_hir = ast_hir::AstToHir::new(tcx);
+        ast_to_hir.map_crate_to_mod(&mut krate, module);
+        let mut checker = ast_hir::MappingChecker { ast_to_hir };
+        for item in &krate.items {
+            checker.visit_item(item);
         }
-        ast_hir::AstToHir::new(tcx).map_crate_to_mod(&mut krate, module);
+
+        // let s = pprust::crate_to_string_for_macros(&krate);
+        // println!("=====MODULE: {p:?}=====\n=====AST=====\n{s}\n=====HIR=====");
+        // for item_id in module.item_ids {
+        //     let item = tcx.hir_item(*item_id);
+        //     let s = rustc_hir_pretty::item_to_string(&tcx, item);
+        //     println!("{s}");
+        // }
     }
 }

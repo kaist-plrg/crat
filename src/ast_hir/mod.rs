@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 
-use rustc_ast::{node_id::NodeMap, *};
+use rustc_ast::{node_id::NodeMap, visit::Visitor, *};
 use rustc_hir::{self as hir, HirId};
 use rustc_middle::ty::TyCtxt;
 use rustc_span::{Ident, def_id::LocalDefId};
@@ -1751,6 +1751,199 @@ impl<'tcx> AstToHir<'tcx> {
         get_anon_const: hir::Node::AnonConst => hir::AnonConst,
         get_const_block: hir::Node::ConstBlock => hir::ConstBlock,
         get_const_arg: hir::Node::ConstArg => hir::ConstArg<'tcx>,
+    }
+}
+
+pub struct MappingChecker<'tcx> {
+    pub ast_to_hir: AstToHir<'tcx>,
+}
+
+impl<'a> Visitor<'a> for MappingChecker<'_> {
+    fn visit_mac_call(&mut self, _: &'a MacCall) {
+        // macro calls are not mapped to HIR nodes, so we skip them
+    }
+
+    fn visit_attribute(&mut self, _: &'a Attribute) {
+        // attributes are not mapped to HIR nodes, so we skip them
+    }
+
+    fn visit_foreign_item(&mut self, item: &'a ForeignItem) {
+        self.ast_to_hir
+            .get_foreign_item(item.id)
+            .unwrap_or_else(|| panic!("{item:?}"));
+        visit::walk_item(self, item);
+    }
+
+    fn visit_item(&mut self, item: &'a Item) {
+        self.ast_to_hir
+            .get_item(item.id)
+            .unwrap_or_else(|| panic!("{item:?}"));
+        visit::walk_item(self, item);
+    }
+
+    fn visit_local(&mut self, local: &'a Local) {
+        self.ast_to_hir
+            .get_let_stmt(local.id)
+            .unwrap_or_else(|| panic!("{local:?}"));
+        visit::walk_local(self, local);
+    }
+
+    fn visit_block(&mut self, block: &'a Block) {
+        self.ast_to_hir
+            .get_block(block.id)
+            .unwrap_or_else(|| panic!("{block:?}"));
+        visit::walk_block(self, block);
+    }
+
+    fn visit_param(&mut self, param: &'a Param) {
+        if matches!(param.pat.kind, PatKind::Missing) {
+            // vararg
+            return;
+        }
+        // self.ast_to_hir.get_param(param.id).unwrap();
+        // visit::walk_param(self, param);
+        // params in functions without bodies are not mapped to HIR nodes
+        self.visit_ty(&param.ty);
+    }
+
+    fn visit_arm(&mut self, arm: &'a Arm) {
+        self.ast_to_hir
+            .get_arm(arm.id)
+            .unwrap_or_else(|| panic!("{arm:?}"));
+        visit::walk_arm(self, arm);
+    }
+
+    fn visit_pat(&mut self, pat: &'a Pat) {
+        if matches!(pat.kind, PatKind::Rest) {
+            // .. pattern
+            return;
+        }
+        self.ast_to_hir
+            .get_pat(pat.id)
+            .unwrap_or_else(|| panic!("{pat:?}"));
+        visit::walk_pat(self, pat);
+    }
+
+    fn visit_anon_const(&mut self, c: &'a AnonConst) {
+        let node = self
+            .ast_to_hir
+            .get_local_node(c.id)
+            .unwrap_or_else(|| panic!("{c:?}"));
+        assert!(matches!(
+            node,
+            hir::Node::AnonConst(..) | hir::Node::ConstBlock(..) | hir::Node::ConstArg(..)
+        ));
+        visit::walk_anon_const(self, c);
+    }
+
+    fn visit_expr(&mut self, expr: &'a Expr) {
+        let node = self
+            .ast_to_hir
+            .get_local_node(expr.id)
+            .unwrap_or_else(|| panic!("{expr:?}"));
+        assert!(matches!(node, hir::Node::Expr(..) | hir::Node::PatExpr(..)));
+        visit::walk_expr(self, expr);
+    }
+
+    fn visit_ty(&mut self, ty: &'a Ty) {
+        if matches!(ty.kind, TyKind::CVarArgs) {
+            return;
+        }
+        self.ast_to_hir
+            .get_ty(ty.id)
+            .unwrap_or_else(|| panic!("{ty:?}"));
+        visit::walk_ty(self, ty);
+    }
+
+    fn visit_generic_param(&mut self, param: &'a GenericParam) {
+        self.ast_to_hir
+            .get_generic_param(param.id)
+            .unwrap_or_else(|| panic!("{param:?}"));
+        visit::walk_generic_param(self, param);
+    }
+
+    fn visit_where_predicate(&mut self, pred: &'a WherePredicate) {
+        self.ast_to_hir
+            .get_where_predicate(pred.id)
+            .unwrap_or_else(|| panic!("{pred:?}"));
+        visit::walk_where_predicate(self, pred);
+    }
+
+    fn visit_assoc_item(&mut self, item: &'a AssocItem, ctxt: visit::AssocCtxt) {
+        let node = self
+            .ast_to_hir
+            .get_global_node(item.id)
+            .unwrap_or_else(|| panic!("{item:?}"));
+        assert!(matches!(
+            node,
+            hir::Node::ImplItem(..) | hir::Node::TraitItem(..)
+        ));
+        visit::walk_assoc_item(self, item, ctxt);
+    }
+
+    fn visit_trait_ref(&mut self, tref: &'a TraitRef) {
+        self.ast_to_hir
+            .get_trait_ref(tref.ref_id)
+            .unwrap_or_else(|| panic!("{tref:?}"));
+        visit::walk_trait_ref(self, tref);
+    }
+
+    fn visit_field_def(&mut self, fd: &'a FieldDef) {
+        self.ast_to_hir
+            .get_field_def(fd.id)
+            .unwrap_or_else(|| panic!("{fd:?}"));
+        visit::walk_field_def(self, fd);
+    }
+
+    fn visit_variant(&mut self, variant: &'a Variant) {
+        self.ast_to_hir
+            .get_variant(variant.id)
+            .unwrap_or_else(|| panic!("{variant:?}"));
+        visit::walk_variant(self, variant);
+    }
+
+    fn visit_lifetime(&mut self, lifetime: &'a Lifetime, _: visit::LifetimeCtxt) {
+        self.ast_to_hir
+            .get_lifetime(lifetime.id)
+            .unwrap_or_else(|| panic!("{lifetime:?}"));
+        visit::walk_lifetime(self, lifetime);
+    }
+
+    fn visit_path_segment(&mut self, seg: &'a PathSegment) {
+        self.ast_to_hir
+            .get_path_segment(seg.id)
+            .unwrap_or_else(|| panic!("{seg:?}"));
+        visit::walk_path_segment(self, seg);
+    }
+
+    fn visit_assoc_item_constraint(&mut self, constraint: &'a AssocItemConstraint) {
+        self.ast_to_hir
+            .get_assoc_item_constraint(constraint.id)
+            .unwrap_or_else(|| panic!("{constraint:?}"));
+        visit::walk_assoc_item_constraint(self, constraint);
+    }
+
+    fn visit_expr_field(&mut self, field: &'a ExprField) {
+        self.ast_to_hir
+            .get_expr_field(field.id)
+            .unwrap_or_else(|| panic!("{field:?}"));
+        visit::walk_expr_field(self, field);
+    }
+
+    fn visit_pat_field(&mut self, field: &'a PatField) {
+        self.ast_to_hir
+            .get_pat_field(field.id)
+            .unwrap_or_else(|| panic!("{field:?}"));
+        visit::walk_pat_field(self, field);
+    }
+
+    fn visit_stmt(&mut self, stmt: &'a Stmt) {
+        let node = self
+            .ast_to_hir
+            .get_local_node(stmt.id)
+            .unwrap_or_else(|| panic!("{stmt:?}"));
+        assert!(matches!(node, hir::Node::Stmt(..) | hir::Node::Expr(..)));
+        visit::walk_stmt(self, stmt);
     }
 }
 
