@@ -716,7 +716,8 @@ fn test_ty_ref() {
 fn test_ty_bare_fn() {
     run_test(
         "
-        fn f<'a>(x: fn (i32, i32) -> i32) {}
+        struct S<'a>(&'a i32);
+        fn f(x: fn (i32, i32, S) -> i32) {}
         ",
     )
 }
@@ -847,5 +848,17 @@ fn test_stmt_mac_call() {
             1;
         }
         "#,
+    )
+}
+
+#[test]
+fn test_generic_arg_infer() {
+    run_test(
+        "
+        fn g<T>(x: T) {}
+        fn f() {
+            g::<_>(0);
+        }
+        ",
     )
 }

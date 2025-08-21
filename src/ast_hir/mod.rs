@@ -698,7 +698,7 @@ impl<'tcx> AstToHir<'tcx> {
             }
             ExprKind::AssignOp(op, lhs, rhs) => {
                 let hir::ExprKind::AssignOp(hop, hlhs, hrhs) = hexpr.kind else { panic!() };
-                assert_eq!(*op, hop);
+                assert_eq!(op.node, hop.node);
                 self.map_expr_to_expr(lhs, hlhs);
                 self.map_expr_to_expr(rhs, hrhs);
             }
@@ -942,13 +942,14 @@ impl<'tcx> AstToHir<'tcx> {
             }
             hir::QPath::TypeRelative(hty, hseg) => {
                 assert!(qself.is_none());
-                assert_eq!(path.segments.len(), 2);
                 let hir::TyKind::Path(hir::QPath::Resolved(None, hpath)) = hty.kind else {
                     panic!()
                 };
-                assert_eq!(hpath.segments.len(), 1);
-                self.map_path_segment_to_path_segment(&mut path.segments[0], &hpath.segments[0]);
-                self.map_path_segment_to_path_segment(&mut path.segments[1], hseg);
+                assert_eq!(path.segments.len(), hpath.segments.len() + 1);
+                for (seg, hseg) in path.segments.iter_mut().zip(hpath.segments) {
+                    self.map_path_segment_to_path_segment(seg, hseg);
+                }
+                self.map_path_segment_to_path_segment(path.segments.last_mut().unwrap(), hseg);
             }
             _ => panic!(),
         }
@@ -961,9 +962,8 @@ impl<'tcx> AstToHir<'tcx> {
     ) {
         self.add_local(&mut seg.id, hseg.hir_id);
         assert_eq!(seg.ident, hseg.ident);
-        assert_eq!(seg.args.is_some(), hseg.args.is_some());
-        if let (Some(args), Some(hargs)) = (&mut seg.args, &hseg.args) {
-            self.map_generic_args_to_generic_args(args, hargs);
+        if let Some(args) = &mut seg.args {
+            self.map_generic_args_to_generic_args(args, hseg.args.unwrap());
         }
     }
 
@@ -1241,7 +1241,7 @@ impl<'tcx> AstToHir<'tcx> {
                 else {
                     panic!()
                 };
-                assert_eq!(generic_params.len(), hgeneric_params.len());
+                assert!(generic_params.len() <= hgeneric_params.len());
                 for (param, hparam) in generic_params.iter_mut().zip(*hgeneric_params) {
                     self.map_generic_param_to_generic_param(param, hparam);
                 }
@@ -1635,10 +1635,15 @@ impl<'tcx> AstToHir<'tcx> {
                 let hir::GenericArg::Lifetime(hlifetime) = harg else { panic!() };
                 self.map_lifetime_to_lifetime(lifetime, hlifetime);
             }
-            GenericArg::Type(ty) => {
-                let hir::GenericArg::Type(hty) = harg else { panic!() };
-                self.map_ty_to_ty(ty, hty);
-            }
+            GenericArg::Type(ty) => match harg {
+                hir::GenericArg::Type(hty) => {
+                    self.map_ty_to_ty(ty, hty);
+                }
+                hir::GenericArg::Infer(harg) => {
+                    self.add_local(&mut ty.id, harg.hir_id);
+                }
+                _ => panic!(),
+            },
             GenericArg::Const(anon_const) => {
                 let hir::GenericArg::Const(hconst_arg) = harg else { panic!() };
                 self.map_anon_const_to_const_arg(anon_const, hconst_arg);
@@ -1735,6 +1740,7 @@ impl<'tcx> AstToHir<'tcx> {
         get_pat: hir::Node::Pat => hir::Pat<'tcx>,
         get_expr: hir::Node::Expr => hir::Expr<'tcx>,
         get_ty: hir::Node::Ty => hir::Ty<'tcx>,
+        get_infer_arg: hir::Node::Infer => hir::InferArg,
         get_generic_param: hir::Node::GenericParam => hir::GenericParam<'tcx>,
         get_where_predicate: hir::Node::WherePredicate => hir::WherePredicate<'tcx>,
         get_trait_ref: hir::Node::TraitRef => hir::TraitRef<'tcx>,
@@ -1846,12 +1852,21 @@ impl<'a> Visitor<'a> for MappingChecker<'_> {
     }
 
     fn visit_ty(&mut self, ty: &'a Ty) {
-        if matches!(ty.kind, TyKind::CVarArgs) {
-            return;
+        match ty.kind {
+            TyKind::CVarArgs => return,
+            TyKind::Infer => {
+                let node = self
+                    .ast_to_hir
+                    .get_local_node(ty.id)
+                    .unwrap_or_else(|| panic!("{ty:?}"));
+                assert!(matches!(node, hir::Node::Ty(..) | hir::Node::Infer(..)));
+            }
+            _ => {
+                self.ast_to_hir
+                    .get_ty(ty.id)
+                    .unwrap_or_else(|| panic!("{ty:?}"));
+            }
         }
-        self.ast_to_hir
-            .get_ty(ty.id)
-            .unwrap_or_else(|| panic!("{ty:?}"));
         visit::walk_ty(self, ty);
     }
 
