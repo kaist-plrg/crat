@@ -23,6 +23,7 @@ enum Finder {
     Macro,
     Mapper,
     Unsafe,
+    Global,
 }
 
 fn main() {
@@ -40,6 +41,9 @@ fn main() {
         }
         Finder::Unsafe => {
             run_compiler_on_path(&file, finder::unsafe_finder::find_unsafe).unwrap();
+        }
+        Finder::Global => {
+            run_compiler_on_path(&file, finder::global_finder::run).unwrap();
         }
     }
 }
