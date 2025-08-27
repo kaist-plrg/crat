@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+pub mod analyze;
 pub mod hir;
 pub mod mir;
 
@@ -7,31 +8,34 @@ use rustc_hir::{Ty, def_id::LocalDefId};
 use rustc_middle::ty::TyCtxt;
 use rustc_span::{Ident, Span};
 
-use crate::finder::enum_finder::hir::{definition::find_enum_tys, usage::find_enum_usage};
+use crate::finder::enum_finder::{
+    hir::{definition::find_enum_tys, usage::find_enum_usage},
+    mir::{get_optimized_mirs, process_mirs},
+};
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct EnumVariant {
+pub struct EnumVariant {
     def_id: LocalDefId,
     span: Span,
     value: i32,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct EnumDefinition {
+pub struct EnumDefinition {
     def_id: LocalDefId,
     span: Span,
     variants: Vec<EnumVariant>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) enum EnumTy {
+pub enum EnumTy {
     Definition(EnumDefinition),
     // For the pattern `typedef enum Name_t { ... } Name;`
     PointsTo(LocalDefId, Span, EnumDefinition),
 }
 
 #[derive(Debug, Clone)]
-pub(crate) enum EnumTyAnnotation<'tcx> {
+pub enum EnumTyAnnotation<'tcx> {
     Let(Ident, Span, &'tcx Ty<'tcx>),
     Struct(
         LocalDefId,
@@ -59,8 +63,22 @@ impl EnumTy {
 
 pub fn find_enum<'tcx>(tcx: TyCtxt<'tcx>) {
     let enum_tys = find_enum_tys(tcx);
-    dbg!(&enum_tys);
+    // for enum_ty in &enum_tys {
+    //     match enum_ty {
+    //         EnumTy::Definition(def) => dbg!(&def.span),
+    //         EnumTy::PointsTo(_, span, _) => dbg!(span),
+    //     };
+    // }
 
-    let enum_usages = find_enum_usage(tcx, enum_tys);
-    dbg!(enum_usages);
+    let enum_usages = find_enum_usage(tcx, enum_tys.clone());
+    // for enum_ty_ann in &enum_usages {
+    //     match enum_ty_ann {
+    //         EnumTyAnnotation::Let(_, span, _)
+    //         | EnumTyAnnotation::Struct(_, _, span, _)
+    //         | EnumTyAnnotation::Fn(_, _, span, _, _) => dbg!(span),
+    //     };
+    // }
+
+    let mir_basic_blocks = get_optimized_mirs(tcx);
+    process_mirs(&mir_basic_blocks, tcx, &enum_tys, &enum_usages);
 }

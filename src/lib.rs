@@ -45,3 +45,11 @@ pub mod ty_shape;
 pub mod type_checker;
 pub mod union_replacer;
 pub mod unsafe_resolver;
+
+pub fn example_function(x: u32) -> (u32, i32) {
+    if x > 10 { (x * 2, -1) } else { (x + 5, 1) }
+}
+
+pub fn example_function2(x: u32) {
+    x.checked_add(u32::MAX).unwrap();
+}

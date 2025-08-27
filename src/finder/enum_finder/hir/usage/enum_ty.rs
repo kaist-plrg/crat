@@ -4,7 +4,7 @@ use rustc_hir::{
 
 use crate::finder::enum_finder::EnumTy;
 
-pub(super) fn is_enum_ty(ty: &Ty<'_>, enum_tys: &[EnumTy]) -> bool {
+pub fn is_enum_ty(ty: &Ty<'_>, enum_tys: &[EnumTy]) -> bool {
     match ty.kind {
         InferDelegation(_, _) => false,
         Slice(ty) | Array(ty, _) => is_enum_ty(ty, enum_tys),

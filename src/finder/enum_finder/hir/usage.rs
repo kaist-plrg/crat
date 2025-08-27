@@ -104,7 +104,7 @@ impl<'tcx> Visitor<'tcx> for CollectEnumTyBindings<'tcx> {
     }
 }
 
-pub(crate) fn find_enum_usage<'tcx>(
+pub fn find_enum_usage<'tcx>(
     tcx: TyCtxt<'tcx>,
     enum_tys: Vec<EnumTy>,
 ) -> Vec<EnumTyAnnotation<'tcx>> {

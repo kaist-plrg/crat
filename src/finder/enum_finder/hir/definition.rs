@@ -19,7 +19,7 @@ struct EnumDefChainItem {
     chain_byte: u32,
 }
 
-pub(crate) fn find_enum_tys<'tcx>(tcx: TyCtxt<'tcx>) -> Vec<EnumTy> {
+pub fn find_enum_tys<'tcx>(tcx: TyCtxt<'tcx>) -> Vec<EnumTy> {
     let free_items = find_free_items(tcx);
     let type_alias_items = find_u32_ty_alias_items(tcx, &free_items);
     let enum_defs = find_enum_def(tcx, &type_alias_items, &free_items);
@@ -178,7 +178,7 @@ fn find_enum_def<'tcx>(
         .collect()
 }
 
-pub(crate) fn find_free_items<'tcx>(tcx: TyCtxt<'tcx>) -> Vec<Item<'tcx>> {
+pub fn find_free_items<'tcx>(tcx: TyCtxt<'tcx>) -> Vec<Item<'tcx>> {
     tcx.hir_free_items()
         .map(|item_id| tcx.hir_item(item_id))
         .cloned()
