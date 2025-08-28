@@ -4,13 +4,14 @@ import argparse
 import os
 from pathlib import Path
 import subprocess
+from typing import List, Tuple
 
 def find_benchmarks(root: Path):
     for p in sorted(root.iterdir()):
         if p.is_dir():
             yield p
 
-def run_one(bench_path: Path, out_dir: Path, bin_name: str, subcmd: str, cargo_extra: list[str]) -> tuple[str, int]:
+def run_one(bench_path: Path, out_dir: Path, bin_name: str, subcmd: str, cargo_extra: List[str]) -> Tuple[str, int]:
     name = bench_path.name
     out_file = out_dir / f"{name}.txt"
     err_file = out_dir / f"{name}.err"
@@ -21,15 +22,23 @@ def run_one(bench_path: Path, out_dir: Path, bin_name: str, subcmd: str, cargo_e
 
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    with out_file.open("wb") as out_f, err_file.open("wb") as err_f:
-        proc = subprocess.run(
-            cmd,
-            stdout=out_f,
-            stderr=err_f,
-            cwd=None,
-            env={**os.environ, "CARGO_TERM_COLOR": "never"}
-        )
-        return name, proc.returncode
+    proc = subprocess.run(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        cwd=None,
+        env={**os.environ, "CARGO_TERM_COLOR": "never"}
+    )
+
+    if proc.returncode == 0:
+        with out_file.open("wb") as out_f:
+            out_f.write(proc.stdout)
+        os.write(2, proc.stderr)
+    else:
+        with out_file.open("wb") as out_f, err_file.open("wb") as err_f:
+            out_f.write(proc.stdout)
+            err_f.write(proc.stderr)
+    return name, proc.returncode
 
 def main():
     parser = argparse.ArgumentParser(description="Run crat-finder over all benchmarks in benchmarks/rs.")
