@@ -1,19 +1,12 @@
-
 use rustc_hash::FxHashMap;
 use rustc_hir::{
-    HirId, ItemKind, Path, Mutability,
+    HirId, ItemKind, Mutability, Path,
     def::Res,
     def_id::DefId,
     intravisit::{self, Visitor as GVisitor},
 };
-use rustc_middle::{
-    hir::nested_filter,
-    ty::{TyCtxt},
-};
-use rustc_span::{
-    Symbol,
-    Span,
-};
+use rustc_middle::{hir::nested_filter, ty::TyCtxt};
+use rustc_span::{Span, Symbol};
 
 pub fn run(tcx: TyCtxt<'_>) {
     let bindings = collect_global_bindings(tcx);
@@ -65,7 +58,13 @@ impl<'tcx> GVisitor<'tcx> for BindingCollector<'tcx> {
 
     fn visit_item(&mut self, item: &'tcx rustc_hir::Item<'tcx>) {
         if let ItemKind::Static(Mutability::Mut, ident, ..) = item.kind {
-            self.ctx.bindings.insert(item.owner_id.to_def_id(), ident.name);
+            self.ctx
+                .bindings
+                .insert(item.owner_id.to_def_id(), ident.name);
+            self.ctx
+                .bound_occurrences
+                .entry(item.owner_id.to_def_id())
+                .or_default();
         }
         intravisit::walk_item(self, item);
     }
@@ -74,7 +73,11 @@ impl<'tcx> GVisitor<'tcx> for BindingCollector<'tcx> {
         if let Res::Def(_, def_id) = path.res
             && self.ctx.bindings.contains_key(&def_id)
         {
-            self.ctx.bound_occurrences.entry(def_id).or_default().push(path.span);
+            self.ctx
+                .bound_occurrences
+                .entry(def_id)
+                .or_default()
+                .push(path.span);
         }
         intravisit::walk_path(self, path);
     }
