@@ -10,15 +10,17 @@ use rustc_span::{Span, Symbol};
 
 pub fn run(tcx: TyCtxt<'_>) {
     let bindings = collect_global_bindings(tcx);
-    let mut occurrences = 0;
-    for (def_id, name) in &bindings.bindings {
+    let mut gv_cnt = 0;
+    for (def_id, (name, def_span)) in &bindings.bindings {
         let owner = tcx.def_path_str(def_id.to_owned());
+        println!("GV binding: `{name}` in `{owner}` at `{def_span:?}`");
         for span in &bindings.bound_occurrences[def_id] {
-            println!("GV binding `{name}` in `{owner}` at `{span:?}`");
+            println!("- `{name}` occurences in `{owner}` at `{span:?}`");
         }
-        occurrences += 1;
+        println!();
+        gv_cnt += 1;
     }
-    println!("Found {occurrences} global variable bindings.");
+    println!("Found {gv_cnt} global variable bindings.");
 }
 
 fn collect_global_bindings(tcx: TyCtxt<'_>) -> Bindings {
@@ -29,7 +31,7 @@ fn collect_global_bindings(tcx: TyCtxt<'_>) -> Bindings {
 
 #[derive(Default)]
 struct Bindings {
-    bindings: FxHashMap<DefId, Symbol>,
+    bindings: FxHashMap<DefId, (Symbol, Span)>,
     bound_occurrences: FxHashMap<DefId, Vec<Span>>,
 }
 
@@ -60,7 +62,7 @@ impl<'tcx> GVisitor<'tcx> for BindingCollector<'tcx> {
         if let ItemKind::Static(Mutability::Mut, ident, ..) = item.kind {
             self.ctx
                 .bindings
-                .insert(item.owner_id.to_def_id(), ident.name);
+                .insert(item.owner_id.to_def_id(), (ident.name, item.span));
             self.ctx
                 .bound_occurrences
                 .entry(item.owner_id.to_def_id())
