@@ -66,6 +66,7 @@ enum Pass {
     Preprocess,
     Bin,
     Check,
+    Libc,
     OutParam,
     Lock,
     Union,
@@ -244,6 +245,9 @@ fn main() {
             }
             Pass::Check => {
                 run_compiler_on_path(&file, type_checker::type_check).unwrap();
+            }
+            Pass::Libc => {
+                run_compiler_on_path(&file, libc_replacer::run).unwrap();
             }
             Pass::OutParam => {
                 todo!()
