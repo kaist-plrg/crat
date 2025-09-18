@@ -1,19 +1,30 @@
 pub mod basic_block;
 
-use std::collections::HashMap;
-
 use rustc_middle::{
     mir::{Body, Local, SourceInfo},
     ty::{Ty, TyCtxt},
 };
 
-use crate::finder::enum_finder::{EnumTy, EnumTyAnnotation};
+use crate::finder::enum_finder::{
+    EnumTy, EnumTyAnnotation,
+    utils::pair_index_vec::{PairIndex, PairIndexVec},
+};
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
 pub struct BodyIndex(usize);
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
 pub struct IdentifierKey(BodyIndex, Local);
+
+impl PairIndex for IdentifierKey {
+    fn pair_index(&self) -> (usize, usize) {
+        (self.0.0, self.1.as_usize())
+    }
+
+    fn from_pair_index(pair: (usize, usize)) -> Self {
+        Self(BodyIndex(pair.0), Local::from_usize(pair.1))
+    }
+}
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
 pub struct IdentifierDetail<'mir> {
@@ -49,7 +60,7 @@ pub(crate) fn process_mirs(
     enum_tys: &[EnumTy],
     enum_usages: &[EnumTyAnnotation<'_>],
 ) {
-    let local_decls = bodies
+    let variables = bodies
         .iter()
         .enumerate()
         .flat_map(|(i, body)| {
@@ -70,13 +81,13 @@ pub(crate) fn process_mirs(
                     (key, detail)
                 })
         })
-        .collect::<HashMap<_, _>>();
+        .collect::<PairIndexVec<_, _>>();
 
     bodies.iter().enumerate().for_each(|(i, body)| {
         basic_block::process_basic_blocks(
             BodyIndex(i),
             &body.basic_blocks,
-            &local_decls,
+            &variables,
             tcx,
             enum_tys,
             enum_usages,

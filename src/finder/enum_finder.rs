@@ -3,6 +3,7 @@
 pub mod analyze;
 pub mod hir;
 pub mod mir;
+pub mod utils;
 
 use rustc_hir::{Ty, def_id::LocalDefId};
 use rustc_middle::ty::TyCtxt;
