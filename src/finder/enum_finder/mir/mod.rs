@@ -1,9 +1,13 @@
 pub mod basic_block;
 
+use std::collections::HashSet;
+
 use rustc_middle::{
     mir::{Body, Local, SourceInfo},
     ty::{Ty, TyCtxt},
 };
+use rustc_span::Span;
+use toml::de;
 
 use crate::finder::enum_finder::{
     EnumTy, EnumTyAnnotation,
@@ -93,4 +97,63 @@ pub(crate) fn process_mirs(
             enum_usages,
         );
     });
+
+    let enum_locals = variables
+        .iter()
+        .filter_map(|(key, detail)| {
+            enum_usages.iter().find_map(|enum_usage| {
+                if let EnumTyAnnotation::Let(_, span, ty) = enum_usage
+                    && detail.source_info.span == *span
+                {
+                    Some((key, (detail, *ty)))
+                } else {
+                    None
+                }
+            })
+        })
+        .collect::<PairIndexVec<_, _>>();
+
+    let mut arg_spans = HashSet::new();
+    let mut recent_fn_span = None;
+    let mut recent_fn_arg_count = -1;
+
+    let enum_params = variables
+        .iter()
+        .filter_map(|(key, detail)| {
+            enum_usages.iter().find_map(|enum_usage| {
+                if let EnumTyAnnotation::Fn(_, _, span, arg_tys, _) = enum_usage
+                    && span.lo().0 <= detail.source_info.span.lo().0
+                    && detail.source_info.span.hi().0 <= span.hi().0
+                    && (detail.kind == IdentifierKind::Argument
+                        || detail.kind == IdentifierKind::Local)
+                {
+                    if recent_fn_span.map(|span: Span| span.lo().0) == Some(span.lo().0) {
+                        if !arg_spans.insert(detail.source_info.span.lo().0) {
+                            return None;
+                        }
+                        recent_fn_arg_count += 1;
+                    } else {
+                        arg_spans.clear();
+                        arg_spans.insert(detail.source_info.span.lo().0);
+                        recent_fn_span = Some(*span);
+                        recent_fn_arg_count = 0;
+                    }
+                    if arg_tys[recent_fn_arg_count as usize].is_some() {
+                        Some((
+                            key,
+                            (detail, arg_tys[recent_fn_arg_count as usize].unwrap()),
+                        ))
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            })
+        })
+        .collect::<PairIndexVec<_, _>>();
+
+    for (_, (detail, _)) in enum_params.iter() {
+        dbg!(detail.source_info.span);
+    }
 }

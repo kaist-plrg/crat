@@ -8,7 +8,7 @@ pub trait PairIndex: Copy {
     fn from_pair_index(pair: (usize, usize)) -> Self;
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct PairIndexVec<I, T> {
     indices: Vec<I>,
     raw: Vec<Vec<Option<T>>>,

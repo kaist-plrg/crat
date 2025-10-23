@@ -71,7 +71,7 @@ pub fn process_basic_blocks(
     //     println!("BodyIndex: {body_idx:?}\tReturn Terminator: {ret:?}");
     // }
 
-    let calls = basic_blocks
+    let _calls = basic_blocks
         .iter()
         .filter_map(|block_data| {
             block_data.terminator.as_ref().filter(|terminator| {
@@ -84,15 +84,7 @@ pub fn process_basic_blocks(
         })
         .collect::<Vec<_>>();
 
-    let mut tail_call_cnt = 0;
-    for call in &calls {
-        if matches!(
-            call.kind,
-            rustc_middle::mir::TerminatorKind::TailCall { .. }
-        ) {
-            tail_call_cnt += 1;
-        }
-        println!("BodyIndex: {body_idx:?}\tCall Terminator: {call:?}");
-    }
-    println!("Tail Call Count: {tail_call_cnt}"); // prints 0
+    // for call in &calls {
+    //     println!("BodyIndex: {body_idx:?}\tCall Terminator: {call:?}");
+    // }
 }
