@@ -135,6 +135,7 @@ enum Pass {
     Union,
     Io,
     Pointer,
+    Mut,
 }
 
 #[derive(Clone, Debug, ValueEnum, Deserialize)]
@@ -420,6 +421,10 @@ fn main() {
             Pass::Pointer => {
                 let s =
                     run_compiler_on_path(&file, pointer_replacer::replace_local_borrows).unwrap();
+                std::fs::write(&file, s).unwrap();
+            }
+            Pass::Mut => {
+                let s = run_compiler_on_path(&file, mut_replacer::replace_mut).unwrap();
                 std::fs::write(&file, s).unwrap();
             }
         }

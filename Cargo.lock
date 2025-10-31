@@ -122,6 +122,7 @@ dependencies = [
  "finders",
  "io_replacer",
  "lazy_static",
+ "mut_replacer",
  "passes",
  "pointer_replacer",
  "points_to",
@@ -249,6 +250,13 @@ name = "memchr"
 version = "2.7.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32a282da65faaf38286cf3be983213fcf1d2e2a58700e808f83f4ea9a4804bc0"
+
+[[package]]
+name = "mut_replacer"
+version = "0.1.0"
+dependencies = [
+ "utils",
+]
 
 [[package]]
 name = "nu-ansi-term"
