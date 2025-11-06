@@ -123,7 +123,7 @@ pub fn analyze_function(func: &Function) -> ConstraintMap {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
+    use std::collections::{HashMap, HashSet};
 
     use super::*;
     use crate::finder::enum_finder::analyze::{absyn::*, utils::*};
@@ -136,7 +136,10 @@ mod tests {
         locals.insert("y".to_string(), Type::Int);
 
         let block0 = BasicBlock {
-            statements: vec![],
+            statements: vec![
+                Statement::Assign("y".to_string(), RValue::UseInt(1)),
+                Statement::Assign("x".to_string(), RValue::Copy("y".to_string())),
+            ],
             terminator: Terminator::Return,
         };
         let mut blocks = HashMap::new();
@@ -169,7 +172,10 @@ mod tests {
         locals.insert("y".to_string(), Type::Int);
 
         let block0 = BasicBlock {
-            statements: vec![],
+            statements: vec![
+                Statement::Assign("y".to_string(), RValue::UseInt(-1)),
+                Statement::Assign("x".to_string(), RValue::UnaryOp(UnOp::Neg, "y".to_string())),
+            ],
             terminator: Terminator::Return,
         };
         let mut blocks = HashMap::new();
@@ -205,7 +211,11 @@ mod tests {
         locals.insert("z".to_string(), enum_type.clone());
 
         let block0 = BasicBlock {
-            statements: vec![],
+            statements: vec![
+                Statement::Assign("y".to_string(), RValue::UseInt(1)),
+                Statement::Assign("x".to_string(), RValue::AddrOf("y".to_string())),
+                Statement::Assign("z".to_string(), RValue::Deref("x".to_string())),
+            ],
             terminator: Terminator::Return,
         };
         let mut blocks = HashMap::new();

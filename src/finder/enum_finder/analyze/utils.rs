@@ -49,8 +49,32 @@ impl UpperBound {
         }
     }
 
+    pub fn greatest_lower_bound(t1: &Type, t2: &Type) -> Type {
+        if t1 == t2 {
+            return t1.clone();
+        }
+        match (t1, t2) {
+            (Type::Enum(e), Type::Int) => Type::Enum(e.clone()),
+            (Type::Int, Type::Enum(e)) => Type::Enum(e.clone()),
+            (Type::Ptr(pt1), Type::Ptr(pt2)) => {
+                Type::Ptr(Box::new(Self::greatest_lower_bound(pt1, pt2)))
+            }
+            (t, _) => t.clone(),
+        }
+    }
+
     pub fn union_with(&mut self, other: &Self) -> bool {
         let new_type = Self::least_upper_bound(&self.0, &other.0);
+        if self.0 != new_type {
+            self.0 = new_type;
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn intersect_with(&mut self, other: &Self) -> bool {
+        let new_type = Self::greatest_lower_bound(&self.0, &other.0);
         if self.0 != new_type {
             self.0 = new_type;
             true
