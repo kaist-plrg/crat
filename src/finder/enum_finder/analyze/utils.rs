@@ -45,6 +45,13 @@ impl UpperBound {
             (Type::Ptr(pt1), Type::Ptr(pt2)) => {
                 Type::Ptr(Box::new(Self::least_upper_bound(pt1, pt2)))
             }
+            (Type::Enum(e1), Type::Enum(e2)) => {
+                if e1 == e2 {
+                    Type::Enum(e1.clone())
+                } else {
+                    Type::Int
+                }
+            }
             _ => Type::Int,
         }
     }

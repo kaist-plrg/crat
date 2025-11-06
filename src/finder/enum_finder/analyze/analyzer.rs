@@ -37,10 +37,12 @@ fn process_block(block: &BasicBlock, map: &mut ConstraintMap) -> HashSet<Id> {
     let mut changed_vars = HashSet::new();
 
     for stmt in &block.statements {
-        let changed = match stmt {
-            Statement::Assign(lhs, rvalue) => process_rvalue(lhs, rvalue, map),
+        match stmt {
+            Statement::Assign(lhs, rvalue) => {
+                let new_changes = process_rvalue(lhs, rvalue, map);
+                changed_vars.extend(new_changes);
+            }
             Statement::DerefAssign(lhs_ptr, rhs) => {
-                let mut changed = false;
                 if let Some(lhs_lower) = map.get(lhs_ptr).map(|c| c.lower.clone()) {
                     for val in lhs_lower.0 {
                         if let Value::Location(loc_id) = val
@@ -48,25 +50,20 @@ fn process_block(block: &BasicBlock, map: &mut ConstraintMap) -> HashSet<Id> {
                             && let Some(loc_constraint) = map.get_mut(&loc_id)
                         {
                             let c1 = loc_constraint.lower.union_with(&rhs_constraint.lower);
-                            let c2 = loc_constraint.upper.union_with(&rhs_constraint.upper);
+
+                            let c2 = loc_constraint.upper.intersect_with(&rhs_constraint.upper);
                             if c1 || c2 {
-                                changed = true;
                                 changed_vars.insert(loc_id);
                             }
                         }
                     }
                 }
                 if upper::propagate_deref_assign_upper(map, lhs_ptr, rhs) {
-                    changed = true;
                     changed_vars.insert(rhs.clone());
                 }
-                changed
             }
-            _ => false,
+            _ => {}
         };
-        if changed && let Statement::Assign(lhs, _) = stmt {
-            changed_vars.insert(lhs.clone());
-        }
     }
 
     if let Terminator::Call(_lhs, _, _args, _) = &block.terminator {}
@@ -74,45 +71,73 @@ fn process_block(block: &BasicBlock, map: &mut ConstraintMap) -> HashSet<Id> {
     changed_vars
 }
 
-fn process_rvalue(lhs: &Id, rvalue: &RValue, map: &mut ConstraintMap) -> bool {
+fn process_rvalue(lhs: &Id, rvalue: &RValue, map: &mut ConstraintMap) -> HashSet<Id> {
+    let mut changed_vars = HashSet::new();
+    let mut lhs_changed = false;
+
     match rvalue {
-        RValue::UseInt(n) => lower::propagate_const_lower(map, lhs, *n),
-        RValue::Copy(rhs) => {
-            let c1 = lower::propagate_copy_lower(map, lhs, rhs);
-            let c2 = upper::propagate_copy_upper(map, lhs, rhs);
-            c1 || c2
+        RValue::UseInt(n) => {
+            lhs_changed = lower::propagate_const_lower(map, lhs, *n);
         }
-        RValue::UnaryOp(op, rhs) => lower::propagate_unop_lower(map, lhs, op, rhs),
-        RValue::BinaryOp(op, r1, r2) => lower::propagate_binop_lower(map, lhs, op, r1, r2),
+        RValue::Copy(rhs) => {
+            lhs_changed = lower::propagate_copy_lower(map, lhs, rhs);
+            if upper::propagate_copy_upper(map, lhs, rhs) {
+                changed_vars.insert(rhs.clone());
+            }
+        }
+        RValue::UnaryOp(op, rhs) => {
+            lhs_changed = lower::propagate_unop_lower(map, lhs, op, rhs);
+        }
+        RValue::BinaryOp(op, r1, r2) => {
+            lhs_changed = lower::propagate_binop_lower(map, lhs, op, r1, r2);
+        }
         RValue::AddrOf(rhs) => {
-            let c1 = lower::propagate_addrof_lower(map, lhs, rhs);
-            let c2 = upper::propagate_addrof_upper(map, lhs, rhs);
-            c1 || c2
+            lhs_changed = lower::propagate_addrof_lower(map, lhs, rhs);
+            if upper::propagate_addrof_upper(map, lhs, rhs) {
+                changed_vars.insert(rhs.clone());
+            }
         }
         RValue::Deref(rhs) => {
-            let mut changed = false;
+            let mut lhs_lower_changed = false;
+
             if let Some(rhs_lower) = map.get(rhs).map(|c| c.lower.clone()) {
                 for val in rhs_lower.0 {
-                    if let Value::Location(loc_id) = val
-                        && let Some(loc_constraint) = map.get(&loc_id).cloned()
-                        && let Some(lhs_constraint) = map.get_mut(lhs)
-                    {
-                        let c1 = lhs_constraint.lower.union_with(&loc_constraint.lower);
-                        let c2 = lhs_constraint.upper.union_with(&loc_constraint.upper);
-                        if c1 || c2 {
-                            changed = true;
+                    if let Value::Location(loc_id) = val {
+                        let lhs_upper_clone = map.get(lhs).map(|c| c.upper.clone());
+                        let loc_lower_clone = map.get(&loc_id).map(|c| c.lower.clone());
+
+                        if let (Some(loc_lower), Some(lhs_constraint_mut)) =
+                            (loc_lower_clone, map.get_mut(lhs))
+                            && lhs_constraint_mut.lower.union_with(&loc_lower)
+                        {
+                            lhs_lower_changed = true;
+                        }
+
+                        if let (Some(lhs_upper), Some(loc_constraint_mut)) =
+                            (lhs_upper_clone, map.get_mut(&loc_id))
+                            && loc_constraint_mut.upper.intersect_with(&lhs_upper)
+                        {
+                            changed_vars.insert(loc_id.clone());
                         }
                     }
                 }
             }
+            lhs_changed = lhs_lower_changed;
+
             if upper::propagate_deref_upper(map, lhs, rhs) {
-                changed = true;
+                changed_vars.insert(rhs.clone());
             }
-            changed
         }
-        RValue::UseFn(fn_name) => lower::propagate_fn_lower(map, lhs, fn_name),
-        _ => false,
+        RValue::UseFn(fn_name) => {
+            lhs_changed = lower::propagate_fn_lower(map, lhs, fn_name);
+        }
+        _ => {}
     }
+
+    if lhs_changed {
+        changed_vars.insert(lhs.clone());
+    }
+    changed_vars
 }
 
 pub fn analyze_function(func: &Function) -> ConstraintMap {
