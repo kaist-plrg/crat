@@ -383,6 +383,10 @@ impl mut_visit::MutVisitor for AstVisitor<'_> {
                 && self.lets_to_remove.contains(&hir_stmt.hir_id)
             {
                 false
+            } else if let StmtKind::Semi(e) = &stmt.kind
+                && matches!(e.kind, ExprKind::Path(_, _))
+            {
+                false
             } else {
                 true
             }
