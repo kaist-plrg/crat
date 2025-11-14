@@ -135,6 +135,7 @@ enum Pass {
     OutParam,
     Lock,
     Union,
+    Punning,
     Io,
     Pointer,
     Static,
@@ -412,6 +413,11 @@ fn main() {
                     union_replacer::tag_analysis::analyze(&config.r#union, config.verbose, tcx)
                 })
                 .unwrap();
+            }
+            Pass::Punning => {
+                let s =
+                    run_compiler_on_path(&file, union_replacer::punning::replace_unions).unwrap();
+                std::fs::write(&file, s).unwrap();
             }
             Pass::Io => {
                 let res = run_compiler_on_path(&file, io_replacer::replace_io).unwrap();
